@@ -1,0 +1,44 @@
+body {
+    background-color: #fafafa;
+    display: flex;
+    height: 100vh;
+    margin: 0;
+}
+
+a {
+    color: rgb(148, 221, 255);
+    text-decoration: none;
+}
+
+a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+#container {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+#help {
+    z-index: 1;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 1rem;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#credits {
+    z-index: 1;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 1rem;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+}
