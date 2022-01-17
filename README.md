@@ -8,6 +8,10 @@ Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight 
 [<img src="doc/ss02.png" width="320" height="200" />](doc/ss02.png)
 [<img src="doc/ss03.png" width="320" height="200" />](doc/ss03.png)
 
+## Live demo
+
+[https://ruben3d.github.io/retroflightsim/dist](https://ruben3d.github.io/retroflightsim/dist)
+
 ## How to build
 
 You need node.js installed globally (I have been using 14.16.0).
