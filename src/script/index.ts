@@ -3,18 +3,24 @@ import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeom
 import { ParametricGeometries } from 'three/examples/jsm/geometries/ParametricGeometries';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { Vector3 } from 'three';
+import { SceneMaterialManager, SceneMaterialUniforms } from './scene/materials/materials';
+import { NoonPalette } from './scene/palettes/noon';
+import { PaletteCategory } from './scene/palettes/palette';
+import { NightPalette } from './scene/palettes/night';
 
 
 // Scene
 
 const TERRAIN_SCALE = 100.0;
 const TERRAIN_MODEL_SIZE = 100.0;
-const TERRAIN_FOG = 0.0001;
-const SKY_FOG = 0.004;
 const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 100000);
 const scene: THREE.Scene = new THREE.Scene();
+let materials: SceneMaterialManager | undefined;
 let sky: THREE.Mesh | undefined;
 const clock = new THREE.Clock();
+
+const palettes = [NoonPalette, NightPalette];
+let currentPalette = 0;
 
 // Controls
 
@@ -41,62 +47,6 @@ let renderer: THREE.WebGL1Renderer | undefined;
 const composeScene: THREE.Scene = new THREE.Scene();
 const composeCamera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-H_RES / 2, H_RES / 2, V_RES / 2, -V_RES / 2, -10, 10);
 let renderTarget: THREE.WebGLRenderTarget | undefined;
-
-const flatVertProgram: string = `
-  precision highp float;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    shade = 1.0;
-    vec4 tmpPos = modelMatrix * vec4(position, 1.0);
-    vPosition = vec3(tmpPos.x, 0.0, tmpPos.z);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const shadedVertProgram: string = `
-  precision highp float;
-
-  uniform mat3 normalModelMatrix;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    vec3 worldNormal = normalize(normalModelMatrix * normal);
-    float shadeUp = 0.9 + dot(worldNormal, vec3(0.0, 1.0, 0.0)) * 0.1;
-    float shadeRight = 0.8 + dot(worldNormal, vec3(0.0, 0.0, 1.0)) * 0.2;
-    shade = shadeUp * shadeRight;
-
-    vec4 tmpPos = modelMatrix * vec4(position, 1.0);
-    vPosition = vec3(tmpPos.x, 0.0, tmpPos.z);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragProgram: string = `
-  precision lowp float;
-
-  uniform vec3 vCameraNormal;
-  uniform float vCameraD;
-  uniform vec3 color;
-  uniform float fogDensity;
-  uniform vec3 fogColor;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    float distance = dot(vPosition, vCameraNormal) + vCameraD;
-    float fogFactor = exp2(-fogDensity  * distance);
-    fogFactor = 1.0 - clamp(fogFactor, 0.0, 1.0);
-    fogFactor = floor(fogFactor * 10.0 + 0.5) / 10.0;
-
-    gl_FragColor = mix(vec4(color * shade, 1.0), vec4(fogColor, 1.0), fogFactor);
-  }
-`;
 
 function setup() {
     setupThree();
@@ -200,20 +150,41 @@ function setupControls() {
         pitchState = Stick.IDLE;
         rollState = Stick.IDLE;
     });
+
+    document.addEventListener('keypress', (event: KeyboardEvent) => {
+        switch (event.key) {
+            case 'n': {
+                currentPalette = (currentPalette + 1) % palettes.length;
+                materials?.setPalette(getPalette());
+                break;
+            }
+        }
+    });
 }
 
 function setupScene() {
+    materials = new SceneMaterialManager(NoonPalette);
+    const localMaterials = materials;
+
     const groundGeometry = new ParametricGeometry(ParametricGeometries.plane(100000, 100000), 1, 1);
     groundGeometry.center();
     const ground = new THREE.Mesh(groundGeometry, new THREE.MeshBasicMaterial());
-    applyMaterial(ground, '#b37934', TERRAIN_FOG, false);
+    applyMaterial(ground, materials.build({
+        category: PaletteCategory.TERRAIN_DEFAULT,
+        shaded: false,
+        depthWrite: false
+    }));
     ground.position.set(0, -5, 0);
     scene.add(ground);
 
     const skyGeometry = new ParametricGeometry(ParametricGeometries.plane(100000, 100000), 1, 1);
     skyGeometry.center();
     sky = new THREE.Mesh(skyGeometry, new THREE.MeshBasicMaterial());
-    applyMaterial(sky, '#10a2fb', SKY_FOG, false);
+    applyMaterial(sky, materials.build({
+        category: PaletteCategory.SKY,
+        shaded: false,
+        depthWrite: false
+    }));
     sky.position.set(0, camera.position.y + 7, 0);
     scene.add(sky);
 
@@ -223,7 +194,11 @@ function setupScene() {
         const block = new THREE.BoxGeometry(10, 10, 10);
         for (let i = 0; i < 800; i++) {
             const mesh = new THREE.Mesh(block, new THREE.MeshBasicMaterial());
-            applyMaterial(mesh, '#dddddd', TERRAIN_FOG, true, true);
+            applyMaterial(mesh, localMaterials.build({
+                category: PaletteCategory.DECORATION_BUILDING,
+                shaded: true,
+                depthWrite: true
+            }));
             randomPosOver(land, mesh.position, 6000);
             scene.add(mesh);
         }
@@ -232,7 +207,11 @@ function setupScene() {
         const hill = new THREE.ConeGeometry(700, 300, 4, 1);
         for (let i = 0; i < 20; i++) {
             const mesh = new THREE.Mesh(hill, new THREE.MeshBasicMaterial());
-            applyMaterial(mesh, '#078C02', TERRAIN_FOG, true, true);
+            applyMaterial(mesh, localMaterials.build({
+                category: PaletteCategory.DECORATION_MOUNTAIN_GRASS,
+                shaded: true,
+                depthWrite: true
+            }));
             randomPosOver(grass, mesh.position, 10000);
             mesh.scale.x = 0.8 + Math.random() / 5.0;
             mesh.scale.y = 0.5 + Math.random() / 2.0;
@@ -245,7 +224,11 @@ function setupScene() {
         const mountain = new THREE.ConeGeometry(1400, 600, 4, 1);
         for (let i = 0; i < 15; i++) {
             const mesh = new THREE.Mesh(mountain, new THREE.MeshBasicMaterial());
-            applyMaterial(mesh, '#AD6025', TERRAIN_FOG, true, true);
+            applyMaterial(mesh, localMaterials.build({
+                category: PaletteCategory.DECORATION_MOUNTAIN_BARE,
+                shaded: true,
+                depthWrite: true
+            }));
             randomPosOver(darkLand, mesh.position, 10000);
             mesh.scale.x = 0.8 + Math.random() / 5.0;
             mesh.scale.y = 0.5 + Math.random() / 2.0;
@@ -257,14 +240,18 @@ function setupScene() {
     const loader = new OBJLoader(loadingManager);
 
     [
-        { file: 'ocean', color: '#134795' },
-        { file: 'shallowocean', color: '#0056E7' },
-        { file: 'land', color: '#b37934' },
-        { file: 'darkland', color: '#AD6025' },
-        { file: 'grass', color: '#078C02' },
+        { file: 'ocean', category: PaletteCategory.TERRAIN_WATER },
+        { file: 'shallowocean', category: PaletteCategory.TERRAIN_SHALLOW_WATER },
+        { file: 'land', category: PaletteCategory.TERRAIN_SAND },
+        { file: 'darkland', category: PaletteCategory.TERRAIN_BARE },
+        { file: 'grass', category: PaletteCategory.TERRAIN_GRASS },
     ].forEach(def => {
         loader.load(`assets/${def.file}.obj`, obj => {
-            applyMaterial(obj, def.color, TERRAIN_FOG);
+            applyMaterial(obj, localMaterials.build({
+                category: def.category,
+                shaded: false,
+                depthWrite: true
+            }));
             obj.scale.x = obj.scale.z = TERRAIN_SCALE;
             terrain.set(def.file, obj);
             scene.add(obj);
@@ -303,37 +290,15 @@ function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vec
     return position;
 }
 
-function applyMaterial(obj: THREE.Group | THREE.Mesh, color: string, fogDensity: number, depthWrite: boolean = true, shaded: boolean = false) {
-    const mat = new THREE.ShaderMaterial({
-        vertexShader: shaded ? shadedVertProgram : flatVertProgram,
-        fragmentShader: fragProgram,
-        side: THREE.DoubleSide,
-        depthWrite: depthWrite,
-        userData: {
-            shaded: shaded
-        },
-        uniforms: {
-            ...{
-                vCameraNormal: { value: new THREE.Vector3() },
-                vCameraD: { value: 0 },
-                color: { value: new THREE.Color(color) },
-                fogDensity: { value: fogDensity },
-                fogColor: { value: new THREE.Color('#d3d3d3') }
-            },
-            ...shaded ? {
-                normalModelMatrix: { value: new THREE.Matrix3() }
-            } : {}
-        }
-    });
-
+function applyMaterial(obj: THREE.Group | THREE.Mesh, material: THREE.Material) {
     if ('isMesh' in obj) {
-        obj.material = mat;
+        obj.material = material;
         obj.onBeforeRender = updateUniforms;
     } else {
         obj.traverse(child => {
             if ('isMesh' in child) {
                 const mesh = (child as THREE.Mesh);
-                mesh.material = mat;
+                mesh.material = material;
                 mesh.onBeforeRender = updateUniforms;
             }
         });
@@ -342,7 +307,7 @@ function applyMaterial(obj: THREE.Group | THREE.Mesh, color: string, fogDensity:
 
 function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, geometry: THREE.BufferGeometry, material: THREE.Material, group: THREE.Group) {
     const m = (material as THREE.ShaderMaterial);
-    const u = m.uniforms;
+    const u = m.uniforms as SceneMaterialUniforms;
     const n = u.vCameraNormal.value as THREE.Vector3;
     camera.getWorldDirection(n).setY(0.0).normalize();
     const p = camera.getWorldPosition(new THREE.Vector3());
@@ -409,13 +374,17 @@ function updateScene(delta: number) {
 function renderScene(r: THREE.WebGL1Renderer) {
     r.setRenderTarget(renderTarget!);
 
-    r.setClearColor('#d3d3d3');
+    r.setClearColor(getPalette().colors[PaletteCategory.BACKGROUND]);
     r.clear();
     r.render(scene, camera);
 
     r.setRenderTarget(null);
     r.clear();
     r.render(composeScene, composeCamera);
+}
+
+function getPalette() {
+    return palettes[currentPalette];
 }
 
 function loop() {
