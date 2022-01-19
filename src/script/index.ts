@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeometry';
-import { ParametricGeometries } from 'three/examples/jsm/geometries/ParametricGeometries';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { Vector3 } from 'three';
 import { SceneMaterialManager, SceneMaterialUniforms } from './scene/materials/materials';
@@ -13,8 +11,12 @@ import { NightPalette } from './scene/palettes/night';
 
 const TERRAIN_SCALE = 100.0;
 const TERRAIN_MODEL_SIZE = 100.0;
-const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 100000);
+const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 20000);
 const scene: THREE.Scene = new THREE.Scene();
+const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 100, 500000);
+const bgGroundScene: THREE.Scene = new THREE.Scene();
+const bgSkyCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 50000);
+const bgSkyScene: THREE.Scene = new THREE.Scene();
 let materials: SceneMaterialManager | undefined;
 let sky: THREE.Mesh | undefined;
 const clock = new THREE.Clock();
@@ -63,6 +65,7 @@ function setupThree() {
 
     renderer = new THREE.WebGL1Renderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.autoClear = false;
     setViewportSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
     window.addEventListener('resize', refreshSize);
@@ -86,8 +89,14 @@ function setupCompose(renderTarget: THREE.WebGLRenderTarget) {
 }
 
 function setViewportSize(viewportWidth: number, viewportHeight: number) {
-    camera.aspect = viewportWidth / viewportHeight;
+    const aspect = viewportWidth / viewportHeight;
+    camera.aspect = aspect;
     camera.updateProjectionMatrix();
+    bgGroundCamera.aspect = aspect;
+    bgGroundCamera.updateProjectionMatrix();
+    bgSkyCamera.aspect = aspect;
+    bgSkyCamera.updateProjectionMatrix();
+
     renderer?.setSize(viewportWidth, viewportHeight);
 }
 
@@ -166,27 +175,29 @@ function setupScene() {
     materials = new SceneMaterialManager(NoonPalette);
     const localMaterials = materials;
 
-    const groundGeometry = new ParametricGeometry(ParametricGeometries.plane(100000, 100000), 1, 1);
+    const groundGeometry = new THREE.PlaneGeometry(1000000, 1000000, 1, 1);
     groundGeometry.center();
+    groundGeometry.rotateX(Math.PI / 2);
     const ground = new THREE.Mesh(groundGeometry, new THREE.MeshBasicMaterial());
     applyMaterial(ground, materials.build({
         category: PaletteCategory.TERRAIN_DEFAULT,
         shaded: false,
         depthWrite: false
     }));
-    ground.position.set(0, -5, 0);
-    scene.add(ground);
+    ground.position.set(0, 0, 0);
+    bgGroundScene.add(ground);
 
-    const skyGeometry = new ParametricGeometry(ParametricGeometries.plane(100000, 100000), 1, 1);
+    const skyGeometry = new THREE.PlaneGeometry(100000, 100000, 1, 1);
     skyGeometry.center();
+    skyGeometry.rotateX(-Math.PI / 2);
     sky = new THREE.Mesh(skyGeometry, new THREE.MeshBasicMaterial());
     applyMaterial(sky, materials.build({
         category: PaletteCategory.SKY,
         shaded: false,
         depthWrite: false
     }));
-    sky.position.set(0, camera.position.y + 7, 0);
-    scene.add(sky);
+    sky.position.set(0, 7, 0);
+    bgSkyScene.add(sky);
 
     const terrain: Map<string, THREE.Object3D<THREE.Event>> = new Map();
     const loadingManager = new THREE.LoadingManager(() => {
@@ -368,7 +379,9 @@ function updateScene(delta: number) {
     if (camera.position.z > modelHalfSize) camera.position.z = -modelHalfSize;
     if (camera.position.z < -modelHalfSize) camera.position.z = modelHalfSize;
 
-    sky?.position.setY(camera.position.y + 7);
+    bgGroundCamera.position.y = camera.position.y;
+    bgGroundCamera.quaternion.copy(camera.quaternion);
+    bgSkyCamera.quaternion.copy(camera.quaternion);
 }
 
 function renderScene(r: THREE.WebGL1Renderer) {
@@ -376,9 +389,12 @@ function renderScene(r: THREE.WebGL1Renderer) {
 
     r.setClearColor(getPalette().colors[PaletteCategory.BACKGROUND]);
     r.clear();
+    r.render(bgSkyScene, bgSkyCamera);
+    r.render(bgGroundScene, bgGroundCamera);
     r.render(scene, camera);
 
     r.setRenderTarget(null);
+
     r.clear();
     r.render(composeScene, composeCamera);
 }

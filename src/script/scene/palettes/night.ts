@@ -17,8 +17,8 @@ const colors: PaletteColors = {
 };
 
 const values: PaletteValues = {
-    [PaletteCategory.FOG_SKY]: 0.004,
-    [PaletteCategory.FOG_TERRAIN]: 0.0002
+    [PaletteCategory.FOG_SKY]: 0.003,
+    [PaletteCategory.FOG_TERRAIN]: 0.00015
 };
 
 export const NightPalette: Palette = {

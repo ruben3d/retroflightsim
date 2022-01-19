@@ -10,15 +10,15 @@ const colors: PaletteColors = {
     [PaletteCategory.TERRAIN_BARE]: '#AD6025',
     [PaletteCategory.TERRAIN_GRASS]: '#078C02',
     [PaletteCategory.TERRAIN_WATER]: '#134795',
-    [PaletteCategory.TERRAIN_SHALLOW_WATER]: '#0056E7',
+    [PaletteCategory.TERRAIN_SHALLOW_WATER]: '#0f54CC',
     [PaletteCategory.DECORATION_MOUNTAIN_GRASS]: '#078C02',
     [PaletteCategory.DECORATION_MOUNTAIN_BARE]: '#AD6025',
     [PaletteCategory.DECORATION_BUILDING]: '#DDDDDD'
 };
 
 const values: PaletteValues = {
-    [PaletteCategory.FOG_SKY]: 0.004,
-    [PaletteCategory.FOG_TERRAIN]: 0.0001
+    [PaletteCategory.FOG_SKY]: 0.003,
+    [PaletteCategory.FOG_TERRAIN]: 0.00008
 };
 
 export const NoonPalette: Palette = {
