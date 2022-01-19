@@ -177,7 +177,7 @@ function setupScene() {
 
     const groundGeometry = new THREE.PlaneGeometry(1000000, 1000000, 1, 1);
     groundGeometry.center();
-    groundGeometry.rotateX(Math.PI / 2);
+    groundGeometry.rotateX(-Math.PI / 2);
     const ground = new THREE.Mesh(groundGeometry, new THREE.MeshBasicMaterial());
     applyMaterial(ground, materials.build({
         category: PaletteCategory.TERRAIN_DEFAULT,
@@ -189,7 +189,7 @@ function setupScene() {
 
     const skyGeometry = new THREE.PlaneGeometry(100000, 100000, 1, 1);
     skyGeometry.center();
-    skyGeometry.rotateX(-Math.PI / 2);
+    skyGeometry.rotateX(Math.PI / 2);
     sky = new THREE.Mesh(skyGeometry, new THREE.MeshBasicMaterial());
     applyMaterial(sky, materials.build({
         category: PaletteCategory.SKY,
@@ -202,7 +202,8 @@ function setupScene() {
     const terrain: Map<string, THREE.Object3D<THREE.Event>> = new Map();
     const loadingManager = new THREE.LoadingManager(() => {
         const land = terrain.get('land')!;
-        const block = new THREE.BoxGeometry(10, 10, 10);
+        const block = new THREE.BoxGeometry(10, 5, 10);
+        block.translate(0, 2.5, 0);
         for (let i = 0; i < 800; i++) {
             const mesh = new THREE.Mesh(block, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({
@@ -215,7 +216,9 @@ function setupScene() {
         }
 
         const grass = terrain.get('grass')!;
-        const hill = new THREE.ConeGeometry(700, 300, 4, 1);
+        const hill = new THREE.ConeGeometry(350, 150, 4, 1).toNonIndexed();
+        hill.computeVertexNormals();
+        hill.translate(0, 75, 0);
         for (let i = 0; i < 20; i++) {
             const mesh = new THREE.Mesh(hill, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({
@@ -232,7 +235,9 @@ function setupScene() {
         }
 
         const darkLand = terrain.get('darkland')!;
-        const mountain = new THREE.ConeGeometry(1400, 600, 4, 1);
+        const mountain = new THREE.ConeGeometry(700, 300, 4, 1).toNonIndexed();
+        mountain.computeVertexNormals();
+        mountain.translate(0, 150, 0);
         for (let i = 0; i < 15; i++) {
             const mesh = new THREE.Mesh(mountain, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({
@@ -261,7 +266,7 @@ function setupScene() {
             applyMaterial(obj, localMaterials.build({
                 category: def.category,
                 shaded: false,
-                depthWrite: true
+                depthWrite: false
             }));
             obj.scale.x = obj.scale.z = TERRAIN_SCALE;
             terrain.set(def.file, obj);

@@ -109,7 +109,7 @@ export class SceneMaterialManager {
         this.flatProto = new THREE.ShaderMaterial({
             vertexShader: flatVertProgram,
             fragmentShader: fragProgram,
-            side: THREE.DoubleSide,
+            side: THREE.FrontSide,
             depthWrite: true,
             userData: {},
             uniforms: {}
@@ -117,7 +117,7 @@ export class SceneMaterialManager {
         this.shadedProto = new THREE.ShaderMaterial({
             vertexShader: shadedVertProgram,
             fragmentShader: fragProgram,
-            side: THREE.DoubleSide,
+            side: THREE.FrontSide,
             depthWrite: true,
             userData: {},
             uniforms: {}
