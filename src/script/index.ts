@@ -7,15 +7,25 @@ import { PaletteCategory } from './scene/palettes/palette';
 import { NightPalette } from './scene/palettes/night';
 
 
+// Rendering
+
+const H_RES = 320;
+const V_RES = 200;
+let container: HTMLElement | null;
+let renderer: THREE.WebGL1Renderer | undefined;
+const composeScene: THREE.Scene = new THREE.Scene();
+const composeCamera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-H_RES / 2, H_RES / 2, V_RES / 2, -V_RES / 2, -10, 10);
+let renderTarget: THREE.WebGLRenderTarget | undefined;
+
 // Scene
 
 const TERRAIN_SCALE = 100.0;
 const TERRAIN_MODEL_SIZE = 100.0;
-const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 20000);
+const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 20000);
 const scene: THREE.Scene = new THREE.Scene();
-const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 100, 500000);
+const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 100, 500000);
 const bgGroundScene: THREE.Scene = new THREE.Scene();
-const bgSkyCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, 1, 5, 50000);
+const bgSkyCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 50000);
 const bgSkyScene: THREE.Scene = new THREE.Scene();
 let materials: SceneMaterialManager | undefined;
 let sky: THREE.Mesh | undefined;
@@ -39,16 +49,6 @@ const YAW_RATE = Math.PI / 16; // Radians/s
 const SPEED = 80.0; // World units/s
 const MIN_HEIGHT = 10; // World units
 const MAX_HEIGHT = 750; // World units
-
-// Rendering
-
-const H_RES = 320;
-const V_RES = 200;
-let container: HTMLElement | null;
-let renderer: THREE.WebGL1Renderer | undefined;
-const composeScene: THREE.Scene = new THREE.Scene();
-const composeCamera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-H_RES / 2, H_RES / 2, V_RES / 2, -V_RES / 2, -10, 10);
-let renderTarget: THREE.WebGLRenderTarget | undefined;
 
 function setup() {
     setupThree();
@@ -89,14 +89,22 @@ function setupCompose(renderTarget: THREE.WebGLRenderTarget) {
 }
 
 function setViewportSize(viewportWidth: number, viewportHeight: number) {
-    const aspect = viewportWidth / viewportHeight;
-    camera.aspect = aspect;
-    camera.updateProjectionMatrix();
-    bgGroundCamera.aspect = aspect;
-    bgGroundCamera.updateProjectionMatrix();
-    bgSkyCamera.aspect = aspect;
-    bgSkyCamera.updateProjectionMatrix();
-
+    const viewportAspect = viewportWidth / viewportHeight;
+    const aspect = H_RES / V_RES;
+    if (viewportAspect > aspect) {
+        const width = viewportAspect / aspect * H_RES;
+        composeCamera.left = -width / 2;
+        composeCamera.right = width / 2;
+        composeCamera.top = V_RES / 2;
+        composeCamera.bottom = -V_RES / 2;
+    } else {
+        const height = aspect / viewportAspect * V_RES;
+        composeCamera.top = height / 2;
+        composeCamera.bottom = -height / 2;
+        composeCamera.left = -H_RES / 2;
+        composeCamera.right = H_RES / 2;
+    }
+    composeCamera.updateProjectionMatrix();
     renderer?.setSize(viewportWidth, viewportHeight);
 }
 
@@ -400,6 +408,7 @@ function renderScene(r: THREE.WebGL1Renderer) {
 
     r.setRenderTarget(null);
 
+    r.setClearColor('#000000');
     r.clear();
     r.render(composeScene, composeCamera);
 }
