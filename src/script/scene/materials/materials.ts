@@ -5,6 +5,7 @@ import { FlatVertProgram } from './shaders/flatVP';
 import { DepthFragProgram } from './shaders/depthFP';
 import { PointVertProgram } from './shaders/pointVP';
 import { ShadedVertProgram } from './shaders/shadedVP';
+import { ConstantFragProgram } from './shaders/constantFP';
 
 
 export interface SceneMaterialProperties {
@@ -25,8 +26,7 @@ export interface SceneFlatMaterialUniforms {
 }
 
 export interface SceneShadedMaterialUniforms {
-    vCameraNormal: { value: THREE.Vector3; };
-    vCameraD: { value: number; };
+    distance: { value: number; };
     color: { value: THREE.Color; };
     fogDensity: { value: number; };
     fogColor: { value: THREE.Color; };
@@ -67,7 +67,7 @@ export class SceneMaterialManager {
         });
         this.shadedProto = new THREE.ShaderMaterial({
             vertexShader: ShadedVertProgram,
-            fragmentShader: DepthFragProgram,
+            fragmentShader: ConstantFragProgram,
             side: THREE.FrontSide,
             depthWrite: true,
             userData: {},
@@ -111,15 +111,17 @@ export class SceneMaterialManager {
     private buildUniforms(properties: SceneMaterialProperties): SceneMaterialUniforms {
         return {
             ...{
-                vCameraNormal: { value: new THREE.Vector3() },
-                vCameraD: { value: 0 },
                 color: { value: new THREE.Color(this.palette.colors[properties.category]) },
                 fogDensity: { value: this.palette.values[FogValueCategory(properties.category)] },
                 fogColor: { value: new THREE.Color(this.palette.colors[FogColorCategory(properties.category)]) }
             },
             ...properties.shaded ? {
+                distance: { value: 0 },
                 normalModelMatrix: { value: new THREE.Matrix3() }
-            } : {}
+            } : {
+                vCameraNormal: { value: new THREE.Vector3() },
+                vCameraD: { value: 0 }
+            }
         };
     }
 
