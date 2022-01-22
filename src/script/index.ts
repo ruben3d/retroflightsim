@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { Vector3 } from 'three';
-import { SceneMaterialManager, SceneMaterialUniforms } from './scene/materials/materials';
+import { SceneMaterialManager } from './scene/materials/materials';
 import { NoonPalette } from './scene/palettes/noon';
 import { PaletteCategory } from './scene/palettes/palette';
 import { NightPalette } from './scene/palettes/night';
+import { Scene } from './scene/scene';
+import { SpecklesEntity } from './scene/entities/speckles';
+import { updateUniforms } from './scene/utils';
 
 
 // Rendering
@@ -22,7 +25,8 @@ let renderTarget: THREE.WebGLRenderTarget | undefined;
 const TERRAIN_SCALE = 100.0;
 const TERRAIN_MODEL_SIZE = 100.0;
 const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 20000);
-const scene: THREE.Scene = new THREE.Scene();
+const decorationScene: THREE.Scene = new THREE.Scene();
+const groundScene: THREE.Scene = new THREE.Scene();
 const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 100, 500000);
 const bgGroundScene: THREE.Scene = new THREE.Scene();
 const bgSkyCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 50000);
@@ -30,6 +34,9 @@ const bgSkyScene: THREE.Scene = new THREE.Scene();
 let materials: SceneMaterialManager | undefined;
 let sky: THREE.Mesh | undefined;
 const clock = new THREE.Clock();
+
+const SCENE_SPECKLES = 'SPECKLES';
+const scene: Scene = new Scene();
 
 const palettes = [NoonPalette, NightPalette];
 let currentPalette = 0;
@@ -46,7 +53,7 @@ let rollState: Stick = Stick.IDLE;
 const PITCH_RATE = Math.PI / 6; // Radians/s
 const ROLL_RATE = Math.PI / 4; // Radians/s
 const YAW_RATE = Math.PI / 16; // Radians/s
-const SPEED = 80.0; // World units/s
+const SPEED = 100.0; // World units/s
 const MIN_HEIGHT = 10; // World units
 const MAX_HEIGHT = 750; // World units
 
@@ -212,7 +219,7 @@ function setupScene() {
         const land = terrain.get('land')!;
         const block = new THREE.BoxGeometry(10, 5, 10);
         block.translate(0, 2.5, 0);
-        for (let i = 0; i < 800; i++) {
+        for (let i = 0; i < 100; i++) {
             const mesh = new THREE.Mesh(block, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({
                 category: PaletteCategory.DECORATION_BUILDING,
@@ -220,7 +227,7 @@ function setupScene() {
                 depthWrite: true
             }));
             randomPosOver(land, mesh.position, 6000);
-            scene.add(mesh);
+            decorationScene.add(mesh);
         }
 
         const grass = terrain.get('grass')!;
@@ -239,7 +246,7 @@ function setupScene() {
             mesh.scale.y = 0.5 + Math.random() / 2.0;
             mesh.scale.z = 0.8 + Math.random() / 5.0;
             mesh.rotateY(Math.random() * Math.PI);
-            scene.add(mesh);
+            decorationScene.add(mesh);
         }
 
         const darkLand = terrain.get('darkland')!;
@@ -258,7 +265,7 @@ function setupScene() {
             mesh.scale.y = 0.5 + Math.random() / 2.0;
             mesh.scale.z = 0.8 + Math.random() / 5.0;
             mesh.rotateY(Math.random() * Math.PI);
-            scene.add(mesh);
+            decorationScene.add(mesh);
         }
     });
     const loader = new OBJLoader(loadingManager);
@@ -278,7 +285,7 @@ function setupScene() {
             }));
             obj.scale.x = obj.scale.z = TERRAIN_SCALE;
             terrain.set(def.file, obj);
-            scene.add(obj);
+            groundScene.add(obj);
 
             for (let x = -1; x <= 1; x++) {
                 for (let z = -1; z <= 1; z++) {
@@ -288,11 +295,14 @@ function setupScene() {
                     tile.position.z = z * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
                     tile.scale.x = tile.scale.x * (x === 0 ? 1 : -1);
                     tile.scale.z = tile.scale.z * (z === 0 ? 1 : -1);
-                    scene.add(tile);
+                    groundScene.add(tile);
                 }
             }
         });
     });
+
+    const speckles = new SpecklesEntity(SCENE_SPECKLES, camera, materials);
+    scene.add(speckles);
 
     camera.position.setY(100);
 }
@@ -314,11 +324,8 @@ function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vec
     return position;
 }
 
-function applyMaterial(obj: THREE.Group | THREE.Mesh, material: THREE.Material) {
-    if ('isMesh' in obj) {
-        obj.material = material;
-        obj.onBeforeRender = updateUniforms;
-    } else {
+function applyMaterial(obj: THREE.Group | THREE.Mesh | THREE.Points, material: THREE.Material) {
+    if ('isGroup' in obj) {
         obj.traverse(child => {
             if ('isMesh' in child) {
                 const mesh = (child as THREE.Mesh);
@@ -326,25 +333,16 @@ function applyMaterial(obj: THREE.Group | THREE.Mesh, material: THREE.Material) 
                 mesh.onBeforeRender = updateUniforms;
             }
         });
-    }
-}
-
-function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, geometry: THREE.BufferGeometry, material: THREE.Material, group: THREE.Group) {
-    const m = (material as THREE.ShaderMaterial);
-    const u = m.uniforms as SceneMaterialUniforms;
-    const n = u.vCameraNormal.value as THREE.Vector3;
-    camera.getWorldDirection(n).setY(0.0).normalize();
-    const p = camera.getWorldPosition(new THREE.Vector3());
-    u.vCameraD.value = p.multiplyScalar(-1).dot(n);
-    m.uniformsNeedUpdate = true;
-
-    if (m.userData?.shaded) {
-        const matrix = u.normalModelMatrix.value as THREE.Matrix3;
-        matrix.getNormalMatrix(this.matrixWorld);
+    } else {
+        obj.material = material;
+        obj.onBeforeRender = updateUniforms;
     }
 }
 
 function updateScene(delta: number) {
+
+    scene.update(delta);
+
     // Roll control
     if (rollState === Stick.POSITIVE) {
         camera.rotateZ(ROLL_RATE * delta);
@@ -366,7 +364,7 @@ function updateScene(delta: number) {
         const up = (new THREE.Vector3(0, 1, 0)).applyQuaternion(camera.quaternion);
         const prjUp = up.clone().projectOnPlane(prjForward).setY(0);
         const sign = (prjForward.x * prjUp.z - prjForward.z * prjUp.x) > 0 ? -1 : 1;
-        camera.rotateOnWorldAxis(new Vector3(0, 1, 0), sign * prjUp.length() * prjForward.length() * YAW_RATE * delta);
+        camera.rotateOnWorldAxis(new Vector3(0, 1, 0), sign * prjUp.length() * prjUp.length() * prjForward.length() * YAW_RATE * delta);
     }
 
     // Movement
@@ -404,7 +402,9 @@ function renderScene(r: THREE.WebGL1Renderer) {
     r.clear();
     r.render(bgSkyScene, bgSkyCamera);
     r.render(bgGroundScene, bgGroundCamera);
-    r.render(scene, camera);
+    r.render(groundScene, camera);
+    r.render(scene.getScene(SCENE_SPECKLES), camera);
+    r.render(decorationScene, camera);
 
     r.setRenderTarget(null);
 

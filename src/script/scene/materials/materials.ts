@@ -1,61 +1,11 @@
 import * as THREE from 'three';
+import { ShaderMaterial } from 'three';
 import { FogColorCategory, FogValueCategory, Palette, PaletteCategory } from "../palettes/palette";
+import { FlatVertProgram } from './shaders/flatVP';
+import { DepthFragProgram } from './shaders/depthFP';
+import { PointVertProgram } from './shaders/pointVP';
+import { ShadedVertProgram } from './shaders/shadedVP';
 
-const flatVertProgram: string = `
-  precision highp float;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    shade = 1.0;
-    vec4 tmpPos = modelMatrix * vec4(position, 1.0);
-    vPosition = vec3(tmpPos.x, 0.0, tmpPos.z);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const shadedVertProgram: string = `
-  precision highp float;
-
-  uniform mat3 normalModelMatrix;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    vec3 worldNormal = normalize(normalModelMatrix * normal);
-    float shadeUp = 0.9 + dot(worldNormal, vec3(0.0, 1.0, 0.0)) * 0.1;
-    float shadeRight = 0.8 + dot(worldNormal, vec3(0.0, 0.0, 1.0)) * 0.2;
-    shade = shadeUp * shadeRight;
-
-    vec4 tmpPos = modelMatrix * vec4(position, 1.0);
-    vPosition = vec3(tmpPos.x, 0.0, tmpPos.z);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragProgram: string = `
-  precision lowp float;
-
-  uniform vec3 vCameraNormal;
-  uniform float vCameraD;
-  uniform vec3 color;
-  uniform float fogDensity;
-  uniform vec3 fogColor;
-
-  varying vec3 vPosition;
-  varying float shade;
-
-  void main() {
-    float distance = dot(vPosition, vCameraNormal) + vCameraD;
-    float fogFactor = exp2(-fogDensity * distance);
-    fogFactor = 1.0 - clamp(fogFactor, 0.0, 1.0);
-    fogFactor = floor(fogFactor * 12.0 + 0.5) / 12.0;
-
-    gl_FragColor = mix(vec4(color * shade, 1.0), vec4(fogColor, 1.0), fogFactor * 0.92);
-  }
-`;
 
 export interface SceneMaterialProperties {
     category: PaletteCategory;
@@ -100,6 +50,7 @@ export class SceneMaterialManager {
 
     private readonly flatProto: THREE.ShaderMaterial;
     private readonly shadedProto: THREE.ShaderMaterial;
+    private readonly pointProto: THREE.ShaderMaterial;
     private palette: Palette;
     private materials: THREE.ShaderMaterial[] = [];
 
@@ -107,30 +58,47 @@ export class SceneMaterialManager {
         this.palette = palette;
 
         this.flatProto = new THREE.ShaderMaterial({
-            vertexShader: flatVertProgram,
-            fragmentShader: fragProgram,
+            vertexShader: FlatVertProgram,
+            fragmentShader: DepthFragProgram,
             side: THREE.FrontSide,
             depthWrite: true,
             userData: {},
             uniforms: {}
         });
         this.shadedProto = new THREE.ShaderMaterial({
-            vertexShader: shadedVertProgram,
-            fragmentShader: fragProgram,
+            vertexShader: ShadedVertProgram,
+            fragmentShader: DepthFragProgram,
             side: THREE.FrontSide,
             depthWrite: true,
+            userData: {},
+            uniforms: {}
+        });
+        this.pointProto = new THREE.ShaderMaterial({
+            vertexShader: PointVertProgram,
+            fragmentShader: DepthFragProgram,
+            depthWrite: false,
             userData: {},
             uniforms: {}
         });
     }
 
     build(properties: SceneMaterialProperties): THREE.Material {
-        const material = properties.shaded ? this.shadedProto.clone() : this.flatProto.clone();
-        material.depthWrite = properties.depthWrite;
-        material.userData = this.buildData(properties);
-        material.uniforms = this.buildUniforms(properties);
+        const p = this.sanitiseProperties(properties);
+        const material = this.cloneMaterial(p);
+        material.depthWrite = p.depthWrite;
+        material.userData = this.buildData(p);
+        material.uniforms = this.buildUniforms(p);
         this.materials.push(material);
         return material;
+    }
+
+    private sanitiseProperties(properties: SceneMaterialProperties): SceneMaterialProperties {
+        const p = { ...properties };
+        if (this.is2D(p)) {
+            p.depthWrite = false;
+            p.shaded = false;
+        }
+        return p;
     }
 
     private buildData(properties: SceneMaterialProperties): SceneMaterialData {
@@ -153,6 +121,20 @@ export class SceneMaterialManager {
                 normalModelMatrix: { value: new THREE.Matrix3() }
             } : {}
         };
+    }
+
+    private is2D(properties: SceneMaterialProperties): boolean {
+        return properties.category === PaletteCategory.DECORATION_SPECKLE;
+    }
+
+    private cloneMaterial(properties: SceneMaterialProperties): ShaderMaterial {
+        if (this.is2D(properties)) {
+            return this.pointProto.clone();
+        } else if (properties.shaded) {
+            return this.shadedProto.clone();
+        } else {
+            return this.flatProto.clone();
+        }
     }
 
     setPalette(palette: Palette) {
