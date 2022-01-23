@@ -1,10 +1,7 @@
 import * as THREE from 'three';
+import { CanvasPainter } from '../render/screen/canvasPainter';
+import { Entity } from './entity';
 
-
-export interface Entity {
-    init(scene: Scene): void;
-    update(delta: number): void;
-}
 
 export class Scene {
 
@@ -14,6 +11,12 @@ export class Scene {
     update(delta: number) {
         for (let i = 0; i < this.entities.length; i++) {
             this.entities[i].update(delta);
+        }
+    }
+
+    render(painter: CanvasPainter) {
+        for (let i = 0; i < this.entities.length; i++) {
+            this.entities[i].render(painter);
         }
     }
 

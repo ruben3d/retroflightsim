@@ -8,17 +8,12 @@ import { NightPalette } from './scene/palettes/night';
 import { Scene } from './scene/scene';
 import { SpecklesEntity } from './scene/entities/speckles';
 import { updateUniforms } from './scene/utils';
+import { HUDEntity } from './scene/entities/overlay/hud';
+import { Renderer } from './render/renderer';
+import { H_RES, V_RES } from './defs';
 
 
-// Rendering
-
-const H_RES = 320;
-const V_RES = 200;
-let container: HTMLElement | null;
-let renderer: THREE.WebGL1Renderer | undefined;
-const composeScene: THREE.Scene = new THREE.Scene();
-const composeCamera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-H_RES / 2, H_RES / 2, V_RES / 2, -V_RES / 2, -10, 10);
-let renderTarget: THREE.WebGLRenderTarget | undefined;
+let renderer: Renderer | undefined;
 
 // Scene
 
@@ -57,66 +52,13 @@ const SPEED = 100.0; // World units/s
 const MIN_HEIGHT = 10; // World units
 const MAX_HEIGHT = 750; // World units
 
+
 function setup() {
-    setupThree();
+    renderer = new Renderer();
+    renderer.setBackground(getPalette().colors[PaletteCategory.BACKGROUND]);
     setupScene();
     setupControls();
     loop();
-}
-
-function setupThree() {
-    container = document.getElementById('container');
-    if (!container) {
-        throw new Error('<div id="container"> not found');
-    }
-
-    renderer = new THREE.WebGL1Renderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.autoClear = false;
-    setViewportSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-    window.addEventListener('resize', refreshSize);
-
-    renderTarget = new THREE.WebGLRenderTarget(H_RES, V_RES, {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.NearestFilter,
-        format: THREE.RGBFormat
-    });
-
-    setupCompose(renderTarget);
-}
-
-function setupCompose(renderTarget: THREE.WebGLRenderTarget) {
-    composeScene.add(new THREE.Mesh(
-        new THREE.PlaneGeometry(H_RES, V_RES),
-        new THREE.MeshBasicMaterial({ map: renderTarget.texture, depthWrite: false })
-    ));
-
-    composeCamera.position.setZ(1);
-}
-
-function setViewportSize(viewportWidth: number, viewportHeight: number) {
-    const viewportAspect = viewportWidth / viewportHeight;
-    const aspect = H_RES / V_RES;
-    if (viewportAspect > aspect) {
-        const width = viewportAspect / aspect * H_RES;
-        composeCamera.left = -width / 2;
-        composeCamera.right = width / 2;
-        composeCamera.top = V_RES / 2;
-        composeCamera.bottom = -V_RES / 2;
-    } else {
-        const height = aspect / viewportAspect * V_RES;
-        composeCamera.top = height / 2;
-        composeCamera.bottom = -height / 2;
-        composeCamera.left = -H_RES / 2;
-        composeCamera.right = H_RES / 2;
-    }
-    composeCamera.updateProjectionMatrix();
-    renderer?.setSize(viewportWidth, viewportHeight);
-}
-
-function refreshSize() {
-    setViewportSize(container?.clientWidth || 1, container?.clientHeight || 1);
 }
 
 function setupControls() {
@@ -180,6 +122,7 @@ function setupControls() {
             case 'n': {
                 currentPalette = (currentPalette + 1) % palettes.length;
                 materials?.setPalette(getPalette());
+                renderer?.setBackground(getPalette().colors[PaletteCategory.BACKGROUND]);
                 break;
             }
         }
@@ -304,6 +247,9 @@ function setupScene() {
     const speckles = new SpecklesEntity(SCENE_SPECKLES, camera, materials);
     scene.add(speckles);
 
+    const hud = new HUDEntity(camera);
+    scene.add(hud);
+
     camera.position.setY(100);
 }
 
@@ -395,24 +341,6 @@ function updateScene(delta: number) {
     bgSkyCamera.quaternion.copy(camera.quaternion);
 }
 
-function renderScene(r: THREE.WebGL1Renderer) {
-    r.setRenderTarget(renderTarget!);
-
-    r.setClearColor(getPalette().colors[PaletteCategory.BACKGROUND]);
-    r.clear();
-    r.render(bgSkyScene, bgSkyCamera);
-    r.render(bgGroundScene, bgGroundCamera);
-    r.render(groundScene, camera);
-    r.render(scene.getScene(SCENE_SPECKLES), camera);
-    r.render(decorationScene, camera);
-
-    r.setRenderTarget(null);
-
-    r.setClearColor('#000000');
-    r.clear();
-    r.render(composeScene, composeCamera);
-}
-
 function getPalette() {
     return palettes[currentPalette];
 }
@@ -422,7 +350,13 @@ function loop() {
     const delta = clock.getDelta();
 
     updateScene(delta);
-    renderScene(renderer!);
+    renderer?.render(scene, (r: THREE.Renderer) => {
+        r.render(bgSkyScene, bgSkyCamera);
+        r.render(bgGroundScene, bgGroundCamera);
+        r.render(groundScene, camera);
+        r.render(scene.getScene(SCENE_SPECKLES), camera);
+        r.render(decorationScene, camera);
+    });
 }
 
 window.addEventListener("load", () => {

@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { PaletteCategory } from '../palettes/palette';
-import { Entity, Scene } from "../scene";
+import { Scene } from "../scene";
+import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
 import { SceneMaterialManager } from '../materials/materials';
+import { CanvasPainter } from '../../render/screen/canvasPainter';
 
 const POINT_COORDS = 3; // ! DO NOT CHANGE
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
@@ -38,6 +40,10 @@ export class SpecklesEntity implements Entity {
                 tile.position.z = Math.floor((this.camera.position.z + row * TILE_SIZE) / span + 0.5) * span - row * TILE_SIZE;
             }
         }
+    }
+
+    render(painter: CanvasPainter): void {
+        //
     }
 
     private buildTile(materials: SceneMaterialManager): THREE.Points {
