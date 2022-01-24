@@ -4,8 +4,8 @@ export class CanvasPainter {
 
     private textRenderer: TextRenderer;
 
-    constructor(private ctx: CanvasRenderingContext2D) {
-        this.textRenderer = new TextRenderer(ctx);
+    constructor(private ctx: CanvasRenderingContext2D, textColors: string[] = []) {
+        this.textRenderer = new TextRenderer(ctx, textColors);
     }
 
     // State
@@ -32,7 +32,7 @@ export class CanvasPainter {
         }
     }
 
-    text(x: number, y: number, text: string, alignment: TextAlignment = TextAlignment.LEFT) {
-        this.textRenderer.text(x, y, text, alignment);
+    text(x: number, y: number, text: string, color?: string, alignment: TextAlignment = TextAlignment.LEFT) {
+        this.textRenderer.text(x, y, text, color, alignment);
     }
 }

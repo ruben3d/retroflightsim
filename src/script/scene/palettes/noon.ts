@@ -1,6 +1,7 @@
 import { Palette, PaletteCategory, PaletteColors, PaletteValues } from "./palette";
 
 const colors: PaletteColors = {
+    [PaletteCategory.HUD_TEXT]: '', // Use default
     [PaletteCategory.BACKGROUND]: '#D3D3D3',
     [PaletteCategory.FOG_SKY]: '#D3D3D3',
     [PaletteCategory.FOG_TERRAIN]: '#D3D3D3',

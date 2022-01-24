@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CanvasPainter } from '../render/screen/canvasPainter';
 import { Entity } from './entity';
+import { Palette } from './palettes/palette';
 
 
 export class Scene {
@@ -14,9 +15,9 @@ export class Scene {
         }
     }
 
-    render(painter: CanvasPainter) {
+    render(painter: CanvasPainter, palette: Palette) {
         for (let i = 0; i < this.entities.length; i++) {
-            this.entities[i].render(painter);
+            this.entities[i].render(painter, palette);
         }
     }
 

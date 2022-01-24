@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { H_RES, V_RES } from '../defs';
+import { DefaultPalette, Palette, PaletteCategory } from '../scene/palettes/palette';
 import { Scene } from '../scene/scene';
 import { CanvasPainter } from './screen/canvasPainter';
+
+export interface RendererOptions {
+    textColors?: string[];
+}
 
 export class Renderer {
     private container: HTMLElement;
@@ -11,9 +16,9 @@ export class Renderer {
     private sceneRenderTarget: THREE.WebGLRenderTarget;
     private canvasTexture: THREE.CanvasTexture;
     private painter: CanvasPainter;
-    private backgroundColor: string = '#000000';
+    private palette: Palette = DefaultPalette;
 
-    constructor() {
+    constructor(options?: RendererOptions) {
         const container = document.getElementById('container');
         if (!container) {
             throw new Error('<div id="container"> not found');
@@ -27,7 +32,7 @@ export class Renderer {
         this.container.appendChild(this.renderer.domElement);
         window.addEventListener('resize', this.updateViewportSize.bind(this));
 
-        const { canvas, painter } = this.setupContext2D();
+        const { canvas, painter } = this.setupContext2D(options);
         this.painter = painter;
 
         this.sceneRenderTarget = new THREE.WebGLRenderTarget(H_RES, V_RES, {
@@ -39,20 +44,20 @@ export class Renderer {
         this.setupCompose(this.sceneRenderTarget, this.canvasTexture);
     }
 
-    setBackground(color: string) {
-        this.backgroundColor = color;
+    setPalette(palette: Palette) {
+        this.palette = palette;
     }
 
     render(scene: Scene, tmpHack: (r: THREE.Renderer) => void) {
         // 2D overlay
         this.painter.clear();
-        scene.render(this.painter);
+        scene.render(this.painter, this.palette);
         this.canvasTexture.needsUpdate = true;
 
         // Main 3D scene
         this.renderer.setRenderTarget(this.sceneRenderTarget);
 
-        this.renderer.setClearColor(this.backgroundColor);
+        this.renderer.setClearColor(this.palette.colors[PaletteCategory.BACKGROUND]);
         this.renderer.clear();
         tmpHack(this.renderer);
 
@@ -65,7 +70,7 @@ export class Renderer {
 
     }
 
-    private setupContext2D(): { canvas: HTMLCanvasElement, painter: CanvasPainter } {
+    private setupContext2D(options: RendererOptions | undefined): { canvas: HTMLCanvasElement, painter: CanvasPainter } {
         const canvas = document.createElement('canvas');
         canvas.width = H_RES;
         canvas.height = V_RES;
@@ -73,7 +78,7 @@ export class Renderer {
         if (!ctx) {
             throw Error('Unable to create CanvasRenderingContext2D');
         }
-        const painter = new CanvasPainter(ctx);
+        const painter = new CanvasPainter(ctx, options?.textColors);
         return { canvas, painter };
     }
 

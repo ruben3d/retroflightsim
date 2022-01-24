@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PaletteCategory } from '../palettes/palette';
+import { Palette, PaletteCategory } from '../palettes/palette';
 import { Scene } from "../scene";
 import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
@@ -42,7 +42,7 @@ export class SpecklesEntity implements Entity {
         }
     }
 
-    render(painter: CanvasPainter): void {
+    render(painter: CanvasPainter, palette: Palette): void {
         //
     }
 

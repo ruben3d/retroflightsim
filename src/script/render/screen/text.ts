@@ -57,21 +57,52 @@ export enum TextAlignment {
 
 export class TextRenderer {
     private smallFont: HTMLImageElement;
+    private smallFontColors: Map<string, HTMLCanvasElement> = new Map();
 
-    constructor(private ctx: CanvasRenderingContext2D) {
+    constructor(private ctx: CanvasRenderingContext2D, colors: string[] = []) {
         this.smallFont = new Image();
         this.smallFont.src = 'assets/smallFont.png';
+        if (this.smallFont.complete) {
+            this.onImageLoaded(colors);
+        } else {
+            this.smallFont.addEventListener('load', this.onImageLoaded.bind(this, colors));
+            this.smallFont.addEventListener('error', () => { throw Error(`Unable to load "${this.smallFont.src}"`) });
+        }
     }
 
-    text(x: number, y: number, text: string, alignment: TextAlignment) {
+    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment) {
+        const canvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
         const x0 = alignment === TextAlignment.LEFT ? x : x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
             const { srcX, srcY } = this.codeToCoords(c);
-            this.ctx.drawImage(this.smallFont,
+            this.ctx.drawImage(canvas,
                 srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
                 x0 + i * (CHAR_WIDTH + CHAR_MARGIN), y, CHAR_WIDTH, CHAR_HEIGHT);
         }
+    }
+
+    private onImageLoaded(colors: string[]) {
+        colors.forEach(c => {
+            this.smallFontColors.set(c.toLowerCase(), this.createColor(this.smallFont, c));
+        });
+    }
+
+    private createColor(src: HTMLImageElement, color: string): HTMLCanvasElement {
+        const canvas = document.createElement('canvas');
+        canvas.width = src.width;
+        canvas.height = src.height;
+        const dstCtx = canvas.getContext("2d");
+        if (!dstCtx) {
+            throw Error('Unable to create CanvasRenderingContext2D');
+        }
+        dstCtx.drawImage(src, 0, 0);
+        dstCtx.fillStyle = color;
+        dstCtx.globalCompositeOperation = "multiply";
+        dstCtx.fillRect(0, 0, canvas.width, canvas.height);
+        dstCtx.globalCompositeOperation = "destination-in";
+        dstCtx.drawImage(src, 0, 0);
+        return canvas;
     }
 
     private codeToCoords(code: number): { srcX: number, srcY: number } {

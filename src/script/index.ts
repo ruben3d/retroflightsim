@@ -54,8 +54,8 @@ const MAX_HEIGHT = 750; // World units
 
 
 function setup() {
-    renderer = new Renderer();
-    renderer.setBackground(getPalette().colors[PaletteCategory.BACKGROUND]);
+    renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
+    renderer.setPalette(getPalette());
     setupScene();
     setupControls();
     loop();
@@ -122,7 +122,7 @@ function setupControls() {
             case 'n': {
                 currentPalette = (currentPalette + 1) % palettes.length;
                 materials?.setPalette(getPalette());
-                renderer?.setBackground(getPalette().colors[PaletteCategory.BACKGROUND]);
+                renderer?.setPalette(getPalette());
                 break;
             }
         }
