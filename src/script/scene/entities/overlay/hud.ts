@@ -4,11 +4,12 @@ import { Scene } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette, PaletteCategory } from "../../palettes/palette";
 import { H_RES, V_RES } from "../../../defs";
+import { PlayerEntity } from "../player";
 
 
 export class HUDEntity implements Entity {
 
-    constructor(private actor: THREE.Camera) { }
+    constructor(private actor: PlayerEntity) { }
 
     init(scene: Scene): void {
         //

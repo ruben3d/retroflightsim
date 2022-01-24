@@ -38,6 +38,7 @@ Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 Limited controls available:
 * `W`/`S`: Pitch control.
 * `A`/`D`: Roll control.
+* `Q`/`E`: Yaw control.
 * `N`: Toggle Day/Night.
 
 On reaching the limits of the detailed scenario the player position wraps around.

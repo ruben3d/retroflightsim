@@ -3,6 +3,8 @@ body {
     display: flex;
     height: 100vh;
     margin: 0;
+    font-family: sans-serif;
+    font-weight: bold;
 }
 
 a {
@@ -29,8 +31,12 @@ a:hover {
     bottom: 0;
     left: 0;
     padding: 1rem;
-    color: white;
+    color: rgb(184, 184, 184);
     background-color: rgba(0, 0, 0, 0.5);
+}
+
+#help>span {
+    color: white;
 }
 
 #credits {
