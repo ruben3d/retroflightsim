@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
-import { Vector3 } from 'three';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { NoonPalette } from './scene/palettes/noon';
 import { PaletteCategory } from './scene/palettes/palette';
@@ -10,15 +9,14 @@ import { SpecklesEntity } from './scene/entities/speckles';
 import { updateUniforms } from './scene/utils';
 import { HUDEntity } from './scene/entities/overlay/hud';
 import { Renderer } from './render/renderer';
-import { H_RES, V_RES } from './defs';
+import { H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from './defs';
+import { PlayerEntity } from './scene/entities/player';
 
 
 let renderer: Renderer | undefined;
 
 // Scene
 
-const TERRAIN_SCALE = 100.0;
-const TERRAIN_MODEL_SIZE = 100.0;
 const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 20000);
 const decorationScene: THREE.Scene = new THREE.Scene();
 const groundScene: THREE.Scene = new THREE.Scene();
@@ -36,22 +34,6 @@ const scene: Scene = new Scene();
 const palettes = [NoonPalette, NightPalette];
 let currentPalette = 0;
 
-// Controls
-
-enum Stick {
-    IDLE,
-    POSITIVE,
-    NEGATIVE
-};
-let pitchState: Stick = Stick.IDLE;
-let rollState: Stick = Stick.IDLE;
-const PITCH_RATE = Math.PI / 6; // Radians/s
-const ROLL_RATE = Math.PI / 4; // Radians/s
-const YAW_RATE = Math.PI / 16; // Radians/s
-const SPEED = 100.0; // World units/s
-const MIN_HEIGHT = 10; // World units
-const MAX_HEIGHT = 750; // World units
-
 
 function setup() {
     renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
@@ -62,61 +44,6 @@ function setup() {
 }
 
 function setupControls() {
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
-        switch (event.key) {
-            case 'w': {
-                pitchState = Stick.NEGATIVE;
-                break;
-            }
-            case 's': {
-                pitchState = Stick.POSITIVE;
-                break;
-            }
-            case 'a': {
-                rollState = Stick.POSITIVE;
-                break;
-            }
-            case 'd': {
-                rollState = Stick.NEGATIVE;
-                break;
-            }
-        }
-    });
-
-    document.addEventListener('keyup', (event: KeyboardEvent) => {
-        switch (event.key) {
-            case 'w': {
-                if (pitchState === Stick.NEGATIVE) {
-                    pitchState = Stick.IDLE;
-                }
-                break;
-            }
-            case 's': {
-                if (pitchState === Stick.POSITIVE) {
-                    pitchState = Stick.IDLE;
-                }
-                break;
-            }
-            case 'a': {
-                if (rollState === Stick.POSITIVE) {
-                    rollState = Stick.IDLE;
-                }
-                break;
-            }
-            case 'd': {
-                if (rollState === Stick.NEGATIVE) {
-                    rollState = Stick.IDLE;
-                }
-                break;
-            }
-        }
-    });
-
-    document.addEventListener('blur', () => {
-        pitchState = Stick.IDLE;
-        rollState = Stick.IDLE;
-    });
-
     document.addEventListener('keypress', (event: KeyboardEvent) => {
         switch (event.key) {
             case 'n': {
@@ -247,10 +174,11 @@ function setupScene() {
     const speckles = new SpecklesEntity(SCENE_SPECKLES, camera, materials);
     scene.add(speckles);
 
-    const hud = new HUDEntity(camera);
-    scene.add(hud);
+    const player = new PlayerEntity(camera, new THREE.Vector3(0, 150, 0), 0);
+    scene.add(player);
 
-    camera.position.setY(100);
+    const hud = new HUDEntity(player);
+    scene.add(hud);
 }
 
 function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vector3, spread: number): THREE.Vector3 {
@@ -288,53 +216,6 @@ function applyMaterial(obj: THREE.Group | THREE.Mesh | THREE.Points, material: T
 function updateScene(delta: number) {
 
     scene.update(delta);
-
-    // Roll control
-    if (rollState === Stick.POSITIVE) {
-        camera.rotateZ(ROLL_RATE * delta);
-    } else if (rollState === Stick.NEGATIVE) {
-        camera.rotateZ(-ROLL_RATE * delta);
-    }
-
-    // Pitch control
-    if (pitchState === Stick.POSITIVE) {
-        camera.rotateX(PITCH_RATE * delta);
-    } else if (pitchState === Stick.NEGATIVE) {
-        camera.rotateX(-PITCH_RATE * delta);
-    }
-
-    // Automatic yaw when rolling
-    const forward = camera.getWorldDirection(new THREE.Vector3());
-    if (-0.99 < forward.y && forward.y < 0.99) {
-        const prjForward = forward.clone().setY(0);
-        const up = (new THREE.Vector3(0, 1, 0)).applyQuaternion(camera.quaternion);
-        const prjUp = up.clone().projectOnPlane(prjForward).setY(0);
-        const sign = (prjForward.x * prjUp.z - prjForward.z * prjUp.x) > 0 ? -1 : 1;
-        camera.rotateOnWorldAxis(new Vector3(0, 1, 0), sign * prjUp.length() * prjUp.length() * prjForward.length() * YAW_RATE * delta);
-    }
-
-    // Movement
-    camera.translateZ(-SPEED * delta);
-
-    // Avoid ground crashes
-    if (camera.position.y < MIN_HEIGHT) {
-        camera.position.y = MIN_HEIGHT;
-        const d = camera.getWorldDirection(new THREE.Vector3());
-        d.setY(0).add(camera.position);
-        camera.lookAt(d);
-    }
-
-    // Avoid flying too high
-    if (camera.position.y > MAX_HEIGHT) {
-        camera.position.y = MAX_HEIGHT;
-    }
-
-    // Avoid flying out of bounds, wraps around
-    const modelHalfSize = TERRAIN_MODEL_SIZE * 0.5 * TERRAIN_SCALE;
-    if (camera.position.x > modelHalfSize) camera.position.x = -modelHalfSize;
-    if (camera.position.x < -modelHalfSize) camera.position.x = modelHalfSize;
-    if (camera.position.z > modelHalfSize) camera.position.z = -modelHalfSize;
-    if (camera.position.z < -modelHalfSize) camera.position.z = modelHalfSize;
 
     bgGroundCamera.position.y = camera.position.y;
     bgGroundCamera.quaternion.copy(camera.quaternion);
