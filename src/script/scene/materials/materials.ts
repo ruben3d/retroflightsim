@@ -12,6 +12,7 @@ export interface SceneMaterialProperties {
     category: PaletteCategory;
     shaded: boolean;
     depthWrite: boolean;
+    point?: boolean;
 }
 
 export type SceneMaterialUniforms = SceneFlatMaterialUniforms | SceneShadedMaterialUniforms;
@@ -94,8 +95,7 @@ export class SceneMaterialManager {
 
     private sanitiseProperties(properties: SceneMaterialProperties): SceneMaterialProperties {
         const p = { ...properties };
-        if (this.is2D(p)) {
-            p.depthWrite = false;
+        if (this.isPoint(p)) {
             p.shaded = false;
         }
         return p;
@@ -125,12 +125,17 @@ export class SceneMaterialManager {
         };
     }
 
-    private is2D(properties: SceneMaterialProperties): boolean {
-        return properties.category === PaletteCategory.DECORATION_SPECKLE;
+    private isPoint(properties: SceneMaterialProperties): boolean {
+        return properties.point ||
+            (properties.point === undefined &&
+                (properties.category === PaletteCategory.SCENERY_SPECKLE ||
+                    properties.category === PaletteCategory.LIGHT_RED ||
+                    properties.category === PaletteCategory.LIGHT_GREEN ||
+                    properties.category === PaletteCategory.LIGHT_YELLOW));
     }
 
     private cloneMaterial(properties: SceneMaterialProperties): ShaderMaterial {
-        if (this.is2D(properties)) {
+        if (this.isPoint(properties)) {
             return this.pointProto.clone();
         } else if (properties.shaded) {
             return this.shadedProto.clone();

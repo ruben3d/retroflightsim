@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { Palette, PaletteCategory } from '../palettes/palette';
-import { Scene } from "../scene";
+import { Scene, SceneLayers } from "../scene";
 import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
 import { SceneMaterialManager } from '../materials/materials';
 import { CanvasPainter } from '../../render/screen/canvasPainter';
+import { assertIsDefined } from '../../../utils/asserts';
 
 const POINT_COORDS = 3; // ! DO NOT CHANGE
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
-const TILE_SIZE = 768.0; // World units
+const TILE_SIZE = 1024.0; // World units
 const JITTER = 0.75; // [0,1] - 0 disabled, 1 cell edge. Applies a random offset to the speck of dust within its cell
 
 const FIELD_SIZE = 7; // Tiles, odd numbers only
@@ -17,15 +18,14 @@ export class SpecklesEntity implements Entity {
 
     private tiles: THREE.Points[] = Array(FIELD_SIZE * FIELD_SIZE);
 
-    constructor(private sceneId: string, private camera: THREE.Camera, materials: SceneMaterialManager) {
+    constructor(private camera: THREE.Camera, materials: SceneMaterialManager) {
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = this.buildTile(materials);
         }
     }
 
     init(scene: Scene): void {
-        const layer = scene.getScene(this.sceneId);
-        this.tiles.forEach(tile => layer.add(tile));
+        //
     }
 
     update(delta: number): void {
@@ -42,8 +42,10 @@ export class SpecklesEntity implements Entity {
         }
     }
 
-    render(painter: CanvasPainter, palette: Palette): void {
-        //
+    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+        const layer = layers.get(SceneLayers.EntityFlats);
+        assertIsDefined(layer);
+        this.tiles.forEach(tile => layer.add(tile));
     }
 
     private buildTile(materials: SceneMaterialManager): THREE.Points {
@@ -64,7 +66,7 @@ export class SpecklesEntity implements Entity {
         pointsBuffer.setAttribute('position', new THREE.BufferAttribute(pointsVertices, 3));
         const points = new THREE.Points(pointsBuffer);
         points.material = materials.build({
-            category: PaletteCategory.DECORATION_SPECKLE,
+            category: PaletteCategory.SCENERY_SPECKLE,
             shaded: false,
             depthWrite: false
         });

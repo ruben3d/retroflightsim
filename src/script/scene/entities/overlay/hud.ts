@@ -18,7 +18,7 @@ export class HUDEntity implements Entity {
         //
     }
 
-    render(painter: CanvasPainter, palette: Palette): void {
+    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         painter.text(H_RES - 1, V_RES / 2, this.toFeet(this.actor.position.y).toFixed(0), palette.colors[PaletteCategory.HUD_TEXT], TextAlignment.RIGHT);
     }
 

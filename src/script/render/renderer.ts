@@ -8,6 +8,11 @@ export interface RendererOptions {
     textColors?: string[];
 }
 
+export interface RenderLayer {
+    camera: THREE.Camera;
+    lists: string[];
+}
+
 export class Renderer {
     private container: HTMLElement;
     private renderer: THREE.WebGL1Renderer;
@@ -48,11 +53,12 @@ export class Renderer {
         this.palette = palette;
     }
 
-    render(scene: Scene, tmpHack: (r: THREE.Renderer) => void) {
+    render(scene: Scene, renderLayers: RenderLayer, tmpHack: (r: THREE.Renderer) => void) {
         // 2D overlay
         this.painter.clear();
-        scene.render(this.painter, this.palette);
         this.canvasTexture.needsUpdate = true;
+
+        scene.buildRenderListsAndPaintCanvas(this.painter, this.palette);
 
         // Main 3D scene
         this.renderer.setRenderTarget(this.sceneRenderTarget);
@@ -60,6 +66,7 @@ export class Renderer {
         this.renderer.setClearColor(this.palette.colors[PaletteCategory.BACKGROUND]);
         this.renderer.clear();
         tmpHack(this.renderer);
+        renderLayers.lists.forEach(id => this.renderer.render(scene.getLayer(id), renderLayers.camera));
 
         // Compose all
         this.renderer.setRenderTarget(null);

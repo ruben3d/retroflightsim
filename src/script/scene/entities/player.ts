@@ -90,7 +90,7 @@ export class PlayerEntity implements Entity {
         this.camera.quaternion.copy(this.obj.quaternion);
     }
 
-    render(painter: CanvasPainter, palette: Palette): void {
+    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         //
     }
 

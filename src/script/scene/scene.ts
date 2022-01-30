@@ -3,10 +3,16 @@ import { CanvasPainter } from '../render/screen/canvasPainter';
 import { Entity } from './entity';
 import { Palette } from './palettes/palette';
 
+export const UP = new THREE.Vector3(0, 1, 0);
+
+export enum SceneLayers {
+    EntityFlats = 'EntityFlats',
+    EntityVolumes = 'EntityVolumes'
+}
 
 export class Scene {
 
-    private scenes: Map<string, THREE.Scene> = new Map();
+    private layers: Map<string, THREE.Scene> = new Map();
     private entities: Entity[] = [];
 
     update(delta: number) {
@@ -15,9 +21,12 @@ export class Scene {
         }
     }
 
-    render(painter: CanvasPainter, palette: Palette) {
+    buildRenderListsAndPaintCanvas(painter: CanvasPainter, palette: Palette) {
+        this.getLayer(SceneLayers.EntityFlats).clear();
+        this.getLayer(SceneLayers.EntityVolumes).clear();
+
         for (let i = 0; i < this.entities.length; i++) {
-            this.entities[i].render(painter, palette);
+            this.entities[i].render(this.layers, painter, palette);
         }
     }
 
@@ -26,11 +35,11 @@ export class Scene {
         entity.init(this);
     }
 
-    getScene(id: string): THREE.Scene {
-        let scene = this.scenes.get(id);
+    getLayer(id: string): THREE.Scene {
+        let scene = this.layers.get(id);
         if (!scene) {
             scene = new THREE.Scene();
-            this.scenes.set(id, scene);
+            this.layers.set(id, scene);
         }
         return scene;
     }
