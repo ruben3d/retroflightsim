@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { MAX_HEIGHT, MIN_HEIGHT, PITCH_RATE, ROLL_RATE, SPEED, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, YAW_RATE } from '../../defs';
+import { MAX_HEIGHT, COCKPIT_HEIGHT, PITCH_RATE, ROLL_RATE, SPEED, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, YAW_RATE } from '../../defs';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity } from "../entity";
 import { Palette } from "../palettes/palette";
-import { Scene } from "../scene";
+import { Scene, UP } from "../scene";
 
 
 enum Stick {
@@ -67,8 +67,8 @@ export class PlayerEntity implements Entity {
         this.obj.translateZ(-SPEED * delta);
 
         // Avoid ground crashes
-        if (this.obj.position.y < MIN_HEIGHT) {
-            this.obj.position.y = MIN_HEIGHT;
+        if (this.obj.position.y < 0) {
+            this.obj.position.y = 0;
             const d = this.obj.getWorldDirection(new THREE.Vector3());
             d.setY(0).add(this.obj.position);
             this.obj.lookAt(d);
@@ -86,7 +86,7 @@ export class PlayerEntity implements Entity {
         if (this.obj.position.z > modelHalfSize) this.obj.position.z = -modelHalfSize;
         if (this.obj.position.z < -modelHalfSize) this.obj.position.z = modelHalfSize;
 
-        this.camera.position.copy(this.obj.position);
+        this.camera.position.copy(this.obj.position).addScaledVector(UP, COCKPIT_HEIGHT);
         this.camera.quaternion.copy(this.obj.quaternion);
     }
 

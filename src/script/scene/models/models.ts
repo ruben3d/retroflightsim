@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { assertIsDefined } from '../../../utils/asserts';
+import { assertIsDefined } from '../../utils/asserts';
 import { SceneMaterialManager } from '../materials/materials';
 import { PaletteCategory, PaletteTime } from '../palettes/palette';
 import { updateUniforms } from '../utils';

@@ -9,5 +9,5 @@ export const PITCH_RATE = Math.PI / 6; // Radians/s
 export const ROLL_RATE = Math.PI / 4; // Radians/s
 export const YAW_RATE = Math.PI / 16; // Radians/s
 export const SPEED = 200.0; // World units/s
-export const MIN_HEIGHT = 3; // World units
+export const COCKPIT_HEIGHT = 3; // World units
 export const MAX_HEIGHT = 1000; // World units

@@ -9,7 +9,7 @@ import { SpecklesEntity } from './scene/entities/speckles';
 import { updateUniforms } from './scene/utils';
 import { HUDEntity } from './scene/entities/overlay/hud';
 import { Renderer } from './render/renderer';
-import { H_RES, MIN_HEIGHT, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from './defs';
+import { H_RES, COCKPIT_HEIGHT, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from './defs';
 import { PlayerEntity } from './scene/entities/player';
 import { ModelManager } from './scene/models/models';
 import { StaticSceneryEntity } from './scene/entities/staticScenery';
@@ -20,7 +20,7 @@ let renderer: Renderer | undefined;
 
 // Scene
 
-const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, MIN_HEIGHT, 20000);
+const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, COCKPIT_HEIGHT, 20000);
 const decorationScene: THREE.Scene = new THREE.Scene();
 const groundScene: THREE.Scene = new THREE.Scene();
 const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 100, 500000);
@@ -94,7 +94,7 @@ function setupScene() {
         const grass = terrain.get('grass')!;
         const hill = new THREE.ConeBufferGeometry(350, 150, 4).toNonIndexed();
         hill.computeVertexNormals();
-        hill.translate(0, 75 - MIN_HEIGHT, 0);
+        hill.translate(0, 75 - COCKPIT_HEIGHT, 0);
         for (let i = 0; i < 40; i++) {
             const mesh = new THREE.Mesh(hill, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({
@@ -113,7 +113,7 @@ function setupScene() {
         const darkLand = terrain.get('darkland')!;
         const mountain = new THREE.ConeBufferGeometry(700, 300, 4).toNonIndexed();
         mountain.computeVertexNormals();
-        mountain.translate(0, 150 - MIN_HEIGHT, 0);
+        mountain.translate(0, 150 - COCKPIT_HEIGHT, 0);
         for (let i = 0; i < 30; i++) {
             const mesh = new THREE.Mesh(mountain, new THREE.MeshBasicMaterial());
             applyMaterial(mesh, localMaterials.build({

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { assertIsDefined } from '../../../utils/asserts';
+import { assertIsDefined } from '../../utils/asserts';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity } from "../entity";
 import { matchesPaletteTime, Model } from '../models/models';

@@ -1,6 +1,6 @@
-const CHAR_WIDTH = 3;
-const CHAR_HEIGHT = 5;
-const CHAR_MARGIN = 1;
+export const CHAR_WIDTH = 3;
+export const CHAR_HEIGHT = 5;
+export const CHAR_MARGIN = 1;
 
 const ASCII_0 = 48;
 const ASCII_BIG_A = 65;

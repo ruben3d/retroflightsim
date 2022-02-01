@@ -1,7 +1,7 @@
 import { Palette, PaletteCategory, PaletteColors, PaletteTime, PaletteValues } from "./palette";
 
 const colors: PaletteColors = {
-    [PaletteCategory.HUD_TEXT]: '', // Use default
+    [PaletteCategory.HUD_TEXT]: '#FFFFFF',
 
     [PaletteCategory.BACKGROUND]: '#D3D3D3',
 

@@ -5,7 +5,7 @@ import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
 import { SceneMaterialManager } from '../materials/materials';
 import { CanvasPainter } from '../../render/screen/canvasPainter';
-import { assertIsDefined } from '../../../utils/asserts';
+import { assertIsDefined } from '../../utils/asserts';
 
 const POINT_COORDS = 3; // ! DO NOT CHANGE
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
