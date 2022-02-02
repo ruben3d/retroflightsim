@@ -9,6 +9,12 @@ class BatchCanvasPainter {
         return this;
     }
 
+    vLine(x: number, y0: number, y1: number): BatchCanvasPainter {
+        this.ctx.moveTo(x + 0.5, y0);
+        this.ctx.lineTo(x + 0.5, y1 + 1);
+        return this;
+    }
+
     commit() {
         this.ctx.stroke();
     }
@@ -18,7 +24,7 @@ class ClipCanvasPainter {
     constructor(private ctx: CanvasRenderingContext2D) { }
 
     rectangle(x: number, y: number, width: number, height: number): ClipCanvasPainter {
-        this.ctx.rect(x + 0.5, y, width - 1, height - 1);
+        this.ctx.rect(x, y, width - 1, height - 1);
         return this;
     }
 
@@ -65,6 +71,12 @@ export class CanvasPainter {
     hLine(x0: number, x1: number, y: number) {
         this.batch()
             .hLine(x0, x1, y)
+            .commit();
+    }
+
+    vLine(x: number, y0: number, y1: number) {
+        this.batch()
+            .vLine(x, y0, y1)
             .commit();
     }
 

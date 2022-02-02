@@ -51,6 +51,7 @@ const LetterMap = new Map<number, { col: number, row: number }>([
 ]);
 
 export enum TextAlignment {
+    CENTER,
     LEFT,
     RIGHT
 }
@@ -72,7 +73,12 @@ export class TextRenderer {
 
     text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment) {
         const canvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
-        const x0 = alignment === TextAlignment.LEFT ? x : x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
+        let x0 = x;
+        if (alignment === TextAlignment.RIGHT) {
+            x0 = x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
+        } else if (alignment === TextAlignment.CENTER) {
+            x0 = x - Math.floor((text.length * CHAR_WIDTH + (text.length - 1) * CHAR_MARGIN) / 2);
+        }
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
             const { srcX, srcY } = this.codeToCoords(c);

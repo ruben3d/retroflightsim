@@ -4,6 +4,8 @@ import { Entity } from './entity';
 import { Palette } from './palettes/palette';
 
 export const UP = new THREE.Vector3(0, 1, 0);
+export const FORWARD = new THREE.Vector3(0, 0, -1);
+export const RIGHT = new THREE.Vector3(1, 0, 0);
 
 export enum SceneLayers {
     EntityFlats = 'EntityFlats',
