@@ -23,6 +23,8 @@ export class PlayerEntity implements Entity {
     private throttleState: Stick = Stick.IDLE;
     private throttle: number = 0; // [0, 1]
 
+    private speed: number = 0;
+
     // Bearing increases CCW, radians
     constructor(private camera: THREE.Camera, position: THREE.Vector3, bearing: number) {
         this.obj.position.copy(position);
@@ -96,6 +98,8 @@ export class PlayerEntity implements Entity {
 
         this.camera.position.copy(this.obj.position).addScaledVector(UP, COCKPIT_HEIGHT);
         this.camera.quaternion.copy(this.obj.quaternion);
+
+        this.speed = this.throttle * MAX_SPEED;
     }
 
     render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -120,6 +124,10 @@ export class PlayerEntity implements Entity {
 
     get throttleUnit(): number {
         return this.throttle;
+    }
+
+    get rawSpeed(): number {
+        return this.speed;
     }
 
     private setupInput() {
