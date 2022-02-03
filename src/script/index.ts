@@ -167,7 +167,7 @@ function setupScene() {
 
     addAirBase(scene, models);
 
-    const player = new PlayerEntity(camera, new THREE.Vector3(0, 150, 0), 0);
+    const player = new PlayerEntity(camera, new THREE.Vector3(1500, 0, -1160), Math.PI);
     scene.add(player);
 
     const hud = new HUDEntity(player);
@@ -205,7 +205,8 @@ function addAirBase(scene: Scene, models: ModelManager) {
     scene.add(hangar3);
 
     const hangar4 = new StaticSceneryEntity(models.getModel('assets/hangar01.gltf'));
-    hangar4.position.set(1670, 0, -920);
+    hangar4.position.set(1670, 0, -810);
+    hangar4.quaternion.setFromAxisAngle(UP, Math.PI);
     scene.add(hangar4);
 
     const tower = new StaticSceneryEntity(models.getModel('assets/control01.gltf'));

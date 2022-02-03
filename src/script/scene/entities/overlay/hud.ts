@@ -33,6 +33,7 @@ export class HUDEntity implements Entity {
 
     private bearing: number = 0; // degrees, 0 is North, increases CW
     private altitude: number = 0; // feet
+    private throttle: number = 0; // Normalised percentage [0, 1]
 
     private tmpVector = new THREE.Vector3();
 
@@ -51,6 +52,8 @@ export class HUDEntity implements Entity {
         if (this.bearing < 0) {
             this.bearing = 360 + this.bearing;
         }
+
+        this.throttle = this.actor.throttleUnit;
     }
 
     render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -58,6 +61,7 @@ export class HUDEntity implements Entity {
 
         this.renderAltitude(painter, palette);
         this.renderBearing(painter, palette);
+        this.renderThrottle(painter, palette);
     }
 
     private renderAltitude(painter: CanvasPainter, palette: Palette) {
@@ -139,6 +143,10 @@ export class HUDEntity implements Entity {
 
     private getBearingDisplay(n: number): string {
         return `00${(((n % 360) + 360) % 360).toFixed(0)}`.slice(-3);
+    }
+
+    private renderThrottle(painter: CanvasPainter, palette: Palette) {
+        painter.text(2, 2, `THR: ${(100 * this.throttle).toFixed(0)}`, palette.colors.HUD_TEXT);
     }
 
     private toFeet(meters: number): number {

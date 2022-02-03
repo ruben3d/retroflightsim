@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MAX_HEIGHT, COCKPIT_HEIGHT, PITCH_RATE, ROLL_RATE, SPEED, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, YAW_RATE } from '../../defs';
+import { COCKPIT_HEIGHT, MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity } from "../entity";
 import { Palette } from "../palettes/palette";
@@ -19,6 +19,9 @@ export class PlayerEntity implements Entity {
     private yawState: Stick = Stick.IDLE;
 
     private obj = new THREE.Object3D();
+
+    private throttleState: Stick = Stick.IDLE;
+    private throttle: number = 0; // [0, 1]
 
     // Bearing increases CCW, radians
     constructor(private camera: THREE.Camera, position: THREE.Vector3, bearing: number) {
@@ -63,8 +66,13 @@ export class PlayerEntity implements Entity {
             this.obj.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), sign * prjUp.length() * prjUp.length() * prjForward.length() * 2.0 * YAW_RATE * delta);
         }
 
+        // Throttle
+        if (this.throttleState !== Stick.IDLE) {
+            this.throttle = Math.min(1.0, Math.max(0, this.throttle + delta * 0.01 * (this.throttleState === Stick.POSITIVE ? THROTTLE_RATE : - THROTTLE_RATE)));
+        }
+
         // Movement
-        this.obj.translateZ(-SPEED * delta);
+        this.obj.translateZ(-MAX_SPEED * this.throttle * delta);
 
         // Avoid ground crashes
         if (this.obj.position.y < 0) {
@@ -75,8 +83,8 @@ export class PlayerEntity implements Entity {
         }
 
         // Avoid flying too high
-        if (this.obj.position.y > MAX_HEIGHT) {
-            this.obj.position.y = MAX_HEIGHT;
+        if (this.obj.position.y > MAX_ALTITUDE) {
+            this.obj.position.y = MAX_ALTITUDE;
         }
 
         // Avoid flying out of bounds, wraps around
@@ -110,6 +118,10 @@ export class PlayerEntity implements Entity {
         return this.obj.quaternion;
     }
 
+    get throttleUnit(): number {
+        return this.throttle;
+    }
+
     private setupInput() {
         document.addEventListener('keydown', (event: KeyboardEvent) => {
             switch (event.key) {
@@ -135,6 +147,14 @@ export class PlayerEntity implements Entity {
                 }
                 case 'e': {
                     this.yawState = Stick.NEGATIVE;
+                    break;
+                }
+                case 'z': {
+                    this.throttleState = Stick.POSITIVE;
+                    break;
+                }
+                case 'x': {
+                    this.throttleState = Stick.NEGATIVE;
                     break;
                 }
             }
@@ -178,6 +198,18 @@ export class PlayerEntity implements Entity {
                     }
                     break;
                 }
+                case 'z': {
+                    if (this.throttleState === Stick.POSITIVE) {
+                        this.throttleState = Stick.IDLE;
+                    }
+                    break;
+                }
+                case 'x': {
+                    if (this.throttleState === Stick.NEGATIVE) {
+                        this.throttleState = Stick.IDLE;
+                    }
+                    break;
+                }
             }
         });
 
@@ -185,6 +217,7 @@ export class PlayerEntity implements Entity {
             this.pitchState = Stick.IDLE;
             this.rollState = Stick.IDLE;
             this.yawState = Stick.IDLE;
+            this.throttleState = Stick.IDLE;
         });
     }
 }
