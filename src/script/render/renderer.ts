@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { H_RES, V_RES } from '../defs';
 import { DefaultPalette, Palette, PaletteCategory } from '../scene/palettes/palette';
-import { Scene } from '../scene/scene';
+import { Scene, SceneLayers } from '../scene/scene';
+import { assertIsDefined } from '../utils/asserts';
 import { CanvasPainter } from './screen/canvasPainter';
 
 export interface RendererOptions {
@@ -9,6 +10,7 @@ export interface RendererOptions {
 }
 
 export interface RenderLayer {
+    // target: ;
     camera: THREE.Camera;
     lists: string[];
 }
@@ -22,6 +24,8 @@ export class Renderer {
     private canvasTexture: THREE.CanvasTexture;
     private painter: CanvasPainter;
     private palette: Palette = DefaultPalette;
+    private renderLists: Map<string, THREE.Scene>;
+    private currentRenderLists: Map<string, THREE.Scene> = new Map();
 
     constructor(options?: RendererOptions) {
         const container = document.getElementById('container');
@@ -47,26 +51,41 @@ export class Renderer {
         });
         this.canvasTexture = new THREE.CanvasTexture(canvas, undefined, undefined, undefined, THREE.NearestFilter, THREE.NearestFilter);
         this.setupCompose(this.sceneRenderTarget, this.canvasTexture);
+
+        this.renderLists = new Map(Object.keys(SceneLayers).map(id => ([id, new THREE.Scene()])));
     }
 
     setPalette(palette: Palette) {
         this.palette = palette;
     }
 
-    render(scene: Scene, renderLayers: RenderLayer, tmpHack: (r: THREE.Renderer) => void) {
-        // 2D overlay
+    render(scene: Scene, renderLayers: RenderLayer[], tmpHack: (r: THREE.Renderer) => void) {
+        // Setup 2D overlay
         this.painter.clear();
         this.canvasTexture.needsUpdate = true;
 
-        scene.buildRenderListsAndPaintCanvas(this.painter, this.palette);
-
-        // Main 3D scene
+        // Render layers
         this.renderer.setRenderTarget(this.sceneRenderTarget);
-
         this.renderer.setClearColor(this.palette.colors[PaletteCategory.BACKGROUND]);
         this.renderer.clear();
+
         tmpHack(this.renderer);
-        renderLayers.lists.forEach(id => this.renderer.render(scene.getLayer(id), renderLayers.camera));
+
+        for (const layer of renderLayers) {
+            this.currentRenderLists.clear();
+            for (const listId of layer.lists) {
+                const list = this.renderLists.get(listId);
+                assertIsDefined(list);
+                list.clear();
+                this.currentRenderLists.set(listId, list);
+            }
+            scene.buildRenderListsAndPaintCanvas(layer.camera, this.currentRenderLists, this.painter, this.palette);
+            for (const listId of layer.lists) {
+                const list = this.currentRenderLists.get(listId);
+                assertIsDefined(list);
+                this.renderer.render(list, layer.camera);
+            }
+        }
 
         // Compose all
         this.renderer.setRenderTarget(null);

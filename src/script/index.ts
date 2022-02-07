@@ -162,7 +162,7 @@ function setupScene() {
         });
     });
 
-    const speckles = new SpecklesEntity(camera, materials);
+    const speckles = new SpecklesEntity(materials);
     scene.add(speckles);
 
     addAirBase(scene, models);
@@ -175,17 +175,17 @@ function setupScene() {
 }
 
 function addAirBase(scene: Scene, models: ModelManager) {
-    const hangarGround1 = new StaticSceneryEntity(models.getModel('lib:pavement'));
+    const hangarGround1 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
     hangarGround1.position.set(1360, 0, -860);
     hangarGround1.scale.set(200, 0, 200);
     scene.add(hangarGround1);
 
-    const hangarGround2 = new StaticSceneryEntity(models.getModel('lib:pavement'));
+    const hangarGround2 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
     hangarGround2.position.set(1640, 0, -860);
     hangarGround2.scale.set(200, 0, 200);
     scene.add(hangarGround2);
 
-    const runway = new StaticSceneryEntity(models.getModel('assets/runway01.gltf'));
+    const runway = new StaticSceneryEntity(models.getModel('assets/runway01.gltf'), 1);
     runway.position.set(1500, 0, -800);
     scene.add(runway);
 
@@ -267,10 +267,10 @@ function loop() {
     updateScene(delta);
     renderer?.render(
         scene,
-        {
+        [{
             camera: camera,
-            lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
-        },
+            lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes, SceneLayers.Overlay]
+        }],
         // TODO This horrible hack will be reduced until it disappears eventually...
         (r: THREE.Renderer) => {
             r.render(bgSkyScene, bgSkyCamera);

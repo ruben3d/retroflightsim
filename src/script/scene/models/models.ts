@@ -5,9 +5,14 @@ import { SceneMaterialManager } from '../materials/materials';
 import { PaletteCategory, PaletteTime } from '../palettes/palette';
 import { updateUniforms } from '../utils';
 
-export interface Model {
+export interface ModelLodLevel {
     flats: THREE.Object3D[];
     volumes: THREE.Object3D[];
+};
+
+export interface Model {
+    lod: ModelLodLevel[];
+    maxSize: number;
 }
 
 export const LIB_PREFFIX = 'lib:';
@@ -105,46 +110,60 @@ export class ModelManager {
     }
 
     private processModel(gltf: GLTF, model: Model): Model {
-        gltf.scene.traverse(child => {
-            if ('isGroup' in child) return;
-            const obj = child as THREE.Mesh | THREE.LineSegments | THREE.Points;
+        const scenes = [...gltf.scenes];
+        const AABBox = new THREE.Box3();
+        model.lod = scenes.sort(this.sortingFn).map(scene => {
+            const level: ModelLodLevel = {
+                flats: [],
+                volumes: []
+            };
+            scene.traverse(child => {
+                if ('isGroup' in child) return;
+                const obj = child as THREE.Mesh | THREE.LineSegments | THREE.Points;
 
-            obj.geometry.computeBoundingBox();
-            obj.onBeforeRender = updateUniforms;
+                obj.geometry.computeBoundingBox();
+                obj.onBeforeRender = updateUniforms;
 
-            const isFlat = isZero(obj.geometry.boundingBox?.max.y || 0.0);
-            if (isFlat) {
-                model.flats.push(obj);
-            } else {
-                model.volumes.push(obj);
-            }
+                const localAABB = obj.geometry.boundingBox;
+                assertIsDefined(localAABB);
+                AABBox.union(localAABB);
 
-            if ('isMesh' in obj) {
-                obj.material = this.materials.build({
-                    category: (obj.material as THREE.MeshStandardMaterial).name as PaletteCategory,
-                    shaded: !isFlat,
-                    depthWrite: !isFlat,
-                    point: false
-                });
-            } else if ('isLineSegments' in child) {
-                obj.material = this.materials.build({
-                    category: (obj.material as THREE.LineBasicMaterial).name as PaletteCategory,
-                    shaded: false,
-                    depthWrite: !isFlat,
-                    point: false
-                });
-            } else if ('isPoints' in child) {
-                obj.material = this.materials.build({
-                    category: (obj.material as THREE.PointsMaterial).name as PaletteCategory,
-                    shaded: false,
-                    depthWrite: !isFlat,
-                    point: true
-                });
-            }
+                const isFlat = isZero(localAABB.max.y || 0.0);
+                if (isFlat) {
+                    level.flats.push(obj);
+                } else {
+                    level.volumes.push(obj);
+                }
+
+                if ('isMesh' in obj) {
+                    obj.material = this.materials.build({
+                        category: (obj.material as THREE.MeshStandardMaterial).name as PaletteCategory,
+                        shaded: !isFlat,
+                        depthWrite: !isFlat,
+                        point: false
+                    });
+                } else if ('isLineSegments' in child) {
+                    obj.material = this.materials.build({
+                        category: (obj.material as THREE.LineBasicMaterial).name as PaletteCategory,
+                        shaded: false,
+                        depthWrite: !isFlat,
+                        point: false
+                    });
+                } else if ('isPoints' in child) {
+                    obj.material = this.materials.build({
+                        category: (obj.material as THREE.PointsMaterial).name as PaletteCategory,
+                        shaded: false,
+                        depthWrite: !isFlat,
+                        point: true
+                    });
+                }
+            });
+
+            level.flats.sort(this.sortingFn);
+            level.volumes.sort(this.sortingFn);
+            return level;
         });
-
-        model.flats.sort(this.sortingFn);
-        model.volumes.sort(this.sortingFn);
+        model.maxSize = Math.max(...AABBox.getSize(new THREE.Vector3()).toArray());
         return model;
     }
 
@@ -153,11 +172,14 @@ export class ModelManager {
     }
 
     private empty(): Model {
-        return { flats: [], volumes: [] };
+        return { lod: [], maxSize: 0 };
     }
 
     private copyTo(src: Model, dst: Model) {
-        src.flats.forEach(obj => dst.flats.push(obj.clone()));
-        src.volumes.forEach(obj => dst.volumes.push(obj.clone()));
+        dst.lod = src.lod.map(level => ({
+            flats: level.flats.map(obj => obj.clone()),
+            volumes: level.volumes.map(obj => obj.clone())
+        }));
+        dst.maxSize = src.maxSize;
     }
 }

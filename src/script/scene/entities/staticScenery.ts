@@ -1,17 +1,21 @@
 import * as THREE from 'three';
-import { assertIsDefined } from '../../utils/asserts';
+import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity } from "../entity";
-import { matchesPaletteTime, Model } from '../models/models';
+import { Model } from '../models/models';
 import { Palette } from "../palettes/palette";
 import { Scene, SceneLayers } from "../scene";
 
+
 export class StaticSceneryEntity implements Entity {
-    constructor(private model: Model) { }
+
+    private lodHelper: LODHelper;
+
+    constructor(private model: Model, lodBias: number = DEFAULT_LOD_BIAS) {
+        this.lodHelper = new LODHelper(model, lodBias);
+    }
 
     private obj: THREE.Object3D = new THREE.Object3D();
-    private objFlats: THREE.Object3D = new THREE.Object3D();
-    private objVolumes: THREE.Object3D = new THREE.Object3D();
 
     set position(p: THREE.Vector3) {
         this.obj.position.copy(p);
@@ -45,27 +49,10 @@ export class StaticSceneryEntity implements Entity {
         //
     }
 
-    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
-        if (this.model.flats.length > 0) {
-            this.subRender(this.objFlats, this.model.flats, SceneLayers.EntityFlats, layers, palette);
-        }
-        if (this.model.volumes.length > 0) {
-            this.subRender(this.objVolumes, this.model.volumes, SceneLayers.EntityVolumes, layers, palette);
-        }
-    }
-
-    private subRender(dst: THREE.Object3D, collection: THREE.Object3D[], layerId: SceneLayers, layers: Map<string, THREE.Scene>, palette: Palette) {
-        const layer = layers.get(layerId);
-        assertIsDefined(layer);
-        dst.clear();
-        collection.forEach(m => {
-            if (matchesPaletteTime(m, palette.time)) {
-                dst.add(m);
-            }
-        });
-        dst.position.copy(this.position);
-        dst.quaternion.copy(this.quaternion);
-        dst.scale.copy(this.scale);
-        layer.add(dst);
+    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+        this.lodHelper.addToRenderList(
+            this.position, this.quaternion, this.scale,
+            camera, palette,
+            SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
     }
 }

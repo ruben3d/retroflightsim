@@ -102,7 +102,7 @@ export class PlayerEntity implements Entity {
         this.speed = this.throttle * MAX_SPEED;
     }
 
-    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         //
     }
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { CHAR_HEIGHT, CHAR_MARGIN, CHAR_WIDTH, TextAlignment } from "../../../render/screen/text";
-import { FORWARD, Scene } from "../../scene";
+import { FORWARD, Scene, SceneLayers } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette, PaletteCategory } from "../../palettes/palette";
 import { H_RES, V_RES } from "../../../defs";
@@ -68,7 +68,9 @@ export class HUDEntity implements Entity {
         this.speed = this.toKnots(this.actor.rawSpeed);
     }
 
-    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+        if (!lists.has(SceneLayers.Overlay)) return;
+
         painter.setColor(palette.colors.HUD_TEXT);
 
         this.renderAltitude(painter, palette);

@@ -6,5 +6,5 @@ import { Scene } from './scene';
 export interface Entity {
     init(scene: Scene): void;
     update(delta: number): void;
-    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void;
+    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void;
 }

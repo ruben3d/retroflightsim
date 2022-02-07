@@ -18,8 +18,11 @@ export class PavementModelLibBuilder implements ModelLibBuilder {
         }));
         mesh.onBeforeRender = updateUniforms;
         return {
-            flats: [mesh],
-            volumes: []
-        }
+            lod: [{
+                flats: [mesh],
+                volumes: []
+            }],
+            maxSize: 2
+        };
     }
 }

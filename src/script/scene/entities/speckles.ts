@@ -7,18 +7,23 @@ import { SceneMaterialManager } from '../materials/materials';
 import { CanvasPainter } from '../../render/screen/canvasPainter';
 import { assertIsDefined } from '../../utils/asserts';
 
-const POINT_COORDS = 3; // ! DO NOT CHANGE
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
 const TILE_SIZE = 1024.0; // World units
 const JITTER = 0.75; // [0,1] - 0 disabled, 1 cell edge. Applies a random offset to the speck of dust within its cell
 
 const FIELD_SIZE = 7; // Tiles, odd numbers only
 
+// ! DO NOT CHANGE THESE
+const POINT_COORDS = 3;
+const MIN = Math.ceil(-FIELD_SIZE / 2);
+const MAX = Math.ceil(FIELD_SIZE / 2);
+const SPAN = FIELD_SIZE * TILE_SIZE;
+
 export class SpecklesEntity implements Entity {
 
     private tiles: THREE.Points[] = Array(FIELD_SIZE * FIELD_SIZE);
 
-    constructor(private camera: THREE.Camera, materials: SceneMaterialManager) {
+    constructor(materials: SceneMaterialManager) {
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = this.buildTile(materials);
         }
@@ -29,22 +34,22 @@ export class SpecklesEntity implements Entity {
     }
 
     update(delta: number): void {
-        const min = Math.ceil(-FIELD_SIZE / 2);
-        const max = Math.ceil(FIELD_SIZE / 2);
-        const span = FIELD_SIZE * TILE_SIZE;
-        let idx = 0;
-        for (let row = min; row < max; row++) {
-            for (let col = min; col < max; col++) {
-                const tile = this.tiles[idx++];
-                tile.position.x = Math.floor((this.camera.position.x + col * TILE_SIZE) / span + 0.5) * span - col * TILE_SIZE;
-                tile.position.z = Math.floor((this.camera.position.z + row * TILE_SIZE) / span + 0.5) * span - row * TILE_SIZE;
-            }
-        }
+        //
     }
 
-    render(layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         const layer = layers.get(SceneLayers.EntityFlats);
-        assertIsDefined(layer);
+        if (!layer) return;
+
+        let idx = 0;
+        for (let row = MIN; row < MAX; row++) {
+            for (let col = MIN; col < MAX; col++) {
+                const tile = this.tiles[idx++];
+                tile.position.x = Math.floor((camera.position.x + col * TILE_SIZE) / SPAN + 0.5) * SPAN - col * TILE_SIZE;
+                tile.position.z = Math.floor((camera.position.z + row * TILE_SIZE) / SPAN + 0.5) * SPAN - row * TILE_SIZE;
+            }
+        }
+
         this.tiles.forEach(tile => layer.add(tile));
     }
 
