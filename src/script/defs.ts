@@ -11,4 +11,4 @@ export const YAW_RATE = Math.PI / 16; // Radians/s
 export const MAX_SPEED = 250.0; // World units/s
 export const THROTTLE_RATE = 25; // Percentage of maximum/s [0,100]
 export const COCKPIT_HEIGHT = 4; // World units
-export const MAX_ALTITUDE = 1000; // World units
+export const MAX_ALTITUDE = 2000; // World units

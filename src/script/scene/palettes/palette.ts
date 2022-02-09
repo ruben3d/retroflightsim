@@ -17,8 +17,8 @@ export enum PaletteCategory {
     TERRAIN_GRASS = 'TERRAIN_GRASS',
     TERRAIN_WATER = 'TERRAIN_WATER',
     TERRAIN_SHALLOW_WATER = 'TERRAIN_SHALLOW_WATER',
-    DECORATION_MOUNTAIN_GRASS = 'DECORATION_MOUNTAIN_GRASS',
-    DECORATION_MOUNTAIN_BARE = 'DECORATION_MOUNTAIN_BARE',
+    SCENERY_MOUNTAIN_GRASS = 'SCENERY_MOUNTAIN_GRASS',
+    SCENERY_MOUNTAIN_BARE = 'SCENERY_MOUNTAIN_BARE',
 
     LIGHT_RED = 'LIGHT_RED',
     LIGHT_GREEN = 'LIGHT_GREEN',
@@ -103,8 +103,8 @@ const defaultPaletteColors: PaletteColors = {
     [PaletteCategory.TERRAIN_GRASS]: '#00ff00',
     [PaletteCategory.TERRAIN_WATER]: '#0000ff',
     [PaletteCategory.TERRAIN_SHALLOW_WATER]: '#4040ff',
-    [PaletteCategory.DECORATION_MOUNTAIN_GRASS]: '#00ff00',
-    [PaletteCategory.DECORATION_MOUNTAIN_BARE]: '#aa5b00',
+    [PaletteCategory.SCENERY_MOUNTAIN_GRASS]: '#00ff00',
+    [PaletteCategory.SCENERY_MOUNTAIN_BARE]: '#aa5b00',
 
     [PaletteCategory.LIGHT_RED]: '#FF0000',
     [PaletteCategory.LIGHT_GREEN]: '#00FF00',

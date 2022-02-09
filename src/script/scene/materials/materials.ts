@@ -35,16 +35,20 @@ export interface SceneShadedMaterialUniforms {
     [uniform: string]: THREE.IUniform<any>;
 }
 
-export type SceneMaterialData = SceneFlatMaterialData | SceneShadedMaterialData;
+export type SceneMaterialData = SceneCommonMaterialData & (SceneFlatMaterialData | SceneShadedMaterialData);
+
+export interface SceneCommonMaterialData {
+    category: PaletteCategory;
+    depthWrite: boolean;
+    point: boolean;
+}
 
 export interface SceneFlatMaterialData {
     shaded: false;
-    type: PaletteCategory;
 }
 
 export interface SceneShadedMaterialData {
     shaded: true;
-    type: PaletteCategory;
 }
 
 export class SceneMaterialManager {
@@ -104,7 +108,9 @@ export class SceneMaterialManager {
     private buildData(properties: SceneMaterialProperties): SceneMaterialData {
         return {
             shaded: properties.shaded,
-            type: properties.category
+            category: properties.category,
+            depthWrite: properties.depthWrite,
+            point: this.isPoint(properties)
         };
     }
 
@@ -150,7 +156,7 @@ export class SceneMaterialManager {
         this.materials.forEach(m => {
             const d = m.userData as SceneMaterialData;
             const u = m.uniforms as SceneMaterialUniforms;
-            const c = d.type;
+            const c = d.category;
             u.color.value.setStyle(palette.colors[c]);
             u.fogDensity.value = palette.values[FogValueCategory(c)];
             u.fogColor.value.setStyle(palette.colors[FogColorCategory(c)]);

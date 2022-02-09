@@ -90,11 +90,11 @@ export class PlayerEntity implements Entity {
         }
 
         // Avoid flying out of bounds, wraps around
-        const modelHalfSize = TERRAIN_MODEL_SIZE * 0.5 * TERRAIN_SCALE;
-        if (this.obj.position.x > modelHalfSize) this.obj.position.x = -modelHalfSize;
-        if (this.obj.position.x < -modelHalfSize) this.obj.position.x = modelHalfSize;
-        if (this.obj.position.z > modelHalfSize) this.obj.position.z = -modelHalfSize;
-        if (this.obj.position.z < -modelHalfSize) this.obj.position.z = modelHalfSize;
+        const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
+        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
+        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
+        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
+        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
 
         this.camera.position.copy(this.obj.position).addScaledVector(UP, COCKPIT_HEIGHT);
         this.camera.quaternion.copy(this.obj.quaternion);

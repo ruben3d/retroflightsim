@@ -14,14 +14,16 @@ import { PlayerEntity } from './scene/entities/player';
 import { ModelManager } from './scene/models/models';
 import { StaticSceneryEntity } from './scene/entities/staticScenery';
 import { PavementModelLibBuilder } from './scene/models/lib/pavementModelBuilder';
+import { HillModelLibBuilder } from './scene/models/lib/hillModelBuilder';
+import { assertIsDefined } from './utils/asserts';
+import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 
 
 let renderer: Renderer | undefined;
 
 // Scene
 
-const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, COCKPIT_HEIGHT, 20000);
-const decorationScene: THREE.Scene = new THREE.Scene();
+const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, COCKPIT_HEIGHT, 40000);
 const groundScene: THREE.Scene = new THREE.Scene();
 const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 100, 500000);
 const bgGroundScene: THREE.Scene = new THREE.Scene();
@@ -61,7 +63,11 @@ function setupControls() {
 
 function setupScene() {
     materials = new SceneMaterialManager(NoonPalette);
-    models = new ModelManager(materials, [new PavementModelLibBuilder()]);
+    models = new ModelManager(materials, [
+        new PavementModelLibBuilder(),
+        new HillModelLibBuilder(),
+        new MountainModelLibBuilder()
+    ]);
     const localMaterials = materials;
 
     const groundGeometry = new THREE.PlaneGeometry(1000000, 1000000, 1, 1);
@@ -90,43 +96,29 @@ function setupScene() {
 
     const terrain: Map<string, THREE.Object3D<THREE.Event>> = new Map();
     const loadingManager = new THREE.LoadingManager(() => {
+        assertIsDefined(models);
 
         const grass = terrain.get('grass')!;
-        const hill = new THREE.ConeBufferGeometry(350, 150, 4).toNonIndexed();
-        hill.computeVertexNormals();
-        hill.translate(0, 75 - COCKPIT_HEIGHT, 0);
-        for (let i = 0; i < 40; i++) {
-            const mesh = new THREE.Mesh(hill, new THREE.MeshBasicMaterial());
-            applyMaterial(mesh, localMaterials.build({
-                category: PaletteCategory.DECORATION_MOUNTAIN_GRASS,
-                shaded: true,
-                depthWrite: true
-            }));
-            randomPosOver(grass, mesh.position, 20000);
-            mesh.scale.x = 0.8 + Math.random() / 5.0;
-            mesh.scale.y = 0.5 + Math.random() / 2.0;
-            mesh.scale.z = 0.8 + Math.random() / 5.0;
-            mesh.rotateY(Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 4);
-            decorationScene.add(mesh);
+        for (let i = 0; i < 30; i++) {
+            const hill = new StaticSceneryEntity(models.getModel('lib:hill'), 4);
+            randomPosOver(grass, hill.position, 20000);
+            hill.scale.set(
+                0.8 + Math.random() / 5.0,
+                0.5 + Math.random() / 2.0,
+                0.8 + Math.random() / 5.0);
+            hill.quaternion.setFromAxisAngle(UP, Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 4);
+            scene.add(hill);
         }
 
         const darkLand = terrain.get('darkland')!;
-        const mountain = new THREE.ConeBufferGeometry(700, 300, 4).toNonIndexed();
-        mountain.computeVertexNormals();
-        mountain.translate(0, 150 - COCKPIT_HEIGHT, 0);
-        for (let i = 0; i < 30; i++) {
-            const mesh = new THREE.Mesh(mountain, new THREE.MeshBasicMaterial());
-            applyMaterial(mesh, localMaterials.build({
-                category: PaletteCategory.DECORATION_MOUNTAIN_BARE,
-                shaded: true,
-                depthWrite: true
-            }));
-            randomPosOver(darkLand, mesh.position, 20000);
-            mesh.scale.x = 0.8 + Math.random() / 5.0;
-            mesh.scale.y = 0.5 + Math.random() / 2.0;
-            mesh.scale.z = 0.8 + Math.random() / 5.0;
-            mesh.rotateY(Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 4);
-            decorationScene.add(mesh);
+        for (let i = 0; i < 20; i++) {
+            const mountain = new StaticSceneryEntity(models.getModel('lib:mountain'), 4);
+            randomPosOver(darkLand, mountain.position, 20000);
+            mountain.scale.x = 0.8 + Math.random() / 5.0;
+            mountain.scale.y = 0.5 + Math.random() / 2.0;
+            mountain.scale.z = 0.8 + Math.random() / 5.0;
+            mountain.quaternion.setFromAxisAngle(UP, Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 4);
+            scene.add(mountain);
         }
     });
     const loader = new OBJLoader(loadingManager);
@@ -148,14 +140,19 @@ function setupScene() {
             terrain.set(def.file, obj);
             groundScene.add(obj);
 
-            for (let x = -1; x <= 1; x++) {
-                for (let z = -1; z <= 1; z++) {
+            for (let x = -2; x <= 2; x++) {
+                for (let z = -2; z <= 2; z++) {
                     if (x === 0 && z === 0) continue;
                     const tile = obj.clone(true);
+                    applyMaterial(tile, localMaterials.build({
+                        category: def.category,
+                        shaded: false,
+                        depthWrite: false
+                    }));
                     tile.position.x = x * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
                     tile.position.z = z * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
-                    tile.scale.x = tile.scale.x * (x === 0 ? 1 : -1);
-                    tile.scale.z = tile.scale.z * (z === 0 ? 1 : -1);
+                    tile.scale.x = tile.scale.x * (Math.abs(x) % 2 === 0 ? 1 : -1);
+                    tile.scale.z = tile.scale.z * (Math.abs(z) % 2 === 0 ? 1 : -1);
                     groundScene.add(tile);
                 }
             }
@@ -177,15 +174,15 @@ function setupScene() {
 function addAirBase(scene: Scene, models: ModelManager) {
     const hangarGround1 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
     hangarGround1.position.set(1360, 0, -860);
-    hangarGround1.scale.set(200, 0, 200);
+    hangarGround1.scale.set(200, 1, 200);
     scene.add(hangarGround1);
 
     const hangarGround2 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
     hangarGround2.position.set(1640, 0, -860);
-    hangarGround2.scale.set(200, 0, 200);
+    hangarGround2.scale.set(200, 1, 200);
     scene.add(hangarGround2);
 
-    const runway = new StaticSceneryEntity(models.getModel('assets/runway01.gltf'), 1);
+    const runway = new StaticSceneryEntity(models.getModel('assets/runway01.gltf'), 0);
     runway.position.set(1500, 0, -800);
     scene.add(runway);
 
@@ -216,6 +213,7 @@ function addAirBase(scene: Scene, models: ModelManager) {
 }
 
 function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vector3, spread: number): THREE.Vector3 {
+    assertIsDefined(surface);
     let intersections: THREE.Intersection<THREE.Object3D<THREE.Event>>[] = [];
     const caster = new THREE.Raycaster();
     const p = UP.clone();
@@ -276,7 +274,6 @@ function loop() {
             r.render(bgSkyScene, bgSkyCamera);
             r.render(bgGroundScene, bgGroundCamera);
             r.render(groundScene, camera);
-            r.render(decorationScene, camera);
         }
     );
 }

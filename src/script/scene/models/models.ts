@@ -58,7 +58,7 @@ export class ModelManager {
 
         if (modelWrapper === undefined) {
             if (url.startsWith(LIB_PREFFIX)) {
-                const libType = url.substr(LIB_PREFFIX.length);
+                const libType = url.substring(LIB_PREFFIX.length);
                 const builder = this.libBuilders.get(libType);
                 assertIsDefined(builder, `"${libType}"`);
                 modelWrapper = {
@@ -177,9 +177,15 @@ export class ModelManager {
 
     private copyTo(src: Model, dst: Model) {
         dst.lod = src.lod.map(level => ({
-            flats: level.flats.map(obj => obj.clone()),
-            volumes: level.volumes.map(obj => obj.clone())
+            flats: level.flats.map(obj => this.cloneObj(obj)),
+            volumes: level.volumes.map(obj => this.cloneObj(obj))
         }));
         dst.maxSize = src.maxSize;
+    }
+
+    private cloneObj(obj: THREE.Object3D): THREE.Object3D {
+        const o = obj.clone();
+        o.onBeforeRender = updateUniforms;
+        return o;
     }
 }
