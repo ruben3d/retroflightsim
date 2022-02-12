@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { COCKPIT_HEIGHT, MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
-import { Entity } from "../entity";
+import { Entity, ENTITY_TAGS } from "../entity";
 import { Palette } from "../palettes/palette";
 import { Scene, UP } from "../scene";
+import { GroundTargetEntity } from './groundTarget';
 
 
 enum Stick {
@@ -13,6 +14,8 @@ enum Stick {
 };
 
 export class PlayerEntity implements Entity {
+
+    private scene: Scene | undefined;
 
     private pitchState: Stick = Stick.IDLE;
     private rollState: Stick = Stick.IDLE;
@@ -25,15 +28,20 @@ export class PlayerEntity implements Entity {
 
     private speed: number = 0;
 
+    private target: GroundTargetEntity | undefined;
+    private targetIndex: number | undefined
+
+    readonly tags: string[] = [];
+
     // Bearing increases CCW, radians
     constructor(private camera: THREE.Camera, position: THREE.Vector3, bearing: number) {
         this.obj.position.copy(position);
         this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
-        this.setupInput();
     }
 
     init(scene: Scene): void {
-        //
+        this.scene = scene;
+        this.setupInput();
     }
 
     update(delta: number): void {
@@ -130,6 +138,10 @@ export class PlayerEntity implements Entity {
         return this.speed;
     }
 
+    get weaponsTarget(): GroundTargetEntity | undefined {
+        return this.target;
+    }
+
     private setupInput() {
         document.addEventListener('keydown', (event: KeyboardEvent) => {
             switch (event.key) {
@@ -221,11 +233,27 @@ export class PlayerEntity implements Entity {
             }
         });
 
+        document.addEventListener('keypress', (event: KeyboardEvent) => {
+            switch (event.key) {
+                case 't': {
+                    this.pickTarget();
+                    break;
+                }
+            }
+        });
+
         document.addEventListener('blur', () => {
             this.pitchState = Stick.IDLE;
             this.rollState = Stick.IDLE;
             this.yawState = Stick.IDLE;
             this.throttleState = Stick.IDLE;
         });
+    }
+
+    private pickTarget() {
+        let index = this.targetIndex !== undefined ? this.targetIndex : -1;
+        index = (index + 1) % (this.scene?.countByTag(ENTITY_TAGS.TARGET) || 0);
+        this.target = this.scene?.entityAtByTag(ENTITY_TAGS.TARGET, index) as GroundTargetEntity | undefined;
+        this.targetIndex = this.target !== undefined ? index : undefined;
     }
 }

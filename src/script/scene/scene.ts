@@ -33,4 +33,37 @@ export class Scene {
         this.entities.push(entity);
         entity.init(this);
     }
+
+    *listByTag(tag: string) {
+        for (let i = 0; i < this.entities.length; i++) {
+            const entity = this.entities[i];
+            if (entity.tags.includes(tag)) {
+                yield entity;
+            }
+        }
+    }
+
+    countByTag(tag: string): number {
+        let count = 0;
+        for (let i = 0; i < this.entities.length; i++) {
+            const entity = this.entities[i];
+            if (entity.tags.includes(tag)) {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
+    entityAtByTag(tag: string, index: number): Entity | undefined {
+        let cursor = -1;
+        for (let i = 0; i < this.entities.length; i++) {
+            const entity = this.entities[i];
+            if (entity.tags.includes(tag)) {
+                cursor += 1;
+                if (cursor === index) {
+                    return entity;
+                }
+            }
+        }
+    }
 }

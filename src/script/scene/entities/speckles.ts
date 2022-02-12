@@ -23,6 +23,8 @@ export class SpecklesEntity implements Entity {
 
     private tiles: THREE.Points[] = Array(FIELD_SIZE * FIELD_SIZE);
 
+    readonly tags: string[] = [];
+
     constructor(materials: SceneMaterialManager) {
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = this.buildTile(materials);

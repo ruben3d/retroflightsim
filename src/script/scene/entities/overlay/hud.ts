@@ -4,19 +4,20 @@ import { CHAR_HEIGHT, CHAR_MARGIN, CHAR_WIDTH, TextAlignment } from "../../../re
 import { FORWARD, Scene, SceneLayers } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette, PaletteCategory } from "../../palettes/palette";
-import { H_RES, V_RES } from "../../../defs";
+import { H_RES, H_RES_HALF, V_RES, V_RES_HALF } from "../../../defs";
 import { PlayerEntity } from "../player";
+import { GroundTargetEntity } from '../groundTarget';
 
 
 const ALTITUDE_X = H_RES - 20;
-const ALTITUDE_Y = V_RES / 2;
+const ALTITUDE_Y = V_RES_HALF;
 const ALTITUDE_HEIGHT = 32;
 // Do not change these...
 const ALTITUDE_STEP = 5;
 const ALTITUDE_LOWP_THRESHOLD = 1000;
 const ALTITUDE_HALF_HEIGHT = ALTITUDE_HEIGHT / 2;
 
-const BEARING_X = H_RES / 2;
+const BEARING_X = H_RES_HALF;
 const BEARING_Y = 10;
 const BEARING_WIDTH = 26;
 // Do not change these...
@@ -25,13 +26,15 @@ const BEARING_SPACING = 5;
 const BEARING_STEP = 5;
 
 const AIRSPEED_X = 19;
-const AIRSPEED_Y = V_RES / 2;
+const AIRSPEED_Y = V_RES_HALF;
 const AIRSPEED_HEIGHT = 32;
 // Do not change these...
 const AIRSPEED_SCALE = 10;
 const AIRSPEED_STEP = 2.5;
 const AIRSPEED_HALF_HEIGHT = AIRSPEED_HEIGHT / 2;
 
+const TARGET_HALF_WIDTH = 8; // Pixels
+const TARGET_WIDTH = TARGET_HALF_WIDTH * 2 + 1;
 
 const HALF_CHAR = Math.floor(CHAR_HEIGHT / 2);
 
@@ -44,8 +47,14 @@ export class HUDEntity implements Entity {
     private altitude: number = 0; // feet
     private throttle: number = 0; // Normalised percentage [0, 1]
     private speed: number = 0; // knots
+    private weaponsTarget: GroundTargetEntity | undefined;
+    private weaponsTargetRange: number = 0; // Km
+    private weaponsTargetBearing: number = 0; // degrees, 0 is North, increases CW
 
     private tmpVector = new THREE.Vector3();
+    private tmpPlane = new THREE.Plane();
+
+    readonly tags: string[] = [];
 
     init(scene: Scene): void {
         //
@@ -58,14 +67,25 @@ export class HUDEntity implements Entity {
             .applyQuaternion(this.actor.quaternion)
             .setY(0)
             .normalize();
-        this.bearing = Math.round(Math.atan2(this.tmpVector.x, -this.tmpVector.z) / (2 * Math.PI) * 360);
-        if (this.bearing < 0) {
-            this.bearing = 360 + this.bearing;
-        }
+        this.bearing = this.vectorBearing(this.tmpVector);
 
         this.throttle = this.actor.throttleUnit;
 
         this.speed = this.toKnots(this.actor.rawSpeed);
+
+        this.weaponsTarget = this.actor.weaponsTarget;
+
+        if (this.weaponsTarget !== undefined) {
+            this.tmpVector
+                .copy(this.weaponsTarget.position)
+                .sub(this.actor.position);
+            this.weaponsTargetRange = this.tmpVector.length() / 1000.0;
+
+            this.tmpVector
+                .setY(0)
+                .normalize();
+            this.weaponsTargetBearing = this.vectorBearing(this.tmpVector);
+        }
     }
 
     render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -77,6 +97,7 @@ export class HUDEntity implements Entity {
         this.renderBearing(painter, palette);
         this.renderAirSpeed(painter, palette);
         this.renderThrottle(painter, palette);
+        this.renderTarget(painter, palette, camera);
     }
 
     private renderAltitude(painter: CanvasPainter, palette: Palette) {
@@ -205,11 +226,40 @@ export class HUDEntity implements Entity {
         painter.text(2, 2, `THR: ${(100 * this.throttle).toFixed(0)}`, palette.colors.HUD_TEXT);
     }
 
+    private renderTarget(painter: CanvasPainter, palette: Palette, camera: THREE.Camera) {
+        if (this.weaponsTarget === undefined) return;
+
+        painter.text(H_RES_HALF, V_RES - 30, `${this.weaponsTarget.targetType} at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
+        painter.text(H_RES_HALF, V_RES - 20, `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
+        painter.text(H_RES_HALF, V_RES - 10, `BRG ${this.getBearingDisplay(this.weaponsTargetBearing)}`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
+
+        camera.getWorldDirection(this.tmpVector);
+        this.tmpPlane.setFromNormalAndCoplanarPoint(this.tmpVector, camera.position);
+        if (this.tmpPlane.distanceToPoint(this.weaponsTarget.position) > 0) {
+            this.tmpVector.copy(this.weaponsTarget.position);
+            this.tmpVector.project(camera);
+            const x = Math.round((this.tmpVector.x * H_RES_HALF) + H_RES_HALF);
+            const y = Math.round(-(this.tmpVector.y * V_RES_HALF) + V_RES_HALF);
+            if (0 <= x && x < H_RES &&
+                0 <= y && y < V_RES) {
+                painter.rectangle(x - TARGET_HALF_WIDTH, y - TARGET_HALF_WIDTH, TARGET_WIDTH, TARGET_WIDTH);
+            }
+        }
+    }
+
     private toFeet(meters: number): number {
         return meters * 3.28084;
     }
 
     private toKnots(metersPerSecond: number): number {
         return metersPerSecond * 1.94384;
+    }
+
+    private vectorBearing(v: THREE.Vector3): number {
+        let bearing = Math.round(Math.atan2(v.x, -v.z) / (2 * Math.PI) * 360);
+        if (bearing < 0) {
+            bearing = 360 + bearing;
+        }
+        return bearing;
     }
 }

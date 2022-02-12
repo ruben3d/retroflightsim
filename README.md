@@ -40,6 +40,7 @@ Limited controls available:
 * `A`/`D`: Roll control.
 * `Q`/`E`: Yaw control.
 * `Z`/`X`: Throttle.
+* `T`: Cycle through available targets.
 * `N`: Toggle Day/Night.
 
 On reaching the limits of the detailed scenario the player position wraps around.

@@ -1,19 +1,20 @@
 import * as THREE from 'three';
 import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
-import { Entity } from "../entity";
+import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
 import { Palette } from "../palettes/palette";
 import { Scene, SceneLayers } from "../scene";
 
-
-export class StaticSceneryEntity implements Entity {
+export class GroundTargetEntity implements Entity {
 
     private lodHelper: LODHelper;
 
-    readonly tags: string[] = [];
+    readonly tags: string[] = [ENTITY_TAGS.TARGET, ENTITY_TAGS.GROUND];
 
-    constructor(private model: Model, lodBias: number = DEFAULT_LOD_BIAS) {
+    constructor(private model: Model, lodBias: number = DEFAULT_LOD_BIAS,
+        private type: string, private location: string) {
+
         this.lodHelper = new LODHelper(model, lodBias);
     }
 
@@ -41,6 +42,14 @@ export class StaticSceneryEntity implements Entity {
 
     get scale() {
         return this.obj.scale;
+    }
+
+    get targetType(): string {
+        return this.type;
+    }
+
+    get targetLocation(): string {
+        return this.location;
     }
 
     init(scene: Scene): void {

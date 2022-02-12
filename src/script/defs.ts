@@ -1,6 +1,8 @@
 
 export const H_RES = 320;
 export const V_RES = 200;
+export const H_RES_HALF = H_RES / 2;
+export const V_RES_HALF = V_RES / 2;
 
 export const TERRAIN_SCALE = 200.0;
 export const TERRAIN_MODEL_SIZE = 100.0;

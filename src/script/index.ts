@@ -17,6 +17,7 @@ import { PavementModelLibBuilder } from './scene/models/lib/pavementModelBuilder
 import { HillModelLibBuilder } from './scene/models/lib/hillModelBuilder';
 import { assertIsDefined } from './utils/asserts';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
+import { GroundTargetEntity } from './scene/entities/groundTarget';
 
 
 let renderer: Renderer | undefined;
@@ -164,6 +165,11 @@ function setupScene() {
 
     addAirBase(scene, models);
 
+    const warehouse = new GroundTargetEntity(models.getModel('assets/hangar01.gltf'), undefined, 'Warehouse', 'Radlydd');
+    warehouse.position.set(-16000, 0, 11000);
+    warehouse.quaternion.setFromAxisAngle(UP, Math.PI / 2);
+    scene.add(warehouse);
+
     const player = new PlayerEntity(camera, new THREE.Vector3(1500, 0, -1160), Math.PI);
     scene.add(player);
 
@@ -182,7 +188,7 @@ function addAirBase(scene: Scene, models: ModelManager) {
     hangarGround2.scale.set(200, 1, 200);
     scene.add(hangarGround2);
 
-    const runway = new StaticSceneryEntity(models.getModel('assets/runway01.gltf'), 0);
+    const runway = new GroundTargetEntity(models.getModel('assets/runway01.gltf'), 0, 'Airbase', 'Stosneehar');
     runway.position.set(1500, 0, -800);
     scene.add(runway);
 
