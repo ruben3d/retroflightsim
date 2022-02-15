@@ -1,20 +1,19 @@
 import * as THREE from 'three';
-import { DEFAULT_LOD_BIAS, LODHelper, modelMaxSize } from '../../render/helpers';
+import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
-import { Entity, ENTITY_TAGS } from "../entity";
+import { Entity } from "../entity";
 import { Model } from '../models/models';
 import { Palette } from "../palettes/palette";
-import { Scene, SceneLayers } from "../scene";
+import { Scene } from "../scene";
 
-export class GroundTargetEntity implements Entity {
+
+export class SimpleEntity implements Entity {
 
     private lodHelper: LODHelper;
 
-    readonly tags: string[] = [ENTITY_TAGS.TARGET, ENTITY_TAGS.GROUND];
+    readonly tags: string[] = [];
 
-    constructor(private model: Model, lodBias: number = DEFAULT_LOD_BIAS,
-        private type: string, private location: string) {
-
+    constructor(model: Model, private flatLayerId: string, private volumeLayerId: string, lodBias: number = DEFAULT_LOD_BIAS) {
         this.lodHelper = new LODHelper(model, lodBias);
     }
 
@@ -44,18 +43,6 @@ export class GroundTargetEntity implements Entity {
         return this.obj.scale;
     }
 
-    get targetType(): string {
-        return this.type;
-    }
-
-    get targetLocation(): string {
-        return this.location;
-    }
-
-    get maxSize(): number {
-        return modelMaxSize(this.model, this.scale);
-    }
-
     init(scene: Scene): void {
         //
     }
@@ -68,6 +55,6 @@ export class GroundTargetEntity implements Entity {
         this.lodHelper.addToRenderList(
             this.position, this.quaternion, this.scale,
             camera, palette,
-            SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+            this.flatLayerId, this.volumeLayerId, lists);
     }
 }

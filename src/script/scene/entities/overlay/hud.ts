@@ -7,6 +7,8 @@ import { Palette, PaletteCategory } from "../../palettes/palette";
 import { H_RES, H_RES_HALF, V_RES, V_RES_HALF } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
+import { vectorBearing } from '../../../utils/math';
+import { formatBearing } from './overlayUtils';
 
 
 const ALTITUDE_X = H_RES - 20;
@@ -48,8 +50,6 @@ export class HUDEntity implements Entity {
     private throttle: number = 0; // Normalised percentage [0, 1]
     private speed: number = 0; // knots
     private weaponsTarget: GroundTargetEntity | undefined;
-    private weaponsTargetRange: number = 0; // Km
-    private weaponsTargetBearing: number = 0; // degrees, 0 is North, increases CW
 
     private tmpVector = new THREE.Vector3();
     private tmpPlane = new THREE.Plane();
@@ -67,25 +67,13 @@ export class HUDEntity implements Entity {
             .applyQuaternion(this.actor.quaternion)
             .setY(0)
             .normalize();
-        this.bearing = this.vectorBearing(this.tmpVector);
+        this.bearing = vectorBearing(this.tmpVector);
 
         this.throttle = this.actor.throttleUnit;
 
         this.speed = this.toKnots(this.actor.rawSpeed);
 
         this.weaponsTarget = this.actor.weaponsTarget;
-
-        if (this.weaponsTarget !== undefined) {
-            this.tmpVector
-                .copy(this.weaponsTarget.position)
-                .sub(this.actor.position);
-            this.weaponsTargetRange = this.tmpVector.length() / 1000.0;
-
-            this.tmpVector
-                .setY(0)
-                .normalize();
-            this.weaponsTargetBearing = this.vectorBearing(this.tmpVector);
-        }
     }
 
     render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -98,6 +86,7 @@ export class HUDEntity implements Entity {
         this.renderAirSpeed(painter, palette);
         this.renderThrottle(painter, palette);
         this.renderTarget(painter, palette, camera);
+        this.renderBoresight(painter, palette);
     }
 
     private renderAltitude(painter: CanvasPainter, palette: Palette) {
@@ -171,14 +160,10 @@ export class HUDEntity implements Entity {
                 painter.text(
                     BEARING_X + i * BEARING_SPACING - offset,
                     BEARING_Y - 8,
-                    this.getBearingDisplay(value), palette.colors[PaletteCategory.HUD_TEXT], TextAlignment.CENTER);
+                    formatBearing(value), palette.colors[PaletteCategory.HUD_TEXT], TextAlignment.CENTER);
             }
         }
         clip.clear();
-    }
-
-    private getBearingDisplay(n: number): string {
-        return `00${(((n % 360) + 360) % 360).toFixed(0)}`.slice(-3);
     }
 
     private renderAirSpeed(painter: CanvasPainter, palette: Palette) {
@@ -229,10 +214,6 @@ export class HUDEntity implements Entity {
     private renderTarget(painter: CanvasPainter, palette: Palette, camera: THREE.Camera) {
         if (this.weaponsTarget === undefined) return;
 
-        painter.text(H_RES_HALF, V_RES - 30, `${this.weaponsTarget.targetType} at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
-        painter.text(H_RES_HALF, V_RES - 20, `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
-        painter.text(H_RES_HALF, V_RES - 10, `BRG ${this.getBearingDisplay(this.weaponsTargetBearing)}`, palette.colors.HUD_TEXT, TextAlignment.CENTER);
-
         camera.getWorldDirection(this.tmpVector);
         this.tmpPlane.setFromNormalAndCoplanarPoint(this.tmpVector, camera.position);
         if (this.tmpPlane.distanceToPoint(this.weaponsTarget.position) > 0) {
@@ -247,19 +228,20 @@ export class HUDEntity implements Entity {
         }
     }
 
+    private renderBoresight(painter: CanvasPainter, palette: Palette) {
+        painter.batch()
+            .hLine(H_RES_HALF - 5 - 5, H_RES_HALF - 5, V_RES_HALF)
+            .hLine(H_RES_HALF + 5, H_RES_HALF + 5 + 5, V_RES_HALF)
+            .vLine(H_RES_HALF, V_RES_HALF - 3 - 3, V_RES_HALF - 3)
+            .vLine(H_RES_HALF, V_RES_HALF + 3, V_RES_HALF + 3 + 3)
+            .commit();
+    }
+
     private toFeet(meters: number): number {
         return meters * 3.28084;
     }
 
     private toKnots(metersPerSecond: number): number {
         return metersPerSecond * 1.94384;
-    }
-
-    private vectorBearing(v: THREE.Vector3): number {
-        let bearing = Math.round(Math.atan2(v.x, -v.z) / (2 * Math.PI) * 360);
-        if (bearing < 0) {
-            bearing = 360 + bearing;
-        }
-        return bearing;
     }
 }

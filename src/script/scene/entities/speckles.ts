@@ -5,7 +5,7 @@ import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
 import { SceneMaterialManager } from '../materials/materials';
 import { CanvasPainter } from '../../render/screen/canvasPainter';
-import { assertIsDefined } from '../../utils/asserts';
+
 
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
 const TILE_SIZE = 1024.0; // World units

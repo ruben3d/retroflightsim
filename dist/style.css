@@ -42,7 +42,7 @@ a:hover {
 #credits {
     z-index: 1;
     position: absolute;
-    bottom: 0;
+    top: 0;
     right: 0;
     padding: 1rem;
     color: white;

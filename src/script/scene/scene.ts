@@ -9,6 +9,9 @@ export const RIGHT = new THREE.Vector3(1, 0, 0);
 
 export enum SceneLayers {
     Overlay = 'Overlay',
+    BackgroundSky = 'BackgroundSky',
+    BackgroundGround = 'BackgroundGround',
+    Terrain = 'Terrain',
     EntityFlats = 'EntityFlats',
     EntityVolumes = 'EntityVolumes'
 }

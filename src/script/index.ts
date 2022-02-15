@@ -1,14 +1,12 @@
 import * as THREE from 'three';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { NoonPalette } from './scene/palettes/noon';
 import { PaletteCategory } from './scene/palettes/palette';
 import { NightPalette } from './scene/palettes/night';
 import { Scene, SceneLayers, UP } from './scene/scene';
 import { SpecklesEntity } from './scene/entities/speckles';
-import { updateUniforms } from './scene/utils';
 import { HUDEntity } from './scene/entities/overlay/hud';
-import { Renderer } from './render/renderer';
+import { CANVAS_RENDER_TARGET, Renderer, RenderLayer, RenderTargetType } from './render/renderer';
 import { H_RES, COCKPIT_HEIGHT, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from './defs';
 import { PlayerEntity } from './scene/entities/player';
 import { ModelManager } from './scene/models/models';
@@ -18,21 +16,23 @@ import { HillModelLibBuilder } from './scene/models/lib/hillModelBuilder';
 import { assertIsDefined } from './utils/asserts';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { GroundTargetEntity } from './scene/entities/groundTarget';
+import { SimpleEntity } from './scene/entities/simpleEntity';
+import { SceneCamera } from './scene/camera';
+import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
+import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD_X, COCKPIT_MFD_Y } from './scene/entities/overlay/cockpit';
 
 
 let renderer: Renderer | undefined;
 
 // Scene
 
-const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, COCKPIT_HEIGHT, 40000);
-const groundScene: THREE.Scene = new THREE.Scene();
-const bgGroundCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 100, 500000);
-const bgGroundScene: THREE.Scene = new THREE.Scene();
-const bgSkyCamera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(50, H_RES / V_RES, 5, 50000);
-const bgSkyScene: THREE.Scene = new THREE.Scene();
+const playerCamera = new SceneCamera(new THREE.PerspectiveCamera(50, H_RES / V_RES, COCKPIT_HEIGHT, 40000));
+const targetCamera = new SceneCamera(new THREE.PerspectiveCamera(50, 1, COCKPIT_HEIGHT, 40000));
+
+const player: PlayerEntity = new PlayerEntity(playerCamera.main, new THREE.Vector3(1500, 0, -1160), Math.PI);
+
 let materials: SceneMaterialManager | undefined;
 let models: ModelManager | undefined;
-let sky: THREE.Mesh | undefined;
 const clock = new THREE.Clock();
 
 const scene: Scene = new Scene();
@@ -40,10 +40,12 @@ const scene: Scene = new Scene();
 const palettes = [NoonPalette, NightPalette];
 let currentPalette = 0;
 
+const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
 
 function setup() {
     renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
     renderer.setPalette(getPalette());
+    renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD_X, COCKPIT_MFD_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
     setupScene();
     setupControls();
     loop();
@@ -65,43 +67,37 @@ function setupControls() {
 function setupScene() {
     materials = new SceneMaterialManager(NoonPalette);
     models = new ModelManager(materials, [
+        new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
+        new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
         new PavementModelLibBuilder(),
         new HillModelLibBuilder(),
         new MountainModelLibBuilder()
     ]);
-    const localMaterials = materials;
 
-    const groundGeometry = new THREE.PlaneGeometry(1000000, 1000000, 1, 1);
-    groundGeometry.center();
-    groundGeometry.rotateX(-Math.PI / 2);
-    const ground = new THREE.Mesh(groundGeometry, new THREE.MeshBasicMaterial());
-    applyMaterial(ground, materials.build({
-        category: PaletteCategory.TERRAIN_DEFAULT,
-        shaded: false,
-        depthWrite: false
-    }));
-    ground.position.set(0, 0, 0);
-    bgGroundScene.add(ground);
+    const ground = new SimpleEntity(models.getModel('lib:GROUND'), SceneLayers.BackgroundGround, SceneLayers.BackgroundGround);
+    scene.add(ground);
 
-    const skyGeometry = new THREE.PlaneGeometry(100000, 100000, 1, 1);
-    skyGeometry.center();
-    skyGeometry.rotateX(Math.PI / 2);
-    sky = new THREE.Mesh(skyGeometry, new THREE.MeshBasicMaterial());
-    applyMaterial(sky, materials.build({
-        category: PaletteCategory.SKY,
-        shaded: false,
-        depthWrite: false
-    }));
+    const sky = new SimpleEntity(models.getModel('lib:SKY'), SceneLayers.BackgroundSky, SceneLayers.BackgroundSky);
     sky.position.set(0, 7, 0);
-    bgSkyScene.add(sky);
+    scene.add(sky);
 
-    const terrain: Map<string, THREE.Object3D<THREE.Event>> = new Map();
-    const loadingManager = new THREE.LoadingManager(() => {
-        assertIsDefined(models);
+    for (let x = -2; x <= 2; x++) {
+        for (let z = -2; z <= 2; z++) {
+            const model = models.getModel('assets/map.gltf');
+            const map = new StaticSceneryEntity(model);
+            map.position.x = x * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
+            map.position.z = z * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
+            map.scale.x = TERRAIN_SCALE * (Math.abs(x) % 2 === 0 ? 1 : -1);
+            map.scale.z = TERRAIN_SCALE * (Math.abs(z) % 2 === 0 ? 1 : -1);
+            scene.add(map);
+        }
+    }
 
-        const grass = terrain.get('grass')!;
+    models.getModel('assets/map.gltf', (url, model) => {
+        const grass = model.lod[0].flats.find(mesh => mesh.name === PaletteCategory.TERRAIN_GRASS);
+        assertIsDefined(grass);
         for (let i = 0; i < 30; i++) {
-            const hill = new StaticSceneryEntity(models.getModel('lib:hill'), 4);
+            const hill = new StaticSceneryEntity(models!.getModel('lib:hill'), 4);
             randomPosOver(grass, hill.position, 20000);
             hill.scale.set(
                 0.8 + Math.random() / 5.0,
@@ -111,53 +107,17 @@ function setupScene() {
             scene.add(hill);
         }
 
-        const darkLand = terrain.get('darkland')!;
+        const bare = model.lod[0].flats.find(mesh => mesh.name === PaletteCategory.TERRAIN_BARE);
+        assertIsDefined(bare);
         for (let i = 0; i < 20; i++) {
-            const mountain = new StaticSceneryEntity(models.getModel('lib:mountain'), 4);
-            randomPosOver(darkLand, mountain.position, 20000);
+            const mountain = new StaticSceneryEntity(models!.getModel('lib:mountain'), 4);
+            randomPosOver(bare, mountain.position, 20000);
             mountain.scale.x = 0.8 + Math.random() / 5.0;
             mountain.scale.y = 0.5 + Math.random() / 2.0;
             mountain.scale.z = 0.8 + Math.random() / 5.0;
             mountain.quaternion.setFromAxisAngle(UP, Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 4);
             scene.add(mountain);
         }
-    });
-    const loader = new OBJLoader(loadingManager);
-
-    [
-        { file: 'ocean', category: PaletteCategory.TERRAIN_WATER },
-        { file: 'shallowocean', category: PaletteCategory.TERRAIN_SHALLOW_WATER },
-        { file: 'land', category: PaletteCategory.TERRAIN_SAND },
-        { file: 'darkland', category: PaletteCategory.TERRAIN_BARE },
-        { file: 'grass', category: PaletteCategory.TERRAIN_GRASS },
-    ].forEach(def => {
-        loader.load(`assets/${def.file}.obj`, obj => {
-            applyMaterial(obj, localMaterials.build({
-                category: def.category,
-                shaded: false,
-                depthWrite: false
-            }));
-            obj.scale.x = obj.scale.z = TERRAIN_SCALE;
-            terrain.set(def.file, obj);
-            groundScene.add(obj);
-
-            for (let x = -2; x <= 2; x++) {
-                for (let z = -2; z <= 2; z++) {
-                    if (x === 0 && z === 0) continue;
-                    const tile = obj.clone(true);
-                    applyMaterial(tile, localMaterials.build({
-                        category: def.category,
-                        shaded: false,
-                        depthWrite: false
-                    }));
-                    tile.position.x = x * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
-                    tile.position.z = z * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
-                    tile.scale.x = tile.scale.x * (Math.abs(x) % 2 === 0 ? 1 : -1);
-                    tile.scale.z = tile.scale.z * (Math.abs(z) % 2 === 0 ? 1 : -1);
-                    groundScene.add(tile);
-                }
-            }
-        });
     });
 
     const speckles = new SpecklesEntity(materials);
@@ -170,11 +130,13 @@ function setupScene() {
     warehouse.quaternion.setFromAxisAngle(UP, Math.PI / 2);
     scene.add(warehouse);
 
-    const player = new PlayerEntity(camera, new THREE.Vector3(1500, 0, -1160), Math.PI);
     scene.add(player);
 
     const hud = new HUDEntity(player);
     scene.add(hud);
+
+    const cockpit = new CockpitEntity(player, playerCamera.main, targetCamera.main);
+    scene.add(cockpit);
 }
 
 function addAirBase(scene: Scene, models: ModelManager) {
@@ -236,52 +198,79 @@ function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vec
     return position;
 }
 
-function applyMaterial(obj: THREE.Group | THREE.Mesh | THREE.Points, material: THREE.Material) {
-    if ('isGroup' in obj) {
-        obj.traverse(child => {
-            if ('isMesh' in child) {
-                const mesh = (child as THREE.Mesh);
-                mesh.material = material;
-                mesh.onBeforeRender = updateUniforms;
-            }
-        });
-    } else {
-        obj.material = material;
-        obj.onBeforeRender = updateUniforms;
-    }
-}
-
 function updateScene(delta: number) {
 
     scene.update(delta);
 
-    bgGroundCamera.position.y = camera.position.y;
-    bgGroundCamera.quaternion.copy(camera.quaternion);
-    bgSkyCamera.quaternion.copy(camera.quaternion);
+    playerCamera.update();
+    targetCamera.update();
 }
 
 function getPalette() {
     return palettes[currentPalette];
 }
 
+const defaultRenderLayers: RenderLayer[] = [
+    {
+        camera: playerCamera.bgSky,
+        lists: [SceneLayers.BackgroundSky]
+    },
+    {
+        camera: playerCamera.bgGround,
+        lists: [SceneLayers.BackgroundGround]
+    },
+    {
+        camera: playerCamera.main,
+        lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+    },
+    {
+        target: CANVAS_RENDER_TARGET,
+        camera: playerCamera.main,
+        lists: [SceneLayers.Overlay]
+    }
+];
+
+const targetRenderLayers: RenderLayer[] = [
+    {
+        camera: playerCamera.bgSky,
+        lists: [SceneLayers.BackgroundSky]
+    },
+    {
+        camera: playerCamera.bgGround,
+        lists: [SceneLayers.BackgroundGround]
+    },
+    {
+        camera: playerCamera.main,
+        lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+    },
+    {
+        target: WEAPONSTARGET_RENDER_TARGET,
+        camera: targetCamera.bgSky,
+        lists: [SceneLayers.BackgroundSky]
+    },
+    {
+        target: WEAPONSTARGET_RENDER_TARGET,
+        camera: targetCamera.bgGround,
+        lists: [SceneLayers.BackgroundGround]
+    },
+    {
+        target: WEAPONSTARGET_RENDER_TARGET,
+        camera: targetCamera.main,
+        lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+    },
+    {
+        target: CANVAS_RENDER_TARGET,
+        camera: playerCamera.main,
+        lists: [SceneLayers.Overlay]
+    }
+];
+
 function loop() {
     window.requestAnimationFrame(loop);
     const delta = clock.getDelta();
 
     updateScene(delta);
-    renderer?.render(
-        scene,
-        [{
-            camera: camera,
-            lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes, SceneLayers.Overlay]
-        }],
-        // TODO This horrible hack will be reduced until it disappears eventually...
-        (r: THREE.Renderer) => {
-            r.render(bgSkyScene, bgSkyCamera);
-            r.render(bgGroundScene, bgGroundCamera);
-            r.render(groundScene, camera);
-        }
-    );
+    renderer?.render(scene, player.weaponsTarget ? targetRenderLayers : defaultRenderLayers);
 }
 
 window.addEventListener("load", () => {
