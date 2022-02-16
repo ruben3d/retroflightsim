@@ -64,8 +64,10 @@ export class CanvasPainter {
 
     // Actions
 
-    clear() {
-        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    clear(): void;
+    clear(x: number, y: number, width: number, height: number): void;
+    clear(x?: number, y?: number, width?: number, height?: number): void {
+        this.ctx.clearRect(x || 0, y || 0, width || this.ctx.canvas.width, height || this.ctx.canvas.height);
     }
 
     hLine(x0: number, x1: number, y: number) {

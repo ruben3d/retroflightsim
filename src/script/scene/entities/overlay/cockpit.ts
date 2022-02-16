@@ -82,6 +82,7 @@ export class CockpitEntity implements Entity {
         if (this.weaponsTarget === undefined) return;
 
         painter.rectangle(COCKPIT_MFD_X - 1, COCKPIT_MFD_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
+        painter.clear(COCKPIT_MFD_X, COCKPIT_MFD_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
 
         painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + 1, this.weaponsTarget.targetType, palette.colors.HUD_TEXT);
         painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + 7, `at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT);
