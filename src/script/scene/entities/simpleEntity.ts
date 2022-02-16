@@ -51,10 +51,10 @@ export class SimpleEntity implements Entity {
         //
     }
 
-    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         this.lodHelper.addToRenderList(
             this.position, this.quaternion, this.scale,
-            camera, palette,
+            targetWidth,camera, palette,
             this.flatLayerId, this.volumeLayerId, lists);
     }
 }

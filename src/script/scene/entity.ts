@@ -11,5 +11,5 @@ export interface Entity {
     readonly tags: string[];
     init(scene: Scene): void;
     update(delta: number): void;
-    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void;
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void;
 }

@@ -39,7 +39,7 @@ export class SpecklesEntity implements Entity {
         //
     }
 
-    render(camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         const layer = layers.get(SceneLayers.EntityFlats);
         if (!layer) return;
 

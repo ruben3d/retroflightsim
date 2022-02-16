@@ -12,11 +12,12 @@ import { formatBearing } from './overlayUtils';
 import { visibleWidthAtDistance } from '../../../render/helpers';
 
 
-export const COCKPIT_MFD_SIZE = 60; // Pixels
+export const COCKPIT_MFD_SIZE = Math.floor(V_RES / 3.333); // Pixels
 export const COCKPIT_MFD_X = H_RES - COCKPIT_MFD_SIZE - 1;
 export const COCKPIT_MFD_Y = V_RES - COCKPIT_MFD_SIZE - 1;
 
 const MFD_TARGET_SIZE_FACTOR = 1.5;
+const MFD_TARGET_MAX_SIZE = 500;
 const MFD_TARGET_CAMERA_MIN_ALTITUDE = 15;
 const MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD = 5000;
 const MFD_TARGET_CAMERA_CONSTANT_NEAR = 10;
@@ -70,7 +71,7 @@ export class CockpitEntity implements Entity {
         }
     }
 
-    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
         painter.setColor(palette.colors.HUD_TEXT);
@@ -93,7 +94,7 @@ export class CockpitEntity implements Entity {
 
     private getWeaponsTargetZoomFactor(weaponsTarget: GroundTargetEntity, distance: number): number {
         const farWidth = visibleWidthAtDistance(this.camera, distance);
-        const relativeSize = MFD_TARGET_SIZE_FACTOR * Math.min(500, weaponsTarget.maxSize) / farWidth;
+        const relativeSize = MFD_TARGET_SIZE_FACTOR * Math.min(MFD_TARGET_MAX_SIZE, weaponsTarget.maxSize) / farWidth;
         return Math.pow(2, relativeSize >= 1 ? 0 : Math.max(0, Math.floor(-Math.log2(relativeSize))));
     }
 }

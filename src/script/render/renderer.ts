@@ -117,7 +117,7 @@ export class Renderer {
                 list.clear();
                 this.currentRenderLists.set(listId, list);
             }
-            scene.buildRenderListsAndPaintCanvas(layer.camera, this.currentRenderLists, this.painter, this.palette);
+            scene.buildRenderListsAndPaintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.currentRenderLists, this.painter, this.palette);
             for (const listId of layer.lists) {
                 const list = this.currentRenderLists.get(listId);
                 assertIsDefined(list);

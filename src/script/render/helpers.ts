@@ -17,6 +17,8 @@ export function modelMaxSize(model: Model, scale: THREE.Vector3): number {
 
 export const DEFAULT_LOD_BIAS = 3;
 
+const REF_WIDTH = 320; // Pixels
+
 export class LODHelper {
 
     private objFlats: THREE.Object3D = new THREE.Object3D();
@@ -26,10 +28,10 @@ export class LODHelper {
 
     addToRenderList(
         position: THREE.Vector3, quaternion: THREE.Quaternion, scale: THREE.Vector3,
-        camera: THREE.Camera, palette: Palette,
+        targetWidth: number, camera: THREE.Camera, palette: Palette,
         flatsId: string, volumesId: string, lists: Map<string, THREE.Scene>) {
 
-        const lodLevel = this.getLodLevel(position, scale, camera, this.model);
+        const lodLevel = this.getLodLevel(position, scale, targetWidth, camera, this.model);
         if (lodLevel >= this.model.lod.length) return;
 
         if (lists.has(flatsId) && this.model.lod[lodLevel].flats.length > 0) {
@@ -40,13 +42,17 @@ export class LODHelper {
         }
     }
 
-    private getLodLevel(position: THREE.Vector3, scale: THREE.Vector3, camera: THREE.Camera, model: Model): number {
+    private getLodLevel(position: THREE.Vector3, scale: THREE.Vector3, targetWidth: number, camera: THREE.Camera, model: Model): number {
         if ('isPerspectiveCamera' in camera === false) {
             return 0;
         }
         const visibleWidthAtD = visibleWidthAtDistance(camera as THREE.PerspectiveCamera, position);
         const relativeSize = modelMaxSize(model, scale) / visibleWidthAtD;
-        return relativeSize >= 1 ? 0 : Math.max(0, Math.floor(-Math.log2(relativeSize)) - this.bias);
+        const referenceSize = relativeSize * REF_WIDTH;
+        const realSize = relativeSize * targetWidth;
+        const ratio = realSize / referenceSize;
+        const scaledRelativeSize = relativeSize * ratio;
+        return scaledRelativeSize >= 1 ? 0 : Math.max(0, Math.floor(-Math.log2(scaledRelativeSize)) - this.bias);
     }
 
     private subRender(

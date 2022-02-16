@@ -76,7 +76,7 @@ export class HUDEntity implements Entity {
         this.weaponsTarget = this.actor.weaponsTarget;
     }
 
-    render(camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
         painter.setColor(palette.colors.HUD_TEXT);

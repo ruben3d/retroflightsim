@@ -26,9 +26,9 @@ export class Scene {
         }
     }
 
-    buildRenderListsAndPaintCanvas(camera: THREE.Camera, renderLists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette) {
+    buildRenderListsAndPaintCanvas(targetWidth: number, targetHeight: number, camera: THREE.Camera, renderLists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette) {
         for (let i = 0; i < this.entities.length; i++) {
-            this.entities[i].render(camera, renderLists, painter, palette);
+            this.entities[i].render(targetWidth, targetHeight, camera, renderLists, painter, palette);
         }
     }
 
