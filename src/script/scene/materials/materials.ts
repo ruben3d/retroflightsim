@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ShaderMaterial } from 'three';
-import { FogColorCategory, FogValueCategory, Palette, PaletteCategory } from "../palettes/palette";
+import { FogColorCategory, FogValueCategory, Palette, PaletteCategory, PALETTE_FX_PREFIX } from "../palettes/palette";
 import { FlatVertProgram } from './shaders/flatVP';
 import { DepthFragProgram } from './shaders/depthFP';
 import { PointVertProgram } from './shaders/pointVP';
@@ -58,6 +58,8 @@ export class SceneMaterialManager {
     private readonly pointProto: THREE.ShaderMaterial;
     private palette: Palette;
     private materials: THREE.ShaderMaterial[] = [];
+    private fxFire: THREE.ShaderMaterial[] = [];
+    private elapsed = 0; // seconds
 
     constructor(palette: Palette) {
         this.palette = palette;
@@ -89,17 +91,35 @@ export class SceneMaterialManager {
 
     build(properties: SceneMaterialProperties): THREE.Material {
         const p = this.sanitiseProperties(properties);
+        const data = this.buildData(p);
         const material = this.cloneMaterial(p);
         material.depthWrite = p.depthWrite;
-        material.userData = this.buildData(p);
+        material.userData = data;
         material.uniforms = this.buildUniforms(p);
         this.materials.push(material);
+        if (data.category === PaletteCategory.FX_FIRE) {
+            this.fxFire.push(material);
+        }
         return material;
+    }
+
+    update(delta: number) {
+        this.elapsed += delta;
+        this.updateFxFire(this.elapsed);
+    }
+
+    private updateFxFire(elapsed: number) {
+        const bit = Math.floor(elapsed * 100) % 2 === 0;
+        const color = bit ? this.palette.colors.FX_FIRE : this.palette.colors.FX_FIRE__B;
+        for (let i = 0; i < this.fxFire.length; i++) {
+            const u = this.fxFire[i].uniforms as SceneMaterialUniforms;
+            u.color.value.setStyle(color);
+        }
     }
 
     private sanitiseProperties(properties: SceneMaterialProperties): SceneMaterialProperties {
         const p = { ...properties };
-        if (this.isPoint(p)) {
+        if (this.isPoint(p) || this.isFx(p)) {
             p.shaded = false;
         }
         return p;
@@ -138,6 +158,10 @@ export class SceneMaterialManager {
                     properties.category === PaletteCategory.LIGHT_RED ||
                     properties.category === PaletteCategory.LIGHT_GREEN ||
                     properties.category === PaletteCategory.LIGHT_YELLOW));
+    }
+
+    private isFx(properties: SceneMaterialProperties): boolean {
+        return properties.category.startsWith(PALETTE_FX_PREFIX);
     }
 
     private cloneMaterial(properties: SceneMaterialProperties): ShaderMaterial {

@@ -8,7 +8,7 @@ const colors: PaletteColors = {
     [PaletteCategory.FOG_SKY]: '#D3D3D3',
     [PaletteCategory.FOG_TERRAIN]: '#D3D3D3',
     [PaletteCategory.FOG_SPECKLE]: '#FFFFFF',
-    [PaletteCategory.FOG_LIGHT]: '#FFFFFF',
+    [PaletteCategory.FOG_LIGHT]: '#D3D3D3',
 
     [PaletteCategory.SKY]: '#10A2FB',
 
@@ -32,18 +32,23 @@ const colors: PaletteColors = {
     [PaletteCategory.SCENERY_ROAD_MAIN]: '#4D4D4D',
     [PaletteCategory.SCENERY_ROAD_SECONDARY]: '#555555',
 
-    [PaletteCategory.SCENERY_BASE_PLASTER]: '#d8d8d8',
-    [PaletteCategory.SCENERY_BASE_CONCRETE]: '#9A9A9A',
-    [PaletteCategory.SCENERY_BASE_METAL]: '#C0C0C0',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_WHITE]: '#d8d8d8',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_RED]: '#e16565',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_TEAL]: '#37aaaa',
+    [PaletteCategory.SCENERY_BUILDING_CONCRETE]: '#9A9A9A',
+    [PaletteCategory.SCENERY_BUILDING_METAL]: '#C0C0C0',
+
     [PaletteCategory.SCENERY_BASE_RUNWAY_LINES]: '#9A9A9A',
     [PaletteCategory.SCENERY_BASE_RUNWAY_THRESHOLD]: '#C0C0C0',
 
+    [PaletteCategory.FX_FIRE]: '#ff8800',
+    [PaletteCategory.FX_FIRE__B]: '#ffff00',
 };
 
 const values: PaletteValues = {
     [PaletteCategory.FOG_SKY]: 0.003,
     [PaletteCategory.FOG_TERRAIN]: 0.00005,
-    [PaletteCategory.FOG_LIGHT]: 0.0,
+    [PaletteCategory.FOG_LIGHT]: 0.00003,
     [PaletteCategory.FOG_SPECKLE]: 0.0005
 };
 

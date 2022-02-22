@@ -26,7 +26,8 @@ export class MountainModelLibBuilder implements ModelLibBuilder {
                 flats: [],
                 volumes: [mesh]
             }],
-            maxSize: 2 * RADIUS
+            maxSize: 2 * RADIUS,
+            center: new THREE.Vector3(0, HEIGHT / 2, 0)
         };
     }
 }

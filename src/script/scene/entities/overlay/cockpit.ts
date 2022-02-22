@@ -58,7 +58,8 @@ export class CockpitEntity implements Entity {
             this.weaponsTargetZoomFactor = this.getWeaponsTargetZoomFactor(this.weaponsTarget, d);
 
             this.targetCamera.position.copy(this.camera.position).setY(Math.max(MFD_TARGET_CAMERA_MIN_ALTITUDE, this.camera.position.y));
-            this.targetCamera.lookAt(this.weaponsTarget.position);
+            this.tmpVector.addVectors(this.weaponsTarget.position, this.weaponsTarget.localCenter);
+            this.targetCamera.lookAt(this.tmpVector);
             this.targetCamera.fov = this.camera.fov * 1 / this.weaponsTargetZoomFactor;
             if (d > MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD) {
                 this.targetCamera.near = this.camera.position.distanceTo(this.weaponsTarget.position) / 2;

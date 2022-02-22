@@ -43,7 +43,7 @@ export class LODHelper {
     }
 
     private getLodLevel(position: THREE.Vector3, scale: THREE.Vector3, targetWidth: number, camera: THREE.Camera, model: Model): number {
-        if ('isPerspectiveCamera' in camera === false) {
+        if ('isPerspectiveCamera' in camera === false || model.maxSize === 0) {
             return 0;
         }
         const visibleWidthAtD = visibleWidthAtDistance(camera as THREE.PerspectiveCamera, position);

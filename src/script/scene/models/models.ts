@@ -13,6 +13,7 @@ export interface ModelLodLevel {
 export interface Model {
     lod: ModelLodLevel[];
     maxSize: number;
+    center: THREE.Vector3;
 }
 
 export const LIB_PREFFIX = 'lib:';
@@ -164,6 +165,7 @@ export class ModelManager {
             return level;
         });
         model.maxSize = Math.max(...AABBox.getSize(new THREE.Vector3()).toArray());
+        AABBox.getCenter(model.center);
         return model;
     }
 
@@ -172,7 +174,7 @@ export class ModelManager {
     }
 
     private empty(): Model {
-        return { lod: [], maxSize: 0 };
+        return { lod: [], maxSize: 0, center: new THREE.Vector3() };
     }
 
     private copyTo(src: Model, dst: Model) {
@@ -181,6 +183,7 @@ export class ModelManager {
             volumes: level.volumes.map(obj => this.cloneObj(obj))
         }));
         dst.maxSize = src.maxSize;
+        dst.center.copy(src.center);
     }
 
     private cloneObj(obj: THREE.Object3D): THREE.Object3D {

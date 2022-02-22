@@ -65,7 +65,7 @@ function setupControls() {
 }
 
 function setupScene() {
-    materials = new SceneMaterialManager(NoonPalette);
+    materials = new SceneMaterialManager(getPalette());
     models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
@@ -125,6 +125,8 @@ function setupScene() {
 
     addAirBase(scene, models);
 
+    addRefinery(scene, models);
+
     const warehouse = new GroundTargetEntity(models.getModel('assets/hangar01.gltf'), undefined, 'Warehouse', 'Radlydd');
     warehouse.position.set(-16000, 0, 11000);
     warehouse.quaternion.setFromAxisAngle(UP, Math.PI / 2);
@@ -137,6 +139,35 @@ function setupScene() {
 
     const cockpit = new CockpitEntity(player, playerCamera.main, targetCamera.main);
     scene.add(cockpit);
+}
+
+function addRefinery(scene: Scene, models: ModelManager) {
+    const x = -1200;
+    const z = 1500;
+    const refinery = new GroundTargetEntity(models.getModel('assets/refinery_towers01.gltf'), 2, 'Oil Refinery', 'Radlydd');
+    refinery.position.set(x, 0, z);
+    scene.add(refinery);
+
+    const depot01a = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+    depot01a.position.set(x, 0, z - 100);
+    scene.add(depot01a);
+
+    const depot01b = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+    depot01b.position.set(x, 0, z + 100);
+    depot01b.quaternion.setFromAxisAngle(UP, Math.PI);
+    scene.add(depot01b);
+
+    const depot01c = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+    depot01c.position.set(x + 100, 0, z - 100);
+    scene.add(depot01c);
+
+    const depot02a = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'));
+    depot02a.position.set(x - 150, 0, z - 50);
+    scene.add(depot02a);
+
+    const depot02b = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'));
+    depot02b.position.set(x + 150, 0, z + 50);
+    scene.add(depot02b);
 }
 
 function addAirBase(scene: Scene, models: ModelManager) {
@@ -201,7 +232,7 @@ function randomPosOver(surface: THREE.Object3D<THREE.Event>, position: THREE.Vec
 function updateScene(delta: number) {
 
     scene.update(delta);
-
+    materials?.update(delta);
     playerCamera.update();
     targetCamera.update();
 }

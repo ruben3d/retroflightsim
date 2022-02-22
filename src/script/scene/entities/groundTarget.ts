@@ -56,6 +56,10 @@ export class GroundTargetEntity implements Entity {
         return modelMaxSize(this.model, this.scale);
     }
 
+    get localCenter(): THREE.Vector3 {
+        return this.model.center;
+    }
+
     init(scene: Scene): void {
         //
     }

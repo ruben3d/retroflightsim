@@ -31,12 +31,20 @@ export enum PaletteCategory {
     SCENERY_ROAD_MAIN = 'SCENERY_ROAD_MAIN',
     SCENERY_ROAD_SECONDARY = 'SCENERY_ROAD_SECONDARY',
 
-    SCENERY_BASE_PLASTER = 'SCENERY_BASE_PLASTER',
-    SCENERY_BASE_CONCRETE = 'SCENERY_BASE_CONCRETE',
-    SCENERY_BASE_METAL = 'SCENERY_BASE_METAL',
+    SCENERY_BUILDING_PLASTER_WHITE = 'SCENERY_BUILDING_PLASTER_WHITE',
+    SCENERY_BUILDING_PLASTER_RED = 'SCENERY_BUILDING_PLASTER_RED',
+    SCENERY_BUILDING_PLASTER_TEAL = 'SCENERY_BUILDING_PLASTER_TEAL',
+    SCENERY_BUILDING_CONCRETE = 'SCENERY_BUILDING_CONCRETE',
+    SCENERY_BUILDING_METAL = 'SCENERY_BUILDING_METAL',
+
     SCENERY_BASE_RUNWAY_LINES = 'SCENERY_BASE_RUNWAY_LINES',
     SCENERY_BASE_RUNWAY_THRESHOLD = 'SCENERY_BASE_RUNWAY_THRESHOLD',
+
+    FX_FIRE = 'FX_FIRE',
+    FX_FIRE__B = 'FX_FIRE__B',
 }
+
+export const PALETTE_FX_PREFIX: string = 'FX';
 
 export enum PaletteTime {
     DAY = 'day',
@@ -67,6 +75,7 @@ const FogColorCategoryMap: Map<PaletteCategory, PaletteFogCategories> = new Map(
     [PaletteCategory.LIGHT_RED, PaletteCategory.FOG_LIGHT],
     [PaletteCategory.LIGHT_GREEN, PaletteCategory.FOG_LIGHT],
     [PaletteCategory.LIGHT_YELLOW, PaletteCategory.FOG_LIGHT],
+    [PaletteCategory.FX_FIRE, PaletteCategory.FOG_LIGHT],
 ]);
 
 const FogValueCategoryMap: Map<PaletteCategory, PaletteFogCategories> = new Map([
@@ -75,6 +84,7 @@ const FogValueCategoryMap: Map<PaletteCategory, PaletteFogCategories> = new Map(
     [PaletteCategory.LIGHT_RED, PaletteCategory.FOG_LIGHT],
     [PaletteCategory.LIGHT_GREEN, PaletteCategory.FOG_LIGHT],
     [PaletteCategory.LIGHT_YELLOW, PaletteCategory.FOG_LIGHT],
+    [PaletteCategory.FX_FIRE, PaletteCategory.FOG_LIGHT],
 ]);
 
 export function FogColorCategory(cat: PaletteCategory): PaletteFogCategories {
@@ -117,11 +127,17 @@ const defaultPaletteColors: PaletteColors = {
     [PaletteCategory.SCENERY_ROAD_MAIN]: '#4D4D4D',
     [PaletteCategory.SCENERY_ROAD_SECONDARY]: '#555555',
 
-    [PaletteCategory.SCENERY_BASE_PLASTER]: '#FFFFFF',
-    [PaletteCategory.SCENERY_BASE_CONCRETE]: '#9A9A9A',
-    [PaletteCategory.SCENERY_BASE_METAL]: '#C0C0C0',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_WHITE]: '#FFFFFF',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_RED]: '#e16565',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_TEAL]: '#37aaaa',
+    [PaletteCategory.SCENERY_BUILDING_CONCRETE]: '#9A9A9A',
+    [PaletteCategory.SCENERY_BUILDING_METAL]: '#C0C0C0',
+
     [PaletteCategory.SCENERY_BASE_RUNWAY_LINES]: '#9A9A9A',
     [PaletteCategory.SCENERY_BASE_RUNWAY_THRESHOLD]: '#C0C0C0',
+
+    [PaletteCategory.FX_FIRE]: '#ff8800',
+    [PaletteCategory.FX_FIRE__B]: '#ffff00',
 };
 
 const defaultPaletteValues: PaletteValues = {

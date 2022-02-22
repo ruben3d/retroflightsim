@@ -32,11 +32,17 @@ const colors: PaletteColors = {
     [PaletteCategory.SCENERY_ROAD_MAIN]: '#282828',
     [PaletteCategory.SCENERY_ROAD_SECONDARY]: '#242424',
 
-    [PaletteCategory.SCENERY_BASE_PLASTER]: '#242424',
-    [PaletteCategory.SCENERY_BASE_CONCRETE]: '#242424',
-    [PaletteCategory.SCENERY_BASE_METAL]: '#282828',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_WHITE]: '#242424',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_RED]: '#2d1414',
+    [PaletteCategory.SCENERY_BUILDING_PLASTER_TEAL]: '#103232',
+    [PaletteCategory.SCENERY_BUILDING_CONCRETE]: '#242424',
+    [PaletteCategory.SCENERY_BUILDING_METAL]: '#282828',
+
     [PaletteCategory.SCENERY_BASE_RUNWAY_LINES]: '#242424',
     [PaletteCategory.SCENERY_BASE_RUNWAY_THRESHOLD]: '#282828',
+
+    [PaletteCategory.FX_FIRE]: '#ff8800',
+    [PaletteCategory.FX_FIRE__B]: '#ffff00',
 };
 
 const values: PaletteValues = {

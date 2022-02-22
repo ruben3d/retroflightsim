@@ -22,7 +22,8 @@ export class PavementModelLibBuilder implements ModelLibBuilder {
                 flats: [mesh],
                 volumes: []
             }],
-            maxSize: 2
+            maxSize: 2,
+            center: new THREE.Vector3()
         };
     }
 }

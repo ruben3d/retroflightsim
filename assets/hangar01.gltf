@@ -141,7 +141,7 @@
     "materials" : [
         {
             "doubleSided" : true,
-            "name" : "SCENERY_BASE_CONCRETE",
+            "name" : "SCENERY_BUILDING_CONCRETE",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     0.800000011920929,
@@ -155,7 +155,7 @@
         },
         {
             "doubleSided" : true,
-            "name" : "SCENERY_BASE_METAL",
+            "name" : "SCENERY_BUILDING_METAL",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     0.800000011920929,
@@ -184,20 +184,6 @@
         {
             "doubleSided" : true,
             "name" : "LIGHT_YELLOW",
-            "pbrMetallicRoughness" : {
-                "baseColorFactor" : [
-                    0.800000011920929,
-                    0.800000011920929,
-                    0.800000011920929,
-                    1
-                ],
-                "metallicFactor" : 0,
-                "roughnessFactor" : 0.4000000059604645
-            }
-        },
-        {
-            "doubleSided" : true,
-            "name" : "LIGHT_YELLOW.001",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     0.800000011920929,
@@ -346,7 +332,7 @@
                     "attributes" : {
                         "POSITION" : 19
                     },
-                    "material" : 4,
+                    "material" : 3,
                     "mode" : 0
                 }
             ]
