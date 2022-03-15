@@ -12,7 +12,6 @@ import { PlayerEntity } from './scene/entities/player';
 import { ModelManager } from './scene/models/models';
 import { StaticSceneryEntity } from './scene/entities/staticScenery';
 import { PavementModelLibBuilder } from './scene/models/lib/pavementModelBuilder';
-import { HillModelLibBuilder } from './scene/models/lib/hillModelBuilder';
 import { assertIsDefined } from './utils/asserts';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { GroundTargetEntity } from './scene/entities/groundTarget';
@@ -20,6 +19,7 @@ import { SimpleEntity } from './scene/entities/simpleEntity';
 import { SceneCamera } from './scene/camera';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
 import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD_X, COCKPIT_MFD_Y } from './scene/entities/overlay/cockpit';
+import { SceneryField } from './scene/entities/sceneryField';
 
 
 let renderer: Renderer | undefined;
@@ -70,8 +70,8 @@ function setupScene() {
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
         new PavementModelLibBuilder(),
-        new HillModelLibBuilder(),
-        new MountainModelLibBuilder()
+        new MountainModelLibBuilder('hill', 700, 300, PaletteCategory.SCENERY_MOUNTAIN_GRASS),
+        new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
     ]);
 
     const ground = new SimpleEntity(models.getModel('lib:GROUND'), SceneLayers.BackgroundGround, SceneLayers.BackgroundGround);
@@ -97,7 +97,7 @@ function setupScene() {
         const grass = model.lod[0].flats.find(mesh => mesh.name === PaletteCategory.TERRAIN_GRASS);
         assertIsDefined(grass);
         for (let i = 0; i < 30; i++) {
-            const hill = new StaticSceneryEntity(models!.getModel('lib:hill'), 4);
+            const hill = new StaticSceneryEntity(models!.getModel('lib:hill'));
             randomPosOver(grass, hill.position, 20000);
             hill.scale.set(
                 0.8 + Math.random() / 5.0,
@@ -110,7 +110,7 @@ function setupScene() {
         const bare = model.lod[0].flats.find(mesh => mesh.name === PaletteCategory.TERRAIN_BARE);
         assertIsDefined(bare);
         for (let i = 0; i < 20; i++) {
-            const mountain = new StaticSceneryEntity(models!.getModel('lib:mountain'), 4);
+            const mountain = new StaticSceneryEntity(models!.getModel('lib:mountain'));
             randomPosOver(bare, mountain.position, 20000);
             mountain.scale.x = 0.8 + Math.random() / 5.0;
             mountain.scale.y = 0.5 + Math.random() / 2.0;
@@ -122,6 +122,11 @@ function setupScene() {
 
     const speckles = new SpecklesEntity(materials);
     scene.add(speckles);
+
+    const field1 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(0, 10000), new THREE.Vector2(80000, 10000)));
+    scene.add(field1);
+    const field2 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(-10000, -10000), new THREE.Vector2(10000, 15000)));
+    scene.add(field2);
 
     addAirBase(scene, models);
 
