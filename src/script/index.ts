@@ -11,7 +11,7 @@ import { H_RES, COCKPIT_HEIGHT, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from 
 import { PlayerEntity } from './scene/entities/player';
 import { ModelManager } from './scene/models/models';
 import { StaticSceneryEntity } from './scene/entities/staticScenery';
-import { PavementModelLibBuilder } from './scene/models/lib/pavementModelBuilder';
+import { FieldModelLibBuilder, FieldModelType } from './scene/models/lib/fieldModelBuilder';
 import { assertIsDefined } from './utils/asserts';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { GroundTargetEntity } from './scene/entities/groundTarget';
@@ -19,7 +19,7 @@ import { SimpleEntity } from './scene/entities/simpleEntity';
 import { SceneCamera } from './scene/camera';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
 import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD_X, COCKPIT_MFD_Y } from './scene/entities/overlay/cockpit';
-import { SceneryField } from './scene/entities/sceneryField';
+import { SceneryField, SceneryFieldSettings } from './scene/entities/sceneryField';
 
 
 let renderer: Renderer | undefined;
@@ -69,7 +69,11 @@ function setupScene() {
     models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
-        new PavementModelLibBuilder(),
+        new FieldModelLibBuilder('pavement', FieldModelType.SQUARE, PaletteCategory.SCENERY_ROAD_SECONDARY),
+        new FieldModelLibBuilder('cropGreen', FieldModelType.SQUARE, PaletteCategory.SCENERY_FIELD_GREEN_LIGHT, 200),
+        new FieldModelLibBuilder('cropYellow', FieldModelType.SQUARE, PaletteCategory.SCENERY_FIELD_YELLOW, 200),
+        new FieldModelLibBuilder('cropOchre', FieldModelType.HEXAGON, PaletteCategory.SCENERY_FIELD_OCHRE, 400),
+        new FieldModelLibBuilder('cropRed', FieldModelType.TRIANGLE, PaletteCategory.SCENERY_FIELD_RED, 400),
         new MountainModelLibBuilder('hill', 700, 300, PaletteCategory.SCENERY_MOUNTAIN_GRASS),
         new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
     ]);
@@ -123,9 +127,46 @@ function setupScene() {
     const speckles = new SpecklesEntity(materials);
     scene.add(speckles);
 
-    const field1 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(0, 10000), new THREE.Vector2(80000, 10000)));
+    const fieldOptions: SceneryFieldSettings = {
+        tilesInField: 7,
+        cellsInTile: 2,
+        tileLength: 2500.0,
+        cellVariations: [
+            {
+                probability: 0.4,
+                model: 'assets/farm01.gltf',
+                jitter: 0.9,
+                randomRotation: true
+            },
+            {
+                probability: 0.25,
+                model: 'lib:cropGreen',
+                jitter: 1.2,
+                randomRotation: false
+            },
+            {
+                probability: 0.25,
+                model: 'lib:cropYellow',
+                jitter: 1.2,
+                randomRotation: false
+            },
+            {
+                probability: 0.05,
+                model: 'lib:cropOchre',
+                jitter: 0.8,
+                randomRotation: true
+            },
+            {
+                probability: 0.05,
+                model: 'lib:cropRed',
+                jitter: 0.8,
+                randomRotation: true
+            }
+        ]
+    };
+    const field1 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(0, 10000), new THREE.Vector2(80000, 10000)), fieldOptions);
     scene.add(field1);
-    const field2 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(-10000, -10000), new THREE.Vector2(10000, 15000)));
+    const field2 = new SceneryField(models, new THREE.Box2().setFromCenterAndSize(new THREE.Vector2(-10000, -10000), new THREE.Vector2(10000, 15000)), fieldOptions);
     scene.add(field2);
 
     addAirBase(scene, models);
@@ -176,12 +217,12 @@ function addRefinery(scene: Scene, models: ModelManager) {
 }
 
 function addAirBase(scene: Scene, models: ModelManager) {
-    const hangarGround1 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
+    const hangarGround1 = new StaticSceneryEntity(models.getModel('lib:pavement'), 5);
     hangarGround1.position.set(1360, 0, -860);
     hangarGround1.scale.set(200, 1, 200);
     scene.add(hangarGround1);
 
-    const hangarGround2 = new StaticSceneryEntity(models.getModel('lib:pavement'), 4);
+    const hangarGround2 = new StaticSceneryEntity(models.getModel('lib:pavement'), 5);
     hangarGround2.position.set(1640, 0, -860);
     hangarGround2.scale.set(200, 1, 200);
     scene.add(hangarGround2);

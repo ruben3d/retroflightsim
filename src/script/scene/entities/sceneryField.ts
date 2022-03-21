@@ -1,24 +1,11 @@
 import * as THREE from 'three';
 import { Palette } from '../palettes/palette';
 import { ModelManager } from "../models/models";
-import { Scene, SceneLayers } from "../scene";
+import { Scene, SceneLayers, UP } from "../scene";
 import { Entity } from "../entity";
 import { CanvasPainter } from '../../render/screen/canvasPainter';
 import { SimpleEntity } from './simpleEntity';
 
-const TILE_SUBDIVISIONS = 2; // Number of cells
-const TILE_SIZE = 2000.0; // World units
-const JITTER = 0.9; // [0,1] - 0 disabled, 1 cell edge. Applies a random offset to the item within its cell
-
-const FIELD_SIZE = 7; // Tiles, odd numbers only
-
-const FIELD_PADDING = 5000.0; // World units
-
-// ! DO NOT CHANGE THESE
-const MIN = Math.ceil(-FIELD_SIZE / 2);
-const MAX = Math.ceil(FIELD_SIZE / 2);
-const SPAN = FIELD_SIZE * TILE_SIZE;
-const CELL_SIZE = TILE_SIZE / TILE_SUBDIVISIONS;
 
 interface FieldTileElement {
     offset: THREE.Vector3; // [0,1]
@@ -27,16 +14,41 @@ interface FieldTileElement {
 
 type FieldTile = FieldTileElement[];
 
+export interface SceneryFieldSettings {
+    tilesInField: number; // Length of the field in tiles
+    cellsInTile: number; // Length of the tile in cells
+    tileLength: number; // World units
+    cellVariations: SceneryFieldCellVariation[];
+}
+
+export interface SceneryFieldCellVariation {
+    probability: number; // All cell options added together should be less or equal to 1.0
+    model: string;
+    jitter: number; // [0,1] - 0 disabled, 1 cell edge. Applies a random offset to the item within its cell
+    randomRotation: boolean;
+}
+
 export class SceneryField implements Entity {
 
-    private tiles: FieldTile[] = Array(FIELD_SIZE * FIELD_SIZE);
+    private tiles: FieldTile[];
     private paddedArea: THREE.Box2;
     private tmpVector2: THREE.Vector2 = new THREE.Vector2();
 
+    private tileMinIndex: number;
+    private tileMaxIndex: number;
+    private fieldLength: number;
+    private cellLength: number;
+
     readonly tags: string[] = [];
 
-    constructor(models: ModelManager, private area: THREE.Box2) {
-        this.paddedArea = area.clone().expandByScalar(FIELD_PADDING);
+    constructor(models: ModelManager, private area: THREE.Box2, private options: SceneryFieldSettings) {
+        this.tiles = Array(options.tilesInField * options.tilesInField);
+        this.tileMinIndex = Math.ceil(-options.tilesInField / 2);
+        this.tileMaxIndex = Math.ceil(options.tilesInField / 2);
+        this.fieldLength = options.tilesInField * options.tileLength;
+        this.cellLength = options.tileLength / options.cellsInTile;
+
+        this.paddedArea = area.clone().expandByScalar(options.tileLength * 2);
 
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = this.buildTile(models);
@@ -57,10 +69,10 @@ export class SceneryField implements Entity {
         if (!this.paddedArea.containsPoint(this.tmpVector2)) return;
 
         let idx = 0;
-        for (let row = MIN; row < MAX; row++) {
-            const z = Math.floor((camera.position.z + row * TILE_SIZE) / SPAN + 0.5) * SPAN - row * TILE_SIZE;
-            for (let col = MIN; col < MAX; col++) {
-                const x = Math.floor((camera.position.x + col * TILE_SIZE) / SPAN + 0.5) * SPAN - col * TILE_SIZE;
+        for (let row = this.tileMinIndex; row < this.tileMaxIndex; row++) {
+            const z = Math.floor((camera.position.z + row * this.options.tileLength) / this.fieldLength + 0.5) * this.fieldLength - row * this.options.tileLength;
+            for (let col = this.tileMinIndex; col < this.tileMaxIndex; col++) {
+                const x = Math.floor((camera.position.x + col * this.options.tileLength) / this.fieldLength + 0.5) * this.fieldLength - col * this.options.tileLength;
                 const tile = this.tiles[idx++];
                 for (let i = 0; i < tile.length; i++) {
                     const item = tile[i];
@@ -74,20 +86,24 @@ export class SceneryField implements Entity {
     }
 
     private buildTile(models: ModelManager): FieldTile {
-        const tile: FieldTile = new Array(TILE_SUBDIVISIONS * TILE_SUBDIVISIONS);
-        for (let row = 0; row < TILE_SUBDIVISIONS; row++) {
-            for (let col = 0; col < TILE_SUBDIVISIONS; col++) {
-                const idx = row * TILE_SUBDIVISIONS + col;
-                tile[idx] = this.buildTileElement(row, col, models);
+        const tile: FieldTile = new Array(this.options.cellsInTile * this.options.cellsInTile);
+        for (let row = 0; row < this.options.cellsInTile; row++) {
+            for (let col = 0; col < this.options.cellsInTile; col++) {
+                const idx = row * this.options.cellsInTile + col;
+                tile[idx] = this.buildCell(row, col, models);
             }
         }
         return tile;
     }
 
-    private buildTileElement(row: number, col: number, models: ModelManager): FieldTileElement {
-        const offset = this.builtElementOffset(row, col);
-        const model = models.getModel('assets/farm01.gltf');
+    private buildCell(row: number, col: number, models: ModelManager): FieldTileElement {
+        const variation = this.pickRandomCellVariation();
+        const offset = this.genElementOffset(row, col, variation.jitter);
+        const model = models.getModel(variation.model);
         const entity = new SimpleEntity(model, SceneLayers.EntityFlats, SceneLayers.EntityVolumes);
+        if (variation.randomRotation) {
+            entity.quaternion.setFromAxisAngle(UP, Math.floor(Math.random() * 4) * 0.5 * Math.PI);
+        }
         const element: FieldTileElement = {
             offset: offset,
             entity: entity
@@ -95,14 +111,24 @@ export class SceneryField implements Entity {
         return element;
     }
 
-    private builtElementOffset(row: number, col: number): THREE.Vector3 {
-        const offset = new THREE.Vector3();
+    private pickRandomCellVariation(): SceneryFieldCellVariation {
+        let n = Math.random();
+        let index = -1;
+        while (n >= 0 && index < this.options.cellVariations.length) {
+            index++;
+            n -= this.options.cellVariations[index].probability;
+        }
+        return this.options.cellVariations[index];
+    }
+
+    private genElementOffset(row: number, col: number, jitter: number): THREE.Vector3 {
         const theta = Math.random() * 2 * Math.PI;
-        const r = Math.random();
-        const sqR = Math.sqrt(r);
-        offset.x = (col + 0.5) * CELL_SIZE - TILE_SIZE / 2 + JITTER * CELL_SIZE / 2 * sqR * Math.cos(theta);
+        const rho = Math.random();
+        const sqRho = Math.sqrt(rho);
+        const offset = new THREE.Vector3();
+        offset.x = (col + 0.5) * this.cellLength - this.options.tileLength / 2 + jitter * this.cellLength / 2 * sqRho * Math.cos(theta);
         offset.y = 0;
-        offset.z = (row + 0.5) * CELL_SIZE - TILE_SIZE / 2 + JITTER * CELL_SIZE / 2 * sqR * Math.sin(theta);
+        offset.z = (row + 0.5) * this.cellLength - this.options.tileLength / 2 + jitter * this.cellLength / 2 * sqRho * Math.sin(theta);
         return offset;
     }
 }

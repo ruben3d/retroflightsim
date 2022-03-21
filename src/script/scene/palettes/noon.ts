@@ -32,8 +32,11 @@ const colors: PaletteColors = {
     [PaletteCategory.SCENERY_ROAD_MAIN]: '#4D4D4D',
     [PaletteCategory.SCENERY_ROAD_SECONDARY]: '#555555',
 
-    [PaletteCategory.SCENERY_FIELD_GREEN]: '#379700',
-    [PaletteCategory.SCENERY_FIELD_YELLOW]: '#dbc500',
+    [PaletteCategory.SCENERY_FIELD_GREEN]: '#006d00',
+    [PaletteCategory.SCENERY_FIELD_GREEN_LIGHT]: '#148214',
+    [PaletteCategory.SCENERY_FIELD_YELLOW]: '#dbb228',
+    [PaletteCategory.SCENERY_FIELD_OCHRE]: '#b66908',
+    [PaletteCategory.SCENERY_FIELD_RED]: '#aa1414',
 
     [PaletteCategory.SCENERY_BUILDING_PLASTER_WHITE]: '#d8d8d8',
     [PaletteCategory.SCENERY_BUILDING_PLASTER_RED]: '#e16565',
