@@ -13,6 +13,8 @@ export class SimpleEntity implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+
     constructor(model: Model, private flatLayerId: string, private volumeLayerId: string, lodBias: number = DEFAULT_LOD_BIAS) {
         this.lodHelper = new LODHelper(model, lodBias);
     }
@@ -54,7 +56,7 @@ export class SimpleEntity implements Entity {
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         this.lodHelper.addToRenderList(
             this.position, this.quaternion, this.scale,
-            targetWidth,camera, palette,
+            targetWidth, camera, palette,
             this.flatLayerId, this.volumeLayerId, lists);
     }
 }

@@ -8,10 +8,10 @@ Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight 
 
 ## Screenshots
 
-[<img src="doc/ss01.png" width="320" height="200" />](doc/ss01.png)
+[<img src="doc/ss08.png" width="320" height="200" />](doc/ss08.png)
 [<img src="doc/ss07.png" width="320" height="200" />](doc/ss07.png)
 [<img src="doc/ss05.png" width="320" height="200" />](doc/ss05.png)
-[<img src="doc/ss03.png" width="320" height="200" />](doc/ss03.png)
+[<img src="doc/ss09.png" width="320" height="200" />](doc/ss09.png)
 
 ## How to build
 
@@ -35,12 +35,16 @@ Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 
 ## Instructions
 
-Limited controls available:
-* `W`/`S`: Pitch control.
-* `A`/`D`: Roll control.
-* `Q`/`E`: Yaw control.
+Plane controls:
+* `W`/`S`: Pitch.
+* `A`/`D`: Roll.
+* `Q`/`E`: Yaw.
 * `Z`/`X`: Throttle.
 * `T`: Cycle through available targets.
+
+Views:
 * `N`: Toggle Day/Night.
+* `1`: Cockpit.
+* `2`: Exterior.
 
 On reaching the limits of the detailed scenario the player position wraps around.

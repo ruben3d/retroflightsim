@@ -25,6 +25,8 @@ export class SpecklesEntity implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+
     constructor(materials: SceneMaterialManager) {
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = this.buildTile(materials);

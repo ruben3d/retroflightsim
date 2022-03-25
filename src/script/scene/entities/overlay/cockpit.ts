@@ -4,7 +4,7 @@ import { TextAlignment } from "../../../render/screen/text";
 import { Scene, SceneLayers } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette } from "../../palettes/palette";
-import { H_RES, V_RES } from "../../../defs";
+import { COCKPIT_FOV, H_RES, V_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorBearing } from '../../../utils/math';
@@ -36,6 +36,8 @@ export class CockpitEntity implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+
     init(scene: Scene): void {
         //
     }
@@ -54,16 +56,16 @@ export class CockpitEntity implements Entity {
                 .normalize();
             this.weaponsTargetBearing = vectorBearing(this.tmpVector);
 
-            const d = this.camera.position.distanceTo(this.weaponsTarget.position);
+            const d = this.actor.position.distanceTo(this.weaponsTarget.position);
             this.weaponsTargetZoomFactor = this.getWeaponsTargetZoomFactor(this.weaponsTarget, d);
 
-            this.targetCamera.position.copy(this.camera.position).setY(Math.max(MFD_TARGET_CAMERA_MIN_ALTITUDE, this.camera.position.y));
+            this.targetCamera.position.copy(this.actor.position).setY(Math.max(MFD_TARGET_CAMERA_MIN_ALTITUDE, this.actor.position.y));
             this.tmpVector.addVectors(this.weaponsTarget.position, this.weaponsTarget.localCenter);
             this.targetCamera.lookAt(this.tmpVector);
-            this.targetCamera.fov = this.camera.fov * 1 / this.weaponsTargetZoomFactor;
+            this.targetCamera.fov = COCKPIT_FOV * 1 / this.weaponsTargetZoomFactor;
             if (d > MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD) {
-                this.targetCamera.near = this.camera.position.distanceTo(this.weaponsTarget.position) / 2;
-                this.targetCamera.far = this.camera.position.distanceTo(this.weaponsTarget.position) * 2;
+                this.targetCamera.near = this.actor.position.distanceTo(this.weaponsTarget.position) / 2;
+                this.targetCamera.far = this.actor.position.distanceTo(this.weaponsTarget.position) * 2;
             } else {
                 this.targetCamera.near = MFD_TARGET_CAMERA_CONSTANT_NEAR;
                 this.targetCamera.far = MFD_TARGET_CAMERA_CONSTANT_FAR;

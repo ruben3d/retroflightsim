@@ -12,5 +12,9 @@ export const ROLL_RATE = Math.PI / 4; // Radians/s
 export const YAW_RATE = Math.PI / 16; // Radians/s
 export const MAX_SPEED = 250.0; // World units/s
 export const THROTTLE_RATE = 25; // Percentage of maximum/s [0,100]
-export const COCKPIT_HEIGHT = 4; // World units
+export const PLANE_DISTANCE_TO_GROUND = 2.0; // World units
+export const PLANE_COCKPIT_OFFSET_Y = 1.0; // World units
+export const PLANE_COCKPIT_OFFSET_Z = 8.0; // World units
 export const MAX_ALTITUDE = 2000; // World units
+
+export const COCKPIT_FOV = 50;

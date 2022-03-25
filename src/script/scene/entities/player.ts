@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { COCKPIT_HEIGHT, MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
+import { MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
+import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity, ENTITY_TAGS } from "../entity";
+import { Model } from '../models/models';
 import { Palette } from "../palettes/palette";
-import { Scene, UP } from "../scene";
+import { Scene, SceneLayers } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 
 
@@ -16,6 +18,7 @@ enum Stick {
 export class PlayerEntity implements Entity {
 
     private scene: Scene | undefined;
+    private lodHelper: LODHelper;
 
     private pitchState: Stick = Stick.IDLE;
     private rollState: Stick = Stick.IDLE;
@@ -33,8 +36,12 @@ export class PlayerEntity implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+    exteriorView: boolean = false;
+
     // Bearing increases CCW, radians
-    constructor(private camera: THREE.Camera, position: THREE.Vector3, bearing: number) {
+    constructor(model: Model, position: THREE.Vector3, bearing: number) {
+        this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
         this.obj.position.copy(position);
         this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
     }
@@ -85,8 +92,8 @@ export class PlayerEntity implements Entity {
         this.obj.translateZ(-MAX_SPEED * this.throttle * delta);
 
         // Avoid ground crashes
-        if (this.obj.position.y < 0) {
-            this.obj.position.y = 0;
+        if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
+            this.obj.position.y = PLANE_DISTANCE_TO_GROUND;
             const d = this.obj.getWorldDirection(new THREE.Vector3());
             d.setY(0).add(this.obj.position);
             this.obj.lookAt(d);
@@ -104,14 +111,16 @@ export class PlayerEntity implements Entity {
         if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
         if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
 
-        this.camera.position.copy(this.obj.position).addScaledVector(UP, COCKPIT_HEIGHT);
-        this.camera.quaternion.copy(this.obj.quaternion);
-
         this.speed = this.throttle * MAX_SPEED;
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
-        //
+    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+        if (this.exteriorView) {
+            this.lodHelper.addToRenderList(
+                this.position, this.quaternion, this.obj.scale,
+                targetWidth, camera, palette,
+                SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+        }
     }
 
     set position(p: THREE.Vector3) {

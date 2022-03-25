@@ -28,6 +28,11 @@ export enum PaletteCategory {
 
     GLASS = 'GLASS',
 
+    VEHICLE_PLANE_GREY = 'VEHICLE_PLANE_GREY',
+    VEHICLE_PLANE_NAVY = 'VEHICLE_PLANE_NAVY',
+    VEHICLE_PLANE_INTAKE = 'VEHICLE_PLANE_INTAKE',
+    VEHICLE_PLANE_ENGINE = 'VEHICLE_PLANE_ENGINE',
+
     SCENERY_ROAD_MAIN = 'SCENERY_ROAD_MAIN',
     SCENERY_ROAD_SECONDARY = 'SCENERY_ROAD_SECONDARY',
 
@@ -127,6 +132,11 @@ const defaultPaletteColors: PaletteColors = {
     [PaletteCategory.LIGHT_YELLOW]: '#FFFFBA',
 
     [PaletteCategory.GLASS]: '#00ffff',
+
+    [PaletteCategory.VEHICLE_PLANE_GREY]: '#828385',
+    [PaletteCategory.VEHICLE_PLANE_NAVY]: '#6f7981',
+    [PaletteCategory.VEHICLE_PLANE_INTAKE]: '#58595A',
+    [PaletteCategory.VEHICLE_PLANE_ENGINE]: '#4B484E',
 
     [PaletteCategory.SCENERY_SPECKLE]: '#888888',
 

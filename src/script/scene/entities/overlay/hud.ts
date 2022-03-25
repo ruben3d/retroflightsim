@@ -56,6 +56,8 @@ export class HUDEntity implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+
     init(scene: Scene): void {
         //
     }

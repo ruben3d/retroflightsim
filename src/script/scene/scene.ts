@@ -22,13 +22,19 @@ export class Scene {
 
     update(delta: number) {
         for (let i = 0; i < this.entities.length; i++) {
-            this.entities[i].update(delta);
+            const entity = this.entities[i];
+            if (entity.enabled) {
+                entity.update(delta);
+            }
         }
     }
 
     buildRenderListsAndPaintCanvas(targetWidth: number, targetHeight: number, camera: THREE.Camera, renderLists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette) {
         for (let i = 0; i < this.entities.length; i++) {
-            this.entities[i].render(targetWidth, targetHeight, camera, renderLists, painter, palette);
+            const entity = this.entities[i];
+            if (entity.enabled) {
+                entity.render(targetWidth, targetHeight, camera, renderLists, painter, palette);
+            }
         }
     }
 

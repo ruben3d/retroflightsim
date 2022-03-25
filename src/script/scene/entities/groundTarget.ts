@@ -12,6 +12,8 @@ export class GroundTargetEntity implements Entity {
 
     readonly tags: string[] = [ENTITY_TAGS.TARGET, ENTITY_TAGS.GROUND];
 
+    enabled: boolean = true;
+
     constructor(private model: Model, lodBias: number = DEFAULT_LOD_BIAS,
         private type: string, private location: string) {
 

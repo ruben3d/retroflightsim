@@ -31,13 +31,17 @@ export class LODHelper {
         targetWidth: number, camera: THREE.Camera, palette: Palette,
         flatsId: string, volumesId: string, lists: Map<string, THREE.Scene>) {
 
+        const hasFlats = lists.has(flatsId);
+        const hasVolumes = lists.has(volumesId);
+        if (!hasFlats && !hasVolumes) return;
+
         const lodLevel = this.getLodLevel(position, scale, targetWidth, camera, this.model);
         if (lodLevel >= this.model.lod.length) return;
 
-        if (lists.has(flatsId) && this.model.lod[lodLevel].flats.length > 0) {
+        if (hasFlats && this.model.lod[lodLevel].flats.length > 0) {
             this.subRender(position, quaternion, scale, this.objFlats, this.model.lod[lodLevel].flats, flatsId, lists, palette);
         }
-        if (lists.has(volumesId) && this.model.lod[lodLevel].volumes.length > 0) {
+        if (hasVolumes && this.model.lod[lodLevel].volumes.length > 0) {
             this.subRender(position, quaternion, scale, this.objVolumes, this.model.lod[lodLevel].volumes, volumesId, lists, palette);
         }
     }
@@ -47,6 +51,9 @@ export class LODHelper {
             return 0;
         }
         const visibleWidthAtD = visibleWidthAtDistance(camera as THREE.PerspectiveCamera, position);
+        if (visibleWidthAtD === 0) {
+            return 0; // Camera and model at the same spot, can't get closer than that
+        }
         const relativeSize = modelMaxSize(model, scale) / visibleWidthAtD;
         const referenceSize = relativeSize * REF_WIDTH;
         const realSize = relativeSize * targetWidth;

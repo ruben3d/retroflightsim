@@ -41,6 +41,8 @@ export class SceneryField implements Entity {
 
     readonly tags: string[] = [];
 
+    enabled: boolean = true;
+
     constructor(models: ModelManager, private area: THREE.Box2, private options: SceneryFieldSettings) {
         this.tiles = Array(options.tilesInField * options.tilesInField);
         this.tileMinIndex = Math.ceil(-options.tilesInField / 2);
