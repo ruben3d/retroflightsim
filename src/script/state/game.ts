@@ -54,7 +54,7 @@ export class Game {
     constructor(private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
         this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, 40000));
         this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, 40000));
-        this.player = new PlayerEntity(this.models.getModel('assets/f22.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
+        this.player = new PlayerEntity(this.models.getModel('assets/f22.gltf'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
