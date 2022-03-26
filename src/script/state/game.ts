@@ -21,6 +21,7 @@ import { assertIsDefined } from '../utils/asserts';
 import { Entity } from '../scene/entity';
 import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
 import { ExteriorBehindCameraUpdater } from './cameraUpdaters/exteriorBehindCameraUpdater';
+import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
@@ -153,7 +154,7 @@ export class Game {
             this.cockpitEntities[i].enabled = true;
         }
         for (let i = 0; i < this.exteriorEntities.length; i++) {
-            this.cockpitEntities[i].enabled = false;
+            this.exteriorEntities[i].enabled = false;
         }
     }
 
@@ -165,7 +166,7 @@ export class Game {
             this.cockpitEntities[i].enabled = false;
         }
         for (let i = 0; i < this.exteriorEntities.length; i++) {
-            this.cockpitEntities[i].enabled = true;
+            this.exteriorEntities[i].enabled = true;
         }
     }
 
@@ -285,6 +286,11 @@ export class Game {
         const cockpit = new CockpitEntity(this.player, this.playerCamera.main, this.targetCamera.main);
         this.cockpitEntities.push(cockpit);
         this.scene.add(cockpit);
+
+        const exteriorData = new ExteriorDataEntity(this.player);
+        exteriorData.enabled = false;
+        this.exteriorEntities.push(exteriorData);
+        this.scene.add(exteriorData);
     }
 
     private addRefinery(scene: Scene, models: ModelManager) {

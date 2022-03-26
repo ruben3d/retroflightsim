@@ -8,7 +8,7 @@ import { H_RES, H_RES_HALF, V_RES, V_RES_HALF } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorBearing } from '../../../utils/math';
-import { formatBearing } from './overlayUtils';
+import { formatBearing, toFeet, toKnots } from './overlayUtils';
 
 
 const ALTITUDE_X = H_RES - 20;
@@ -63,7 +63,7 @@ export class HUDEntity implements Entity {
     }
 
     update(delta: number): void {
-        this.altitude = this.toFeet(this.actor.position.y);
+        this.altitude = toFeet(this.actor.position.y);
 
         this.tmpVector.copy(FORWARD)
             .applyQuaternion(this.actor.quaternion)
@@ -73,7 +73,7 @@ export class HUDEntity implements Entity {
 
         this.throttle = this.actor.throttleUnit;
 
-        this.speed = this.toKnots(this.actor.rawSpeed);
+        this.speed = toKnots(this.actor.rawSpeed);
 
         this.weaponsTarget = this.actor.weaponsTarget;
     }
@@ -237,13 +237,5 @@ export class HUDEntity implements Entity {
             .vLine(H_RES_HALF, V_RES_HALF - 3 - 3, V_RES_HALF - 3)
             .vLine(H_RES_HALF, V_RES_HALF + 3, V_RES_HALF + 3 + 3)
             .commit();
-    }
-
-    private toFeet(meters: number): number {
-        return meters * 3.28084;
-    }
-
-    private toKnots(metersPerSecond: number): number {
-        return metersPerSecond * 1.94384;
     }
 }
