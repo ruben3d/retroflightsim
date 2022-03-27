@@ -45,6 +45,7 @@ Plane controls:
 Views:
 * `N`: Toggle Day/Night.
 * `1`: Cockpit.
-* `2`: Exterior.
+* `2`: Exterior behind.
+* `3`: Toggle exterior left/right.
 
 On reaching the limits of the detailed scenario the player position wraps around.

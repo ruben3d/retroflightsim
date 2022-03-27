@@ -22,6 +22,7 @@ import { Entity } from '../scene/entity';
 import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
 import { ExteriorBehindCameraUpdater } from './cameraUpdaters/exteriorBehindCameraUpdater';
 import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
+import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteriorSideCameraUpdater';
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
@@ -29,6 +30,8 @@ const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
 enum PlayerViewState {
     COCKPIT_FRONT,
     EXTERIOR_BEHIND,
+    EXTERIOR_LEFT,
+    EXTERIOR_RIGHT,
 }
 
 export class Game {
@@ -58,6 +61,8 @@ export class Game {
         this.player = new PlayerEntity(this.models.getModel('assets/f22.gltf'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_RIGHT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.RIGHT));
         this.cameraUpdater = this.getCameraUpdater(this.view);
 
         const playerLayers: RenderLayer[] = [
@@ -142,6 +147,10 @@ export class Game {
                     }
                     break;
                 }
+                case '3': {
+                    this.setExteriorSideView();
+                    break;
+                }
             }
         });
     }
@@ -159,7 +168,19 @@ export class Game {
     }
 
     private setExteriorBehindView() {
-        this.view = PlayerViewState.EXTERIOR_BEHIND;
+        this.setExteriorView(PlayerViewState.EXTERIOR_BEHIND);
+    }
+
+    private setExteriorSideView() {
+        if (this.view !== PlayerViewState.EXTERIOR_RIGHT) {
+            this.setExteriorView(PlayerViewState.EXTERIOR_RIGHT);
+        } else {
+            this.setExteriorView(PlayerViewState.EXTERIOR_LEFT);
+        }
+    }
+
+    private setExteriorView(view: PlayerViewState) {
+        this.view = view;
         this.player.exteriorView = true;
         this.cameraUpdater = this.getCameraUpdater(this.view);
         for (let i = 0; i < this.cockpitEntities.length; i++) {
