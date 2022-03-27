@@ -8,6 +8,7 @@ import { ModelManager } from './scene/models/models';
 import { NightPalette } from './scene/palettes/night';
 import { DefaultPalette, PaletteCategory } from './scene/palettes/palette';
 import { Game } from './state/game';
+import { assertIsDefined } from './utils/asserts';
 
 
 let renderer: Renderer | undefined;
@@ -47,6 +48,22 @@ function loop() {
     game?.render();
 }
 
+function setupHelp() {
+    const button = document.getElementById('help-button');
+    assertIsDefined(button);
+    const panel = document.getElementById('help');
+    assertIsDefined(panel);
+
+    button.addEventListener('click', () => {
+        if (panel.classList.contains('open')) {
+            panel.classList.remove('open');
+        } else {
+            panel.classList.add('open');
+        }
+    });
+}
+
 window.addEventListener("load", () => {
     setup();
+    setupHelp();
 });
