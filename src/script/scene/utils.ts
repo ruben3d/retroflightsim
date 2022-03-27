@@ -9,7 +9,11 @@ export function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, 
     const m = (material as THREE.ShaderMaterial);
     const u = m.uniforms as SceneMaterialUniforms;
 
-    camera.getWorldDirection(camDir).setY(0.0).normalize();
+    if ('isPerspectiveCamera' in camera === false) {
+        camDir.set(0, -1, 0);
+    } else {
+        camera.getWorldDirection(camDir).setY(0.0).normalize();
+    }
     camPos.copy(camera.position);
     const camD = camPos.negate().dot(camDir);
 

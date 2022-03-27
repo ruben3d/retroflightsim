@@ -4,7 +4,7 @@ import { CANVAS_RENDER_TARGET, Renderer, RenderLayer, RenderTargetType } from ".
 import { SceneCamera } from '../scene/cameras/camera';
 import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
 import { GroundTargetEntity } from '../scene/entities/groundTarget';
-import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD_X, COCKPIT_MFD_Y } from '../scene/entities/overlay/cockpit';
+import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD1_X, COCKPIT_MFD1_Y } from '../scene/entities/overlay/cockpit';
 import { HUDEntity } from '../scene/entities/overlay/hud';
 import { PlayerEntity } from '../scene/entities/player';
 import { SceneryField, SceneryFieldSettings } from '../scene/entities/sceneryField';
@@ -16,7 +16,7 @@ import { ModelManager } from "../scene/models/models";
 import { NightPalette } from '../scene/palettes/night';
 import { NoonPalette } from '../scene/palettes/noon';
 import { Palette, PaletteCategory } from '../scene/palettes/palette';
-import { Scene, SceneLayers, UP } from '../scene/scene';
+import { RIGHT, Scene, SceneLayers, UP } from '../scene/scene';
 import { assertIsDefined } from '../utils/asserts';
 import { Entity } from '../scene/entity';
 import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
@@ -26,6 +26,7 @@ import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteri
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
+const MAP_RENDER_TARGET = 'MAP_RENDER_TARGET';
 
 enum PlayerViewState {
     COCKPIT_FRONT,
@@ -40,6 +41,7 @@ export class Game {
 
     private playerCamera: SceneCamera;
     private targetCamera: SceneCamera;
+    private mapCamera: THREE.OrthographicCamera;
     private cameraUpdaters: Map<PlayerViewState, CameraUpdater> = new Map();
     private cameraUpdater: CameraUpdater;
     private player: PlayerEntity;
@@ -47,8 +49,9 @@ export class Game {
     private palettes = [NoonPalette, NightPalette];
     private currentPalette = 0;
 
-    private defaultRenderLayers: RenderLayer[];
-    private targetRenderLayers: RenderLayer[];
+    private cockpitRenderLayers: RenderLayer[];
+    private cockpitTargetRenderLayers: RenderLayer[];
+    private exteriorRenderLayers: RenderLayer[];
 
     private view: PlayerViewState = PlayerViewState.COCKPIT_FRONT;
 
@@ -58,6 +61,9 @@ export class Game {
     constructor(private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
         this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, 40000));
         this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, 40000));
+        this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
+        this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
+        this.mapCamera.position.set(0, 500, 0);
         this.player = new PlayerEntity(this.models.getModel('assets/f22.gltf'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
@@ -76,7 +82,7 @@ export class Game {
             },
             {
                 camera: this.playerCamera.main,
-                lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+                lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
             }
         ];
         const targetLayers: RenderLayer[] = [
@@ -93,7 +99,14 @@ export class Game {
             {
                 target: WEAPONSTARGET_RENDER_TARGET,
                 camera: this.targetCamera.main,
-                lists: [SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+                lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+            }
+        ];
+        const mapLayers: RenderLayer[] = [
+            {
+                target: MAP_RENDER_TARGET,
+                camera: this.mapCamera,
+                lists: [SceneLayers.Terrain]
             }
         ];
         const canvasLayers: RenderLayer[] = [
@@ -103,12 +116,14 @@ export class Game {
                 lists: [SceneLayers.Overlay]
             }
         ];
-        this.defaultRenderLayers = [...playerLayers, ...canvasLayers];
-        this.targetRenderLayers = [...playerLayers, ...targetLayers, ...canvasLayers];
+        this.cockpitRenderLayers = [...playerLayers, ...mapLayers, ...canvasLayers];
+        this.cockpitTargetRenderLayers = [...playerLayers, ...mapLayers, ...targetLayers, ...canvasLayers];
+        this.exteriorRenderLayers = [...playerLayers, ...canvasLayers];
     }
 
     setup() {
-        this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD_X, COCKPIT_MFD_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+        this.renderer.createRenderTarget(MAP_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+        this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
         this.renderer.setPalette(this.getPalette());
         this.materials.setPalette(this.getPalette());
         this.setupControls();
@@ -123,7 +138,13 @@ export class Game {
     }
 
     render() {
-        this.renderer.render(this.scene, this.player.weaponsTarget && this.view === PlayerViewState.COCKPIT_FRONT ? this.targetRenderLayers : this.defaultRenderLayers);
+        let layers = this.cockpitRenderLayers;
+        if (this.view !== PlayerViewState.COCKPIT_FRONT) {
+            layers = this.exteriorRenderLayers;
+        } else if (this.player.weaponsTarget) {
+            layers = this.cockpitTargetRenderLayers;
+        }
+        this.renderer.render(this.scene, layers);
     }
 
     private setupControls() {
@@ -208,7 +229,7 @@ export class Game {
         for (let x = -2; x <= 2; x++) {
             for (let z = -2; z <= 2; z++) {
                 const model = this.models.getModel('assets/map.gltf');
-                const map = new StaticSceneryEntity(model);
+                const map = new SimpleEntity(model, SceneLayers.Terrain, SceneLayers.Terrain);
                 map.position.x = x * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
                 map.position.z = z * TERRAIN_MODEL_SIZE * TERRAIN_SCALE;
                 map.scale.x = TERRAIN_SCALE * (Math.abs(x) % 2 === 0 ? 1 : -1);
@@ -304,7 +325,7 @@ export class Game {
         this.cockpitEntities.push(hud);
         this.scene.add(hud);
 
-        const cockpit = new CockpitEntity(this.player, this.playerCamera.main, this.targetCamera.main);
+        const cockpit = new CockpitEntity(this.player, this.playerCamera.main, this.targetCamera.main, this.mapCamera);
         this.cockpitEntities.push(cockpit);
         this.scene.add(cockpit);
 
@@ -321,24 +342,24 @@ export class Game {
         refinery.position.set(x, 0, z);
         scene.add(refinery);
 
-        const depot01a = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+        const depot01a = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'), 2);
         depot01a.position.set(x, 0, z - 100);
         scene.add(depot01a);
 
-        const depot01b = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+        const depot01b = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'), 2);
         depot01b.position.set(x, 0, z + 100);
         depot01b.quaternion.setFromAxisAngle(UP, Math.PI);
         scene.add(depot01b);
 
-        const depot01c = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'));
+        const depot01c = new StaticSceneryEntity(models.getModel('assets/refinery_depot01.gltf'), 2);
         depot01c.position.set(x + 100, 0, z - 100);
         scene.add(depot01c);
 
-        const depot02a = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'));
+        const depot02a = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'), 2);
         depot02a.position.set(x - 150, 0, z - 50);
         scene.add(depot02a);
 
-        const depot02b = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'));
+        const depot02b = new StaticSceneryEntity(models.getModel('assets/refinery_depot02.gltf'), 2);
         depot02b.position.set(x + 150, 0, z + 50);
         scene.add(depot02b);
     }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
-import { TextAlignment } from "../../../render/screen/text";
+import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/text";
 import { Scene, SceneLayers } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette } from "../../palettes/palette";
@@ -13,8 +13,10 @@ import { visibleWidthAtDistance } from '../../../render/helpers';
 
 
 export const COCKPIT_MFD_SIZE = Math.floor(V_RES / 3.333); // Pixels
-export const COCKPIT_MFD_X = H_RES - COCKPIT_MFD_SIZE - 1;
-export const COCKPIT_MFD_Y = V_RES - COCKPIT_MFD_SIZE - 1;
+export const COCKPIT_MFD1_X = 1;
+export const COCKPIT_MFD1_Y = V_RES - COCKPIT_MFD_SIZE - 1;
+export const COCKPIT_MFD2_X = H_RES - COCKPIT_MFD_SIZE - 1;
+export const COCKPIT_MFD2_Y = V_RES - COCKPIT_MFD_SIZE - 1;
 
 const MFD_TARGET_SIZE_FACTOR = 1.5;
 const MFD_TARGET_MAX_SIZE = 500;
@@ -25,7 +27,10 @@ const MFD_TARGET_CAMERA_CONSTANT_FAR = 10000;
 
 export class CockpitEntity implements Entity {
 
-    constructor(private actor: PlayerEntity, private camera: THREE.PerspectiveCamera, private targetCamera: THREE.PerspectiveCamera) { }
+    constructor(private actor: PlayerEntity,
+        private camera: THREE.PerspectiveCamera,
+        private targetCamera: THREE.PerspectiveCamera,
+        private mapCamera: THREE.OrthographicCamera) { }
 
     private weaponsTarget: GroundTargetEntity | undefined;
     private weaponsTargetRange: number = 0; // Km
@@ -43,6 +48,9 @@ export class CockpitEntity implements Entity {
     }
 
     update(delta: number): void {
+
+        this.mapCamera.position.copy(this.actor.position).setY(500);
+
         this.weaponsTarget = this.actor.weaponsTarget;
 
         if (this.weaponsTarget !== undefined) {
@@ -79,20 +87,35 @@ export class CockpitEntity implements Entity {
 
         painter.setColor(palette.colors.HUD_TEXT);
 
-        this.renderMFD(painter, palette);
+        this.renderMFD1(painter, palette);
+        this.renderMFD2(painter, palette);
     }
 
-    private renderMFD(painter: CanvasPainter, palette: Palette) {
-        if (this.weaponsTarget === undefined) return;
+    private renderMFD1(painter: CanvasPainter, palette: Palette) {
+        painter.rectangle(COCKPIT_MFD1_X - 1, COCKPIT_MFD1_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
+        painter.clear(COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+    }
 
-        painter.rectangle(COCKPIT_MFD_X - 1, COCKPIT_MFD_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
-        painter.clear(COCKPIT_MFD_X, COCKPIT_MFD_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+    private renderMFD2(painter: CanvasPainter, palette: Palette) {
+        painter.rectangle(COCKPIT_MFD2_X - 1, COCKPIT_MFD2_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
 
-        painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + 1, this.weaponsTarget.targetType, palette.colors.HUD_TEXT);
-        painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + 7, `at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT);
-        painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + COCKPIT_MFD_SIZE - 12, `BRG ${formatBearing(this.weaponsTargetBearing)}`, palette.colors.HUD_TEXT);
-        painter.text(COCKPIT_MFD_X + COCKPIT_MFD_SIZE - 1, COCKPIT_MFD_Y + COCKPIT_MFD_SIZE - 12, `${this.weaponsTargetZoomFactor.toFixed(0)}x`, palette.colors.HUD_TEXT, TextAlignment.RIGHT);
-        painter.text(COCKPIT_MFD_X + 1, COCKPIT_MFD_Y + COCKPIT_MFD_SIZE - 6, `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT);
+        if (this.weaponsTarget === undefined) {
+            painter.setBackground('#142901');
+            painter.rectangle(COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE, true);
+            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - CHAR_HEIGHT - CHAR_MARGIN, 'No target', palette.colors.HUD_TEXT);
+        } else {
+            painter.clear(COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + CHAR_MARGIN,
+                this.weaponsTarget.targetType, palette.colors.HUD_TEXT);
+            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + CHAR_MARGIN * 2 + CHAR_HEIGHT,
+                `at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT);
+            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+                `BRG ${formatBearing(this.weaponsTargetBearing)}`, palette.colors.HUD_TEXT);
+            painter.text(COCKPIT_MFD2_X + COCKPIT_MFD_SIZE - CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+                `${this.weaponsTargetZoomFactor.toFixed(0)}x`, palette.colors.HUD_TEXT, TextAlignment.RIGHT);
+            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - CHAR_HEIGHT - CHAR_MARGIN,
+                `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT);
+        }
     }
 
     private getWeaponsTargetZoomFactor(weaponsTarget: GroundTargetEntity, distance: number): number {

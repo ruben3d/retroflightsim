@@ -280,8 +280,13 @@ export class PlayerEntity implements Entity {
 
     private pickTarget() {
         let index = this.targetIndex !== undefined ? this.targetIndex : -1;
-        index = (index + 1) % (this.scene?.countByTag(ENTITY_TAGS.TARGET) || 0);
-        this.target = this.scene?.entityAtByTag(ENTITY_TAGS.TARGET, index) as GroundTargetEntity | undefined;
-        this.targetIndex = this.target !== undefined ? index : undefined;
+        index++;
+        if (index >= (this.scene?.countByTag(ENTITY_TAGS.TARGET) || 0)) {
+            this.target = undefined;
+            this.targetIndex = undefined;
+        } else {
+            this.target = this.scene?.entityAtByTag(ENTITY_TAGS.TARGET, index) as GroundTargetEntity | undefined;
+            this.targetIndex = this.target !== undefined ? index : undefined;
+        }
     }
 }

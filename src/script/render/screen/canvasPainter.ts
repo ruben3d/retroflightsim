@@ -84,7 +84,7 @@ export class CanvasPainter {
 
     rectangle(x: number, y: number, width: number, height: number, fill: boolean = false) {
         if (fill) {
-            this.ctx.fillRect(x + 0.5, y + 0.5, width - 1, height - 1);
+            this.ctx.fillRect(x, y, width, height);
         } else {
             this.ctx.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
         }
