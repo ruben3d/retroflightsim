@@ -1,16 +1,28 @@
 import * as THREE from 'three';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/text";
-import { Scene, SceneLayers } from "../../scene";
+import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette } from "../../palettes/palette";
-import { COCKPIT_FOV, H_RES, V_RES } from "../../../defs";
+import { COCKPIT_FOV, H_RES, H_RES_HALF, V_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorBearing } from '../../../utils/math';
 import { formatBearing } from './overlayUtils';
 import { visibleWidthAtDistance } from '../../../render/helpers';
 
+
+const AI_SIZE = 29;
+const AI_SIZE_HALF = Math.floor(AI_SIZE / 2);
+const AI_X = H_RES_HALF - AI_SIZE_HALF;
+const AI_Y = V_RES - AI_SIZE + 1;
+const AI_COLOR_GROUND = '#ffa200';
+const AI_COLOR_SKY = '#2c558e';
+
+const AI_X_MAX = AI_X + AI_SIZE - 1;
+const AI_Y_MAX = AI_Y + AI_SIZE - 1;
+const AI_CENTER_X = AI_X + AI_SIZE_HALF;
+const AI_CENTER_Y = AI_Y + AI_SIZE_HALF;
 
 export const COCKPIT_MFD_SIZE = Math.floor(V_RES / 3.333); // Pixels
 export const COCKPIT_MFD1_X = 1;
@@ -32,12 +44,17 @@ export class CockpitEntity implements Entity {
         private targetCamera: THREE.PerspectiveCamera,
         private mapCamera: THREE.OrthographicCamera) { }
 
+    private aiPitch: number = 0;
+    private aiRoll: number = 0;
+
     private weaponsTarget: GroundTargetEntity | undefined;
     private weaponsTargetRange: number = 0; // Km
     private weaponsTargetBearing: number = 0; // degrees, 0 is North, increases CW
     private weaponsTargetZoomFactor: number = 1; // Times standard FOV
 
-    private tmpVector = new THREE.Vector3();
+    private tmpV = new THREE.Vector3();
+    private tmpV2 = new THREE.Vector3();
+    private tmpQ = new THREE.Quaternion();
 
     readonly tags: string[] = [];
 
@@ -49,27 +66,44 @@ export class CockpitEntity implements Entity {
 
     update(delta: number): void {
 
+        const forward = this.tmpV.copy(FORWARD)
+            .applyQuaternion(this.actor.quaternion);
+        const prjForward = this.tmpV2.copy(forward)
+            .setY(0)
+            .normalize();
+        this.aiPitch = forward.angleTo(prjForward) * (forward.y >= 0 ? 1 : -1);
+
+        this.tmpQ.setFromUnitVectors(forward, prjForward);
+
+        const right = this.tmpV.copy(RIGHT)
+            .applyQuaternion(this.actor.quaternion)
+            .applyQuaternion(this.tmpQ);
+        this.tmpQ.setFromUnitVectors(prjForward, FORWARD);
+        right.applyQuaternion(this.tmpQ);
+        this.aiRoll = Math.acos(right.x) * (right.y >= 0 ? -1 : 1);
+        this.aiRoll = isNaN(this.aiRoll) ? 0.0 : this.aiRoll;
+
         this.mapCamera.position.copy(this.actor.position).setY(500);
 
         this.weaponsTarget = this.actor.weaponsTarget;
 
         if (this.weaponsTarget !== undefined) {
-            this.tmpVector
+            this.tmpV
                 .copy(this.weaponsTarget.position)
                 .sub(this.actor.position);
-            this.weaponsTargetRange = this.tmpVector.length() / 1000.0;
+            this.weaponsTargetRange = this.tmpV.length() / 1000.0;
 
-            this.tmpVector
+            this.tmpV
                 .setY(0)
                 .normalize();
-            this.weaponsTargetBearing = vectorBearing(this.tmpVector);
+            this.weaponsTargetBearing = vectorBearing(this.tmpV);
 
             const d = this.actor.position.distanceTo(this.weaponsTarget.position);
             this.weaponsTargetZoomFactor = this.getWeaponsTargetZoomFactor(this.weaponsTarget, d);
 
             this.targetCamera.position.copy(this.actor.position).setY(Math.max(MFD_TARGET_CAMERA_MIN_ALTITUDE, this.actor.position.y));
-            this.tmpVector.addVectors(this.weaponsTarget.position, this.weaponsTarget.localCenter);
-            this.targetCamera.lookAt(this.tmpVector);
+            this.tmpV.addVectors(this.weaponsTarget.position, this.weaponsTarget.localCenter);
+            this.targetCamera.lookAt(this.tmpV);
             this.targetCamera.fov = COCKPIT_FOV * 1 / this.weaponsTargetZoomFactor;
             if (d > MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD) {
                 this.targetCamera.near = this.actor.position.distanceTo(this.weaponsTarget.position) / 2;
@@ -85,18 +119,87 @@ export class CockpitEntity implements Entity {
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
-        painter.setColor(palette.colors.HUD_TEXT);
-
+        this.renderAttitudeIndicator(painter, palette);
         this.renderMFD1(painter, palette);
         this.renderMFD2(painter, palette);
     }
 
+    private renderAttitudeIndicator(painter: CanvasPainter, palette: Palette) {
+
+        const offset = this.aiPitch / (Math.PI / 2);
+        const center = this.tmpV2.set(AI_CENTER_X, 0, AI_CENTER_Y);
+
+        const normal = this.tmpV.copy(FORWARD)
+            .applyAxisAngle(UP, this.aiRoll);
+        center.addScaledVector(normal, -offset * AI_SIZE);
+
+        normal.multiplyScalar(AI_SIZE_HALF);
+
+        const C0_X = Math.floor(center.x + normal.z);
+        const C0_Y = Math.round(center.z + -normal.x);
+        const C1_X = Math.floor(center.x + -normal.z);
+        const C1_Y = Math.round(center.z + normal.x);
+
+        painter.setBackground('#404042');
+        painter.rectangle(AI_X - 2, AI_Y - 2, AI_SIZE + 3, AI_SIZE + 3, true);
+
+        const clip = painter.clip().circle(AI_CENTER_X, AI_CENTER_Y, AI_SIZE_HALF).clip();
+
+        painter.setColor(AI_COLOR_GROUND);
+
+        painter.setBackground(AI_COLOR_SKY);
+        painter.rectangle(AI_X, AI_Y, AI_SIZE - 1, AI_SIZE - 1, true);
+
+        painter.setBackground(AI_COLOR_GROUND);
+        if (C0_X < C1_X) {
+            if (C0_X > AI_X && C0_Y < AI_Y_MAX) {
+                painter.rectangle(AI_X, C0_Y, C0_X - AI_X, AI_Y_MAX - C0_Y, true);
+            }
+            if (C1_X < AI_X_MAX && C1_Y < AI_Y_MAX) {
+                painter.rectangle(C1_X + 1, C1_Y, AI_X_MAX - C1_X - 1, AI_Y_MAX - C1_Y, true);
+            }
+            const C_Y = Math.max(C0_Y, C1_Y);
+            if (C1_Y < AI_Y_MAX) {
+                painter.rectangle(C0_X, C_Y, C1_X - C0_X + 1, AI_Y_MAX - C_Y, true);
+            }
+        } else {
+            if (C1_X > AI_X && C1_Y > AI_Y) {
+                painter.rectangle(AI_X, AI_Y, C1_X - AI_X, C1_Y - AI_Y, true);
+            }
+            if (C0_X < AI_X_MAX && C0_Y > AI_Y) {
+                painter.rectangle(C0_X + 1, AI_Y, AI_X_MAX - C0_X - 1, C0_Y - AI_Y, true);
+            }
+            const C_Y = Math.min(C0_Y, C1_Y);
+            if (C_Y > AI_Y) {
+                painter.rectangle(C1_X, AI_Y, C0_X - C1_X + 1, C_Y - AI_Y, true);
+            }
+        }
+
+        painter.rightTriangle(
+            Math.floor(C0_X),
+            Math.round(C0_Y),
+            Math.floor(C1_X),
+            Math.round(C1_Y));
+
+        clip.clear();
+
+        painter.setColor('#ffffff');
+        painter.batch()
+            .hLine(-1 + AI_CENTER_X - 8, -1 + AI_CENTER_X - 4, AI_CENTER_Y - 2)
+            .hLine(AI_CENTER_X + 4, AI_CENTER_X + 8, AI_CENTER_Y - 2)
+            .line(-1 + AI_CENTER_X - 4, AI_CENTER_Y - 2, -1 + AI_CENTER_X, AI_CENTER_Y + 2)
+            .line(AI_CENTER_X, AI_CENTER_Y + 2, AI_CENTER_X + 4, AI_CENTER_Y - 2)
+            .commit();
+    }
+
     private renderMFD1(painter: CanvasPainter, palette: Palette) {
+        painter.setColor(palette.colors.HUD_TEXT);
         painter.rectangle(COCKPIT_MFD1_X - 1, COCKPIT_MFD1_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
         painter.clear(COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
     }
 
     private renderMFD2(painter: CanvasPainter, palette: Palette) {
+        painter.setColor(palette.colors.HUD_TEXT);
         painter.rectangle(COCKPIT_MFD2_X - 1, COCKPIT_MFD2_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
 
         if (this.weaponsTarget === undefined) {

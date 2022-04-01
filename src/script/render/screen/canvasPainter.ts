@@ -1,17 +1,121 @@
 import { TextAlignment, TextRenderer } from "./text";
 
+
+function XOR(p: boolean, q: boolean): boolean {
+    return (p || q) && !(p && q);
+}
+
 class BatchCanvasPainter {
     constructor(private ctx: CanvasRenderingContext2D) { }
 
     hLine(x0: number, x1: number, y: number): BatchCanvasPainter {
-        this.ctx.moveTo(x0, y + 0.5);
-        this.ctx.lineTo(x1 + 1, y + 0.5);
+        const inverted = x0 > x1 ? 1 : 0;
+        this.ctx.moveTo(x0 + inverted, y + 0.5);
+        this.ctx.lineTo(x1 + 1 - inverted, y + 0.5);
         return this;
     }
 
     vLine(x: number, y0: number, y1: number): BatchCanvasPainter {
-        this.ctx.moveTo(x + 0.5, y0);
-        this.ctx.lineTo(x + 0.5, y1 + 1);
+        const inverted = y0 > y1 ? 1 : 0;
+        this.ctx.moveTo(x + 0.5, y0 + inverted);
+        this.ctx.lineTo(x + 0.5, y1 + 1 - inverted);
+        return this;
+    }
+
+    line(x0: number, y0: number, x1: number, y1: number): BatchCanvasPainter {
+        if (x0 === x1) {
+            this.vLine(x0, y0, y1);
+            return this;
+        } else if (y0 === y1) {
+            this.hLine(x0, x1, y0);
+            return this;
+        }
+
+        let lead0 = x0;
+        let lead1 = x1;
+        let offset0 = y0;
+        let offset1 = y1;
+        const flip = Math.abs((y1 - y0) / (x1 - x0)) > 1;
+        if (flip) {
+            lead0 = y0;
+            lead1 = y1;
+            offset0 = x0;
+            offset1 = x1;
+        }
+        if (lead0 > lead1) {
+            [lead0, lead1] = [lead1, lead0];
+            [offset0, offset1] = [offset1, offset0];
+        }
+        const offsetStep = offset0 < offset1 ? 1 : -1;
+        const offsetDelta = offsetStep * (offset1 - offset0);
+        const leadDelta = lead1 - lead0;
+        let error = 2 * offsetDelta - leadDelta;
+        let offset = offset0;
+
+        for (let lead = lead0; lead <= lead1; lead++) {
+            // TODO If two or more consecutive lead pixels have the same offset then use a single line for all
+            if (flip) {
+                this.vLine(offset, lead, lead);
+            } else {
+                this.hLine(lead, lead, offset);
+            }
+            if (error > 0) {
+                offset = offset + offsetStep;
+                error = error - 2 * leadDelta;
+            }
+            error = error + 2 * offsetDelta;
+        }
+        return this;
+    }
+
+    // The points define the hypotenuse
+    // Left -> Right: Bottom is filled
+    // Right -> Left: Top is filled
+    rightTriangle(x0: number, y0: number, x1: number, y1: number): BatchCanvasPainter {
+        if (x0 === x1) {
+            this.vLine(x0, y0, y1);
+            return this;
+        } else if (y0 === y1) {
+            this.hLine(x0, x1, y0);
+            return this;
+        }
+
+        let lead0 = x0;
+        let lead1 = x1;
+        let offset0 = y0;
+        let offset1 = y1;
+        const flip = Math.abs((y1 - y0) / (x1 - x0)) > 1;
+        if (flip) {
+            lead0 = y0;
+            lead1 = y1;
+            offset0 = x0;
+            offset1 = x1;
+        }
+        let invertedLead = false;
+        if (lead0 > lead1) {
+            invertedLead = true;
+            [lead0, lead1] = [lead1, lead0];
+            [offset0, offset1] = [offset1, offset0];
+        }
+        const invertedOffset = offset0 > offset1;
+        const offsetStep = invertedOffset ? -1 : 1;
+        const offsetDelta = offsetStep * (offset1 - offset0);
+        const leadDelta = lead1 - lead0;
+        let error = 2 * offsetDelta - leadDelta;
+        let offset = offset0;
+
+        for (let lead = lead0; lead <= lead1; lead++) {
+            if (flip) {
+                this.hLine(XOR(invertedLead, !invertedOffset) ? offset0 : offset1, offset, lead);
+            } else {
+                this.vLine(lead, XOR(invertedLead, !invertedOffset) ? offset1 : offset0, offset);
+            }
+            if (error > 0) {
+                offset = offset + offsetStep;
+                error = error - 2 * leadDelta;
+            }
+            error = error + 2 * offsetDelta;
+        }
         return this;
     }
 
@@ -25,6 +129,11 @@ class ClipCanvasPainter {
 
     rectangle(x: number, y: number, width: number, height: number): ClipCanvasPainter {
         this.ctx.rect(x, y, width - 1, height - 1);
+        return this;
+    }
+
+    circle(x: number, y: number, radius: number): ClipCanvasPainter {
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         return this;
     }
 
@@ -79,6 +188,18 @@ export class CanvasPainter {
     vLine(x: number, y0: number, y1: number) {
         this.batch()
             .vLine(x, y0, y1)
+            .commit();
+    }
+
+    line(x0: number, y0: number, x1: number, y1: number) {
+        this.batch()
+            .line(x0, y0, x1, y1)
+            .commit();
+    }
+
+    rightTriangle(x0: number, y0: number, x1: number, y1: number) {
+        this.batch()
+            .rightTriangle(x0, y0, x1, y1)
             .commit();
     }
 

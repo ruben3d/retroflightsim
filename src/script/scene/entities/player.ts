@@ -81,11 +81,10 @@ export class PlayerEntity implements Entity {
         }
 
         // Automatic yaw when rolling
-        const forward = this.obj.getWorldDirection(new THREE.Vector3());
+        const forward = this.obj.getWorldDirection(this.tmpVector);
         if (-0.99 < forward.y && forward.y < 0.99) {
-            // TODO Avoid mem allocations here
-            const prjForward = forward.clone().setY(0);
-            const up = (new THREE.Vector3(0, 1, 0)).applyQuaternion(this.obj.quaternion);
+            const prjForward = forward.setY(0);
+            const up = UP.clone().applyQuaternion(this.obj.quaternion); // TODO Avoid mem allocation here
             const prjUp = up.projectOnPlane(prjForward).setY(0);
             const sign = (prjForward.x * prjUp.z - prjForward.z * prjUp.x) > 0 ? 1 : -1;
             this.obj.rotateOnWorldAxis(UP, sign * prjUp.length() * prjUp.length() * prjForward.length() * 2.0 * YAW_RATE * delta);
