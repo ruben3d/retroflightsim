@@ -8,6 +8,7 @@ import { H_RES_HALF, V_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { vectorBearing } from '../../../utils/math';
 import { toFeet, toKnots } from './overlayUtils';
+import { GroundTargetEntity } from '../groundTarget';
 
 
 const BEARING_X = H_RES_HALF - 75;
@@ -15,6 +16,9 @@ const AIRSPEED_X = H_RES_HALF - (CHAR_WIDTH + CHAR_MARGIN) * 5;
 const ALTITUDE_X = H_RES_HALF + 45;
 
 const Y = V_RES - CHAR_HEIGHT * 2;
+
+const TARGETINFO_X = H_RES_HALF;
+const TARGETINFO_Y = Y - CHAR_HEIGHT * 2;
 
 
 export class ExteriorDataEntity implements Entity {
@@ -24,6 +28,7 @@ export class ExteriorDataEntity implements Entity {
     private bearing: number = 0; // degrees, 0 is North, increases CW
     private altitude: number = 0; // feet
     private speed: number = 0; // knots
+    private weaponsTarget: GroundTargetEntity | undefined;
 
     private tmpVector = new THREE.Vector3();
 
@@ -45,6 +50,8 @@ export class ExteriorDataEntity implements Entity {
         this.bearing = vectorBearing(this.tmpVector);
 
         this.speed = toKnots(this.actor.rawSpeed);
+
+        this.weaponsTarget = this.actor.weaponsTarget;
     }
 
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -55,6 +62,7 @@ export class ExteriorDataEntity implements Entity {
         this.renderAltitude(painter, palette);
         this.renderBearing(painter, palette);
         this.renderAirSpeed(painter, palette);
+        this.renderTargetInfo(painter, palette);
     }
 
     private renderAltitude(painter: CanvasPainter, palette: Palette) {
@@ -67,5 +75,11 @@ export class ExteriorDataEntity implements Entity {
 
     private renderAirSpeed(painter: CanvasPainter, palette: Palette) {
         painter.text(AIRSPEED_X, Y, `Airspeed ${Math.floor(this.speed).toFixed(0)}`, palette.colors[PaletteCategory.HUD_TEXT], TextAlignment.LEFT);
+    }
+
+    private renderTargetInfo(painter: CanvasPainter, palette: Palette) {
+        if (this.weaponsTarget) {
+            painter.text(TARGETINFO_X, TARGETINFO_Y, `${this.weaponsTarget.targetType} at ${this.weaponsTarget.targetLocation}`, palette.colors[PaletteCategory.HUD_TEXT], TextAlignment.CENTER);
+        }
     }
 }
