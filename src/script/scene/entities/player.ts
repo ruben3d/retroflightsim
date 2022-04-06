@@ -38,7 +38,8 @@ export class PlayerEntity implements Entity {
     private target: GroundTargetEntity | undefined;
     private targetIndex: number | undefined
 
-    private tmpVector = new THREE.Vector3();
+    private _v = new THREE.Vector3();
+    private _w = new THREE.Vector3();
 
     readonly tags: string[] = [];
 
@@ -81,10 +82,10 @@ export class PlayerEntity implements Entity {
         }
 
         // Automatic yaw when rolling
-        const forward = this.obj.getWorldDirection(this.tmpVector);
+        const forward = this.obj.getWorldDirection(this._v);
         if (-0.99 < forward.y && forward.y < 0.99) {
             const prjForward = forward.setY(0);
-            const up = UP.clone().applyQuaternion(this.obj.quaternion); // TODO Avoid mem allocation here
+            const up = this._w.copy(UP).applyQuaternion(this.obj.quaternion);
             const prjUp = up.projectOnPlane(prjForward).setY(0);
             const sign = (prjForward.x * prjUp.z - prjForward.z * prjUp.x) > 0 ? 1 : -1;
             this.obj.rotateOnWorldAxis(UP, sign * prjUp.length() * prjUp.length() * prjForward.length() * 2.0 * YAW_RATE * delta);
@@ -101,7 +102,7 @@ export class PlayerEntity implements Entity {
         // Avoid ground crashes
         if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
             this.obj.position.y = PLANE_DISTANCE_TO_GROUND;
-            const d = this.obj.getWorldDirection(this.tmpVector);
+            const d = this.obj.getWorldDirection(this._v);
             d.setY(0).add(this.obj.position);
             this.obj.lookAt(d);
         }
@@ -124,9 +125,9 @@ export class PlayerEntity implements Entity {
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
 
         this.shadowPosition.copy(this.position).setY(0);
-        this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this.tmpVector).setY(0).normalize().multiplyScalar(-1));
-        const shadowLength = Math.max(0.2, this.tmpVector.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
-        const shadowWidth = Math.max(0.2, this.tmpVector.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
+        this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize().multiplyScalar(-1));
+        const shadowLength = Math.max(0.2, this._v.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
+        const shadowWidth = Math.max(0.2, this._v.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
         this.shadowScale.set(shadowWidth, 1, shadowLength);
         this.lodHelperShadow.addToRenderList(
             this.shadowPosition, this.shadowQuaternion, this.shadowScale,

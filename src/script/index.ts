@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Kernel } from './core/kernel';
 import { Renderer } from './render/renderer';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
@@ -7,21 +7,14 @@ import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder
 import { ModelManager } from './scene/models/models';
 import { NightPalette } from './scene/palettes/night';
 import { DefaultPalette, PaletteCategory } from './scene/palettes/palette';
-import { Game } from './state/game';
+import { Game, GameRenderTask, GameUpdateTask } from './state/game';
 import { assertIsDefined } from './utils/asserts';
 
 
-let renderer: Renderer | undefined;
-let materials: SceneMaterialManager | undefined;
-let models: ModelManager | undefined;
-let game: Game | undefined;
-
-const clock = new THREE.Clock();
-
-function setup() {
-    renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
-    materials = new SceneMaterialManager(DefaultPalette);
-    models = new ModelManager(materials, [
+function setup(): Kernel {
+    const renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
+    const materials = new SceneMaterialManager(DefaultPalette);
+    const models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
         new FieldModelLibBuilder('pavement', FieldModelType.SQUARE, PaletteCategory.SCENERY_ROAD_SECONDARY),
@@ -33,19 +26,14 @@ function setup() {
         new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
     ]);
 
-    game = new Game(models, materials, renderer);
+    const game = new Game(models, materials, renderer);
     game.setup();
 
-    loop();
-}
-
-function loop() {
-    window.requestAnimationFrame(loop);
-    const delta = clock.getDelta();
-
-    materials?.update(delta);
-    game?.update(delta);
-    game?.render();
+    const kernel = new Kernel(15);
+    kernel.addTask(materials);
+    kernel.addTask(new GameUpdateTask(game));
+    kernel.addTask(new GameRenderTask(game));
+    return kernel;
 }
 
 function setupHelp() {
@@ -64,6 +52,7 @@ function setupHelp() {
 }
 
 window.addEventListener("load", () => {
-    setup();
     setupHelp();
+    const kernel = setup();
+    kernel.start();
 });

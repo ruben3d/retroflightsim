@@ -23,6 +23,7 @@ import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
 import { ExteriorBehindCameraUpdater } from './cameraUpdaters/exteriorBehindCameraUpdater';
 import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
 import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteriorSideCameraUpdater';
+import { KernelTask } from '../core/kernel';
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
@@ -33,6 +34,24 @@ enum PlayerViewState {
     EXTERIOR_BEHIND,
     EXTERIOR_LEFT,
     EXTERIOR_RIGHT,
+}
+
+export class GameUpdateTask implements KernelTask {
+
+    constructor(private game: Game) { }
+
+    update(delta: number) {
+        this.game.update(delta);
+    }
+}
+
+export class GameRenderTask implements KernelTask {
+
+    constructor(private game: Game) { }
+    
+    update(delta: number) {
+        this.game.render();
+    }
 }
 
 export class Game {

@@ -1,18 +1,22 @@
 import * as THREE from 'three';
 import { ShaderMaterial } from 'three';
 import { FogColorCategory, FogValueCategory, Palette, PaletteCategory, PALETTE_FX_PREFIX } from "../palettes/palette";
-import { FlatVertProgram } from './shaders/flatVP';
+import { FlatVertProgram, HighpFlatVertProgram } from './shaders/flatVP';
 import { DepthFragProgram } from './shaders/depthFP';
 import { PointVertProgram } from './shaders/pointVP';
 import { ShadedVertProgram } from './shaders/shadedVP';
 import { ConstantFragProgram } from './shaders/constantFP';
+import { KernelTask } from '../../core/kernel';
+import { LineVertProgram } from './shaders/lineVP';
 
 
 export interface SceneMaterialProperties {
     category: PaletteCategory;
     shaded: boolean;
     depthWrite: boolean;
+    line?: boolean;
     point?: boolean;
+    highp?: boolean; // Flat only (not shaded)
 }
 
 export type SceneMaterialUniforms = SceneFlatMaterialUniforms | SceneShadedMaterialUniforms;
@@ -40,20 +44,24 @@ export type SceneMaterialData = SceneCommonMaterialData & (SceneFlatMaterialData
 export interface SceneCommonMaterialData {
     category: PaletteCategory;
     depthWrite: boolean;
+    line: boolean;
     point: boolean;
 }
 
 export interface SceneFlatMaterialData {
     shaded: false;
+    highp: boolean;
 }
 
 export interface SceneShadedMaterialData {
     shaded: true;
 }
 
-export class SceneMaterialManager {
+export class SceneMaterialManager implements KernelTask {
 
     private readonly flatProto: THREE.ShaderMaterial;
+    private readonly highpFlatProto: THREE.ShaderMaterial;
+    private readonly lineProto: THREE.ShaderMaterial;
     private readonly shadedProto: THREE.ShaderMaterial;
     private readonly pointProto: THREE.ShaderMaterial;
     private palette: Palette;
@@ -66,6 +74,22 @@ export class SceneMaterialManager {
 
         this.flatProto = new THREE.ShaderMaterial({
             vertexShader: FlatVertProgram,
+            fragmentShader: DepthFragProgram,
+            side: THREE.FrontSide,
+            depthWrite: false,
+            userData: {},
+            uniforms: {}
+        });
+        this.highpFlatProto = new THREE.ShaderMaterial({
+            vertexShader: HighpFlatVertProgram,
+            fragmentShader: DepthFragProgram,
+            side: THREE.FrontSide,
+            depthWrite: false,
+            userData: {},
+            uniforms: {}
+        });
+        this.lineProto = new THREE.ShaderMaterial({
+            vertexShader: LineVertProgram,
             fragmentShader: DepthFragProgram,
             side: THREE.FrontSide,
             depthWrite: true,
@@ -83,7 +107,7 @@ export class SceneMaterialManager {
         this.pointProto = new THREE.ShaderMaterial({
             vertexShader: PointVertProgram,
             fragmentShader: DepthFragProgram,
-            depthWrite: false,
+            depthWrite: true,
             userData: {},
             uniforms: {}
         });
@@ -121,6 +145,11 @@ export class SceneMaterialManager {
         const p = { ...properties };
         if (this.isPoint(p) || this.isFx(p)) {
             p.shaded = false;
+            p.highp = false;
+        }
+        if (p.shaded) {
+            p.line = false;
+            p.highp = false;
         }
         return p;
     }
@@ -130,7 +159,9 @@ export class SceneMaterialManager {
             shaded: properties.shaded,
             category: properties.category,
             depthWrite: properties.depthWrite,
-            point: this.isPoint(properties)
+            line: properties.line || false,
+            point: this.isPoint(properties),
+            highp: properties.highp || false
         };
     }
 
@@ -169,6 +200,10 @@ export class SceneMaterialManager {
             return this.pointProto.clone();
         } else if (properties.shaded) {
             return this.shadedProto.clone();
+        } else if (properties.line) {
+            return this.lineProto.clone();
+        } else if (properties.highp) {
+            return this.highpFlatProto.clone();
         } else {
             return this.flatProto.clone();
         }

@@ -16,6 +16,7 @@ export class BackgroundModelLibBuilder implements ModelLibBuilder {
         const mesh = new THREE.Mesh(geometry, materials.build({
             category: this.type === BackgroundModelLibBuilder.Type.GROUND ? PaletteCategory.TERRAIN_DEFAULT : PaletteCategory.SKY,
             depthWrite: false,
+            highp: true,
             shaded: false
         }));
         mesh.name = this.type;

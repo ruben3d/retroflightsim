@@ -148,6 +148,7 @@ export class ModelManager {
                         category: (obj.material as THREE.LineBasicMaterial).name as PaletteCategory,
                         shaded: false,
                         depthWrite: !isFlat,
+                        line: !isFlat,
                         point: false
                     });
                 } else if ('isPoints' in child) {
