@@ -26,9 +26,8 @@ a:hover {
     bottom: 0;
 }
 
-#help-button {
+#panel > nav > div {
     position: absolute;
-    top: 1rem;
     right: 1rem;
     user-select: none;
     cursor: pointer;
@@ -42,12 +41,31 @@ a:hover {
     height: 3rem;
 }
 
-#help-button:hover {
+#panel > nav > div:hover {
     color: white;
     background-color: black;
 }
 
-#help {
+#panel > nav > div.active {
+    color: white;
+    background-color: black;
+}
+
+#panel > nav > div.active:hover {
+    color: black;
+    background-color: white;
+}
+
+#help-button {
+    top: 1rem;
+}
+
+#settings-button {
+    top: 5rem;
+}
+
+#panel {
+    cursor: default;
     overflow-y: none;
     z-index: 1;
     position: absolute;
@@ -61,34 +79,51 @@ a:hover {
     background-color: transparent;
 }
 
-#help.open {
+#panel.open {
     overflow-y: auto;
     left: 0;
     background-color: rgba(0, 0, 0, 0.5);
 }
 
-#help h1 {
+#panel > section {
+    display: none;
+}
+
+#panel > section.active {
+    display: initial;
+}
+
+#panel h1 {
     margin-top: 0;
     font-size: 1.5rem;
     line-height: 3rem;
     color: white;
 }
 
-#help h2 {
+#panel h2 {
     font-size: 1rem;
     color: white;
 }
 
-#help ul {
+#panel ul {
     padding: 0;
 }
 
-#help li {
+#panel li {
     display: block;
 }
 
-#help span {
+#panel span {
+    display: inline-block;
+    padding: 0 0.25rem;
+    margin: 0.25rem;
+    border: 1px rgb(138, 138, 138) solid;
+    background-color: rgb(75, 75, 75);
     color: white;
+}
+
+#panel input[type="radio"], #panel label {
+    cursor: pointer;
 }
 
 #credits {

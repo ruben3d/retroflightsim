@@ -2,18 +2,13 @@ import * as THREE from 'three';
 import { MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
 import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
+import { isZero } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
 import { Palette } from "../palettes/palette";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 
-
-enum Stick {
-    IDLE,
-    POSITIVE,
-    NEGATIVE
-};
 
 export class PlayerEntity implements Entity {
 
@@ -24,13 +19,11 @@ export class PlayerEntity implements Entity {
     private shadowQuaternion = new THREE.Quaternion();
     private shadowScale = new THREE.Vector3();
 
-    private pitchState: Stick = Stick.IDLE;
-    private rollState: Stick = Stick.IDLE;
-    private yawState: Stick = Stick.IDLE;
-
     private obj = new THREE.Object3D();
 
-    private throttleState: Stick = Stick.IDLE;
+    private pitch: number = 0; // [-1, 1]
+    private roll: number = 0; // [-1, 1]
+    private yaw: number = 0; // [-1, 1]
     private throttle: number = 0; // [0, 1]
 
     private speed: number = 0;
@@ -61,24 +54,18 @@ export class PlayerEntity implements Entity {
 
     update(delta: number): void {
         // Roll control
-        if (this.rollState === Stick.POSITIVE) {
-            this.obj.rotateZ(ROLL_RATE * delta);
-        } else if (this.rollState === Stick.NEGATIVE) {
-            this.obj.rotateZ(-ROLL_RATE * delta);
+        if (!isZero(this.roll)) {
+            this.obj.rotateZ(-this.roll * ROLL_RATE * delta);
         }
 
         // Pitch control
-        if (this.pitchState === Stick.POSITIVE) {
-            this.obj.rotateX(PITCH_RATE * delta);
-        } else if (this.pitchState === Stick.NEGATIVE) {
-            this.obj.rotateX(-PITCH_RATE * delta);
+        if (!isZero(this.pitch)) {
+            this.obj.rotateX(this.pitch * PITCH_RATE * delta);
         }
 
         // Yaw control
-        if (this.yawState === Stick.POSITIVE) {
-            this.obj.rotateY(YAW_RATE * delta);
-        } else if (this.yawState === Stick.NEGATIVE) {
-            this.obj.rotateY(-YAW_RATE * delta);
+        if (!isZero(this.yaw)) {
+            this.obj.rotateY(-this.yaw * YAW_RATE * delta);
         }
 
         // Automatic yaw when rolling
@@ -91,13 +78,9 @@ export class PlayerEntity implements Entity {
             this.obj.rotateOnWorldAxis(UP, sign * prjUp.length() * prjUp.length() * prjForward.length() * 2.0 * YAW_RATE * delta);
         }
 
-        // Throttle
-        if (this.throttleState !== Stick.IDLE) {
-            this.throttle = Math.min(1.0, Math.max(0, this.throttle + delta * 0.01 * (this.throttleState === Stick.POSITIVE ? THROTTLE_RATE : - THROTTLE_RATE)));
-        }
-
         // Movement
-        this.obj.translateZ(-MAX_SPEED * this.throttle * delta);
+        this.speed = this.throttle * MAX_SPEED;
+        this.obj.translateZ(-this.speed * delta);
 
         // Avoid ground crashes
         if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
@@ -118,8 +101,6 @@ export class PlayerEntity implements Entity {
         if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
         if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
         if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
-
-        this.speed = this.throttle * MAX_SPEED;
     }
 
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
@@ -140,6 +121,22 @@ export class PlayerEntity implements Entity {
                 targetWidth, camera, palette,
                 SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
         }
+    }
+
+    setPitch(pitch: number) {
+        this.pitch = pitch;
+    }
+
+    setRoll(roll: number) {
+        this.roll = roll;
+    }
+
+    setYaw(yaw: number) {
+        this.yaw = yaw;
+    }
+
+    setThrottle(throttle: number) {
+        this.throttle = throttle;
     }
 
     set position(p: THREE.Vector3) {
@@ -171,96 +168,6 @@ export class PlayerEntity implements Entity {
     }
 
     private setupInput() {
-        document.addEventListener('keydown', (event: KeyboardEvent) => {
-            switch (event.key) {
-                case 'w': {
-                    this.pitchState = Stick.NEGATIVE;
-                    break;
-                }
-                case 's': {
-                    this.pitchState = Stick.POSITIVE;
-                    break;
-                }
-                case 'a': {
-                    this.rollState = Stick.POSITIVE;
-                    break;
-                }
-                case 'd': {
-                    this.rollState = Stick.NEGATIVE;
-                    break;
-                }
-                case 'q': {
-                    this.yawState = Stick.POSITIVE;
-                    break;
-                }
-                case 'e': {
-                    this.yawState = Stick.NEGATIVE;
-                    break;
-                }
-                case 'z': {
-                    this.throttleState = Stick.POSITIVE;
-                    break;
-                }
-                case 'x': {
-                    this.throttleState = Stick.NEGATIVE;
-                    break;
-                }
-            }
-        });
-
-        document.addEventListener('keyup', (event: KeyboardEvent) => {
-            switch (event.key) {
-                case 'w': {
-                    if (this.pitchState === Stick.NEGATIVE) {
-                        this.pitchState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 's': {
-                    if (this.pitchState === Stick.POSITIVE) {
-                        this.pitchState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'a': {
-                    if (this.rollState === Stick.POSITIVE) {
-                        this.rollState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'd': {
-                    if (this.rollState === Stick.NEGATIVE) {
-                        this.rollState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'q': {
-                    if (this.yawState === Stick.POSITIVE) {
-                        this.yawState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'e': {
-                    if (this.yawState === Stick.NEGATIVE) {
-                        this.yawState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'z': {
-                    if (this.throttleState === Stick.POSITIVE) {
-                        this.throttleState = Stick.IDLE;
-                    }
-                    break;
-                }
-                case 'x': {
-                    if (this.throttleState === Stick.NEGATIVE) {
-                        this.throttleState = Stick.IDLE;
-                    }
-                    break;
-                }
-            }
-        });
-
         document.addEventListener('keypress', (event: KeyboardEvent) => {
             switch (event.key) {
                 case 't': {
@@ -268,13 +175,6 @@ export class PlayerEntity implements Entity {
                     break;
                 }
             }
-        });
-
-        document.addEventListener('blur', () => {
-            this.pitchState = Stick.IDLE;
-            this.rollState = Stick.IDLE;
-            this.yawState = Stick.IDLE;
-            this.throttleState = Stick.IDLE;
         });
     }
 

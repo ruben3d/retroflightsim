@@ -1,4 +1,6 @@
 import { Kernel } from './core/kernel';
+import { KeyboardControlDevice } from './input/devices/keyboardControlDevice';
+import { setupOSD } from './osd/osdPanel';
 import { Renderer } from './render/renderer';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
@@ -8,8 +10,9 @@ import { ModelManager } from './scene/models/models';
 import { NightPalette } from './scene/palettes/night';
 import { DefaultPalette, PaletteCategory } from './scene/palettes/palette';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
-import { assertIsDefined } from './utils/asserts';
 
+
+let input: KeyboardControlDevice;
 
 function setup(): Kernel {
     const renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
@@ -28,31 +31,18 @@ function setup(): Kernel {
 
     const game = new Game(models, materials, renderer);
     game.setup();
+    input = new KeyboardControlDevice(game.getPlayer());
 
     const kernel = new Kernel(15);
     kernel.addTask(materials);
+    kernel.addTask(input);
     kernel.addTask(new GameUpdateTask(game));
     kernel.addTask(new GameRenderTask(game));
     return kernel;
 }
 
-function setupHelp() {
-    const button = document.getElementById('help-button');
-    assertIsDefined(button);
-    const panel = document.getElementById('help');
-    assertIsDefined(panel);
-
-    button.addEventListener('click', () => {
-        if (panel.classList.contains('open')) {
-            panel.classList.remove('open');
-        } else {
-            panel.classList.add('open');
-        }
-    });
-}
-
 window.addEventListener("load", () => {
-    setupHelp();
     const kernel = setup();
     kernel.start();
+    setupOSD(input);
 });

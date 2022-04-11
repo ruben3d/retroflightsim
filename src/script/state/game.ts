@@ -166,6 +166,10 @@ export class Game {
         this.renderer.render(this.scene, layers);
     }
 
+    getPlayer(): PlayerEntity {
+        return this.player;
+    }
+
     private setupControls() {
         document.addEventListener('keypress', (event: KeyboardEvent) => {
             switch (event.key) {
