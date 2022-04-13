@@ -7,9 +7,9 @@ export const V_RES_HALF = V_RES / 2;
 export const TERRAIN_SCALE = 200.0;
 export const TERRAIN_MODEL_SIZE = 100.0;
 
-export const PITCH_RATE = Math.PI / 6; // Radians/s
-export const ROLL_RATE = Math.PI / 4; // Radians/s
-export const YAW_RATE = Math.PI / 16; // Radians/s
+export const PITCH_RATE = Math.PI / 5; // Radians/s
+export const ROLL_RATE = Math.PI / 3; // Radians/s
+export const YAW_RATE = Math.PI / 12; // Radians/s
 export const MAX_SPEED = 250.0; // World units/s
 export const THROTTLE_RATE = 25; // Percentage of maximum/s [0,100]
 export const PLANE_DISTANCE_TO_GROUND = 2.0; // World units

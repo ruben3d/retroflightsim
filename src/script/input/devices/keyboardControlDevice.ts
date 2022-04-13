@@ -75,7 +75,6 @@ export class KeyboardControlDevice implements KernelTask {
     private rollState: Stick = Stick.IDLE;
     private yawState: Stick = Stick.IDLE;
     private throttleState: Stick = Stick.IDLE;
-    private throttle: number = 0; // [0, 1]
 
     private layout: KeyboardControlLayout = QwertyKeyboardControlLayout;
 
@@ -93,11 +92,11 @@ export class KeyboardControlDevice implements KernelTask {
                     break;
                 }
                 case Stick.NEGATIVE: {
-                    this.player.setPitch(-1.0);
+                    this.player.setPitch(-0.75);
                     break;
                 }
                 case Stick.POSITIVE: {
-                    this.player.setPitch(1.0);
+                    this.player.setPitch(0.75);
                     break;
                 }
             }
@@ -112,11 +111,11 @@ export class KeyboardControlDevice implements KernelTask {
                     break;
                 }
                 case Stick.NEGATIVE: {
-                    this.player.setRoll(-1.0);
+                    this.player.setRoll(-0.75);
                     break;
                 }
                 case Stick.POSITIVE: {
-                    this.player.setRoll(1.0);
+                    this.player.setRoll(0.75);
                     break;
                 }
             }
@@ -131,24 +130,24 @@ export class KeyboardControlDevice implements KernelTask {
                     break;
                 }
                 case Stick.NEGATIVE: {
-                    this.player.setYaw(-1.0);
+                    this.player.setYaw(-0.75);
                     break;
                 }
                 case Stick.POSITIVE: {
-                    this.player.setYaw(1.0);
+                    this.player.setYaw(0.75);
                     break;
                 }
             }
         }
 
         if (this.throttleState !== Stick.IDLE) {
-            this.throttle = clamp(this.throttle + delta * 0.01 *
+            const throttle = clamp(this.player.throttleUnit + delta * 0.01 *
                 (this.throttleState === Stick.POSITIVE || this.throttleState === Stick.POSITIVE_ENDED ? THROTTLE_RATE : - THROTTLE_RATE),
                 0, 1);
             if (this.throttleState === Stick.POSITIVE_ENDED || this.throttleState === Stick.NEGATIVE_ENDED) {
                 this.throttleState = Stick.IDLE;
             }
-            this.player.setThrottle(this.throttle);
+            this.player.setThrottle(throttle);
         }
     }
 

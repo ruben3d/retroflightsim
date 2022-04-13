@@ -1,6 +1,6 @@
 # Retro Flight Simulator
 
-Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight simulators, using as a reference MicroProse's F-117A Nighthawk Stealh Fighter 2.0 (1991).
+Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight simulators, using as a reference MicroProse's F-117A Nighthawk Stealth Fighter 2.0 (1991).
 
 ## Live demo
 
@@ -35,17 +35,46 @@ Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 
 ## Instructions
 
-Plane controls:
-* `W`/`S`: Pitch.
-* `A`/`D`: Roll.
-* `Q`/`E`: Yaw.
-* `Z`/`X`: Throttle.
-* `T`: Cycle through available targets.
+### Plane controls
 
-Views:
-* `N`: Toggle Day/Night.
-* `1`: Cockpit.
-* `2`: Exterior behind.
-* `3`: Toggle exterior left/right.
+#### Keyboard
+
+Use the OSD settings to select the keyboard layout.
+
+QWERTY (default):
+* `W`/`S`: Pitch
+* `A`/`D`: Roll
+* `Q`/`E`: Yaw
+* `Z`/`X`: Throttle
+
+AZERTY:
+* `Z`/`S`: Pitch
+* `Q`/`D`: Roll
+* `A`/`E`: Yaw
+* `W`/`X`: Throttle
+
+Dvorak:
+* `,`/`O`: Pitch
+* `A`/`E`: Roll
+* `'`/`.`: Yaw
+* `Q`/`J`: Throttle
+
+#### Joystick
+
+The system supports a single device connected only. If the device has less than four axes the keyboard can be used to complement the missing controls. Joystick information displayed in the OSD help.
+
+* `Axis 1`: Pitch
+* `Axis 0`: Roll
+* `Axis 3`: Yaw
+* `Axis 2`: Throttle
+
+### Systems
+* `T`: Select target
+
+### Views
+* `N`: Day/Night
+* `1`: Cockpit
+* `2`: Exterior follow
+* `3`: Exterior left/right
 
 On reaching the limits of the detailed scenario the player position wraps around.

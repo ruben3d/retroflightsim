@@ -1,4 +1,5 @@
 import { Kernel } from './core/kernel';
+import { JoystickControlDevice } from './input/devices/joystickControlDevice';
 import { KeyboardControlDevice } from './input/devices/keyboardControlDevice';
 import { setupOSD } from './osd/osdPanel';
 import { Renderer } from './render/renderer';
@@ -12,7 +13,8 @@ import { DefaultPalette, PaletteCategory } from './scene/palettes/palette';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
 
 
-let input: KeyboardControlDevice;
+let keyboardInput: KeyboardControlDevice;
+let joystickInput: JoystickControlDevice;
 
 function setup(): Kernel {
     const renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
@@ -31,11 +33,14 @@ function setup(): Kernel {
 
     const game = new Game(models, materials, renderer);
     game.setup();
-    input = new KeyboardControlDevice(game.getPlayer());
+
+    keyboardInput = new KeyboardControlDevice(game.getPlayer());
+    joystickInput = new JoystickControlDevice(game.getPlayer());
 
     const kernel = new Kernel(15);
     kernel.addTask(materials);
-    kernel.addTask(input);
+    kernel.addTask(keyboardInput);
+    kernel.addTask(joystickInput);
     kernel.addTask(new GameUpdateTask(game));
     kernel.addTask(new GameRenderTask(game));
     return kernel;
@@ -44,5 +49,5 @@ function setup(): Kernel {
 window.addEventListener("load", () => {
     const kernel = setup();
     kernel.start();
-    setupOSD(input);
+    setupOSD(keyboardInput, joystickInput);
 });

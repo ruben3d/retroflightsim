@@ -1,8 +1,15 @@
+import { JoystickControlDevice } from "../input/devices/joystickControlDevice";
 import { KeyboardControlAction, KeyboardControlDevice, KeyboardControlLayoutId, KeyboardControlLayouts } from "../input/devices/keyboardControlDevice";
 import { assertIsDefined } from "../utils/asserts";
 
 
-export function setupOSD(input: KeyboardControlDevice) {
+export function setupOSD(keyboardInput: KeyboardControlDevice, joystickInput: JoystickControlDevice) {
+    setupButtons();
+    setupKeyboardHelp(keyboardInput);
+    setupJoystickHelp(joystickInput);
+}
+
+function setupButtons() {
     const helpButton = document.getElementById('help-button');
     assertIsDefined(helpButton);
     const settingsButton = document.getElementById('settings-button');
@@ -39,7 +46,9 @@ export function setupOSD(input: KeyboardControlDevice) {
             helpSection.classList.remove('active');
         }
     });
+}
 
+function setupKeyboardHelp(keyboardInput: KeyboardControlDevice) {
     const qwertyLayout = document.getElementById('layout-qwerty');
     assertIsDefined(qwertyLayout);
     const azertyLayout = document.getElementById('layout-azerty');
@@ -48,16 +57,26 @@ export function setupOSD(input: KeyboardControlDevice) {
     assertIsDefined(dvorakLayout);
 
     qwertyLayout.addEventListener('change', () => {
-        input.setKeyboardLayout(KeyboardControlLayoutId.QWERTY);
+        keyboardInput.setKeyboardLayout(KeyboardControlLayoutId.QWERTY);
         updateControlsHelp(KeyboardControlLayoutId.QWERTY);
     });
     azertyLayout.addEventListener('change', () => {
-        input.setKeyboardLayout(KeyboardControlLayoutId.AZERTY);
+        keyboardInput.setKeyboardLayout(KeyboardControlLayoutId.AZERTY);
         updateControlsHelp(KeyboardControlLayoutId.AZERTY);
     });
     dvorakLayout.addEventListener('change', () => {
-        input.setKeyboardLayout(KeyboardControlLayoutId.DVORAK);
+        keyboardInput.setKeyboardLayout(KeyboardControlLayoutId.DVORAK);
         updateControlsHelp(KeyboardControlLayoutId.DVORAK);
+    });
+}
+
+function setupJoystickHelp(joystickInput: JoystickControlDevice) {
+    joystickInput.setListener(connected => {
+        if (connected) {
+            updateJoystickHelp(joystickInput.getDeviceId(), joystickInput.getAxisCount());
+        } else {
+            disableJoystickHelp();
+        }
     });
 }
 
@@ -90,4 +109,51 @@ function updateControlsHelp(layoutId: KeyboardControlLayoutId) {
     yawNeg.innerText = layout[KeyboardControlAction.YAW_NEG].toUpperCase();
     throttlePos.innerText = layout[KeyboardControlAction.THROTTLE_POS].toUpperCase();
     throttleNeg.innerText = layout[KeyboardControlAction.THROTTLE_NEG].toUpperCase();
+}
+
+function updateJoystickHelp(id: string, axisCount: number) {
+    const joystick = document.getElementById('joystick');
+    assertIsDefined(joystick);
+    const joystickId = document.getElementById('joystick-id');
+    assertIsDefined(joystickId);
+    const axisPitch = document.getElementById('axis-pitch');
+    assertIsDefined(axisPitch);
+    const axisRoll = document.getElementById('axis-roll');
+    assertIsDefined(axisRoll);
+    const axisYaw = document.getElementById('axis-yaw');
+    assertIsDefined(axisYaw);
+    const axisThrottle = document.getElementById('axis-throttle');
+    assertIsDefined(axisThrottle);
+
+    joystick.classList.remove('hidden');
+    const lastBracketIndex = id.lastIndexOf('(');
+    joystickId.innerText = id.substring(0, lastBracketIndex !== -1 ? lastBracketIndex - 1 : undefined);
+
+    if (axisCount < 4) {
+        axisYaw.classList.add('hidden');
+    } else {
+        axisYaw.classList.remove('hidden');
+    }
+    if (axisCount < 3) {
+        axisThrottle.classList.add('hidden');
+    } else {
+        axisThrottle.classList.remove('hidden');
+    }
+    if (axisCount < 2) {
+        axisPitch.classList.add('hidden');
+    } else {
+        axisPitch.classList.remove('hidden');
+    }
+    if (axisCount < 1) {
+        axisRoll.classList.add('hidden');
+    } else {
+        axisRoll.classList.remove('hidden');
+    }
+}
+
+function disableJoystickHelp() {
+    const joystick = document.getElementById('joystick');
+    assertIsDefined(joystick);
+
+    joystick.classList.add('hidden');
 }

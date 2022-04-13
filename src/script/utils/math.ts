@@ -7,6 +7,10 @@ export function isZero(n: number): boolean {
     return -EPSILON <= n && n <= EPSILON;
 }
 
+export function equals(a: number, b: number): boolean {
+    return a - EPSILON <= b && b <= a + EPSILON;
+}
+
 export function clamp(n: number, min: number, max: number): number {
     return Math.max(min, Math.min(n, max));
 }

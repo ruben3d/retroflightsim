@@ -82,7 +82,7 @@ a:hover {
 #panel.open {
     overflow-y: auto;
     left: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
 #panel > section {
@@ -101,6 +101,11 @@ a:hover {
 }
 
 #panel h2 {
+    font-size: 1.2rem;
+    color: white;
+}
+
+#panel h3 {
     font-size: 1rem;
     color: white;
 }
@@ -126,6 +131,11 @@ a:hover {
     cursor: pointer;
 }
 
+#joystick-id {
+    font-weight: initial;
+    font-size: smaller;
+}
+
 #credits {
     z-index: 1;
     position: absolute;
@@ -134,4 +144,8 @@ a:hover {
     padding: 1rem;
     color: white;
     background-color: rgba(0, 0, 0, 0.5);
+}
+
+.hidden {
+    display: none;
 }

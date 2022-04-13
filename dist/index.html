@@ -21,12 +21,27 @@
             <h1>Help</h1>
 
             <h2>Controls</h2>
-            <ul>
-                <li><span id="key-pitch-neg">W</span>/<span id="key-pitch-pos">S</span>: Pitch</li>
-                <li><span id="key-roll-neg">A</span>/<span id="key-roll-pos">D</span>: Roll</li>
-                <li><span id="key-yaw-neg">Q</span>/<span id="key-yaw-pos">E</span>: Yaw</li>
-                <li><span id="key-throttle-pos">Z</span>/<span id="key-throttle-neg">X</span>: Throttle</li>
-            </ul>
+
+            <div>
+                <h3>Keyboard</h3>
+                <ul>
+                    <li><span id="key-pitch-neg">W</span>/<span id="key-pitch-pos">S</span>: Pitch</li>
+                    <li><span id="key-roll-neg">A</span>/<span id="key-roll-pos">D</span>: Roll</li>
+                    <li><span id="key-yaw-neg">Q</span>/<span id="key-yaw-pos">E</span>: Yaw</li>
+                    <li><span id="key-throttle-pos">Z</span>/<span id="key-throttle-neg">X</span>: Throttle</li>
+                </ul>
+            </div>
+
+            <div id="joystick" class="hidden">
+                <h3>Joystick</h3>
+                <div id="joystick-id"></div>
+                <ul>
+                    <li id="axis-pitch"><span>Axis 1</span>: Pitch</li>
+                    <li id="axis-roll"><span>Axis 0</span>: Roll</li>
+                    <li id="axis-yaw"><span>Axis 3</span>: Yaw</li>
+                    <li id="axis-throttle"><span>Axis 2</span>: Throttle</li>
+                </ul>
+            </div>
 
             <h2>Systems</h2>
             <ul>
