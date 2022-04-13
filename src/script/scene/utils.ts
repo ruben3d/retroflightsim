@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { H_RES, V_RES } from '../defs';
 import { SceneMaterialUniforms } from './materials/materials';
 
 const camDir = new THREE.Vector3();
@@ -25,5 +26,10 @@ export function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, 
         (u.vCameraNormal.value as THREE.Vector3).copy(camDir);
         u.vCameraD.value = camD;
     }
+
+    const target = renderer.getRenderTarget();
+    u.halfWidth.value = Math.floor((target?.width || H_RES) * 0.5);
+    u.halfHeight.value = Math.floor((target?.height || V_RES) * 0.5);
+
     m.uniformsNeedUpdate = true;
 }

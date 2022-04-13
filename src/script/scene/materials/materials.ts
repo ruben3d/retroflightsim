@@ -22,6 +22,8 @@ export interface SceneMaterialProperties {
 export type SceneMaterialUniforms = SceneFlatMaterialUniforms | SceneShadedMaterialUniforms;
 
 export interface SceneFlatMaterialUniforms {
+    halfWidth: { value: number; };
+    halfHeight: { value: number; };
     vCameraNormal: { value: THREE.Vector3; };
     vCameraD: { value: number; };
     color: { value: THREE.Color; };
@@ -31,6 +33,8 @@ export interface SceneFlatMaterialUniforms {
 }
 
 export interface SceneShadedMaterialUniforms {
+    halfWidth: { value: number; };
+    halfHeight: { value: number; };
     distance: { value: number; };
     color: { value: THREE.Color; };
     fogDensity: { value: number; };
@@ -168,6 +172,8 @@ export class SceneMaterialManager implements KernelTask {
     private buildUniforms(properties: SceneMaterialProperties): SceneMaterialUniforms {
         return {
             ...{
+                halfWidth: { value: 0 },
+                halfHeight: { value: 0 },
                 color: { value: new THREE.Color(this.palette.colors[properties.category]) },
                 fogDensity: { value: this.palette.values[FogValueCategory(properties.category)] },
                 fogColor: { value: new THREE.Color(this.palette.colors[FogColorCategory(properties.category)]) }

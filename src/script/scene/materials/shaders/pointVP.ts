@@ -1,7 +1,8 @@
-import { H_RES_HALF, V_RES_HALF } from "../../../defs";
-
 export const PointVertProgram: string = `
   precision highp float;
+
+  uniform float halfWidth;
+  uniform float halfHeight;
 
   varying vec3 vPosition;
 
@@ -11,8 +12,8 @@ export const PointVertProgram: string = `
     gl_PointSize = 1.0;
 
     vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    pos.x = floor(pos.x / pos.w * ${H_RES_HALF}.0 + 0.5) / ${H_RES_HALF}.0 * pos.w;
-    pos.y = floor(pos.y / pos.w * ${V_RES_HALF}.0 + 1.0) / ${V_RES_HALF}.0 * pos.w;
+    pos.x = floor(pos.x / pos.w * halfWidth + 0.5) / halfWidth * pos.w;
+    pos.y = floor(pos.y / pos.w * halfHeight + 1.0) / halfHeight * pos.w;
     gl_Position = pos;
   }
 `;
