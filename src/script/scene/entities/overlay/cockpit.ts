@@ -25,6 +25,7 @@ const AI_CENTER_X = AI_X + AI_SIZE_HALF;
 const AI_CENTER_Y = AI_Y + AI_SIZE_HALF;
 
 export const COCKPIT_MFD_SIZE = Math.floor(V_RES / 3.333); // Pixels
+const COCKPIT_MFD_SIZE_HALF = Math.floor(COCKPIT_MFD_SIZE / 2);
 export const COCKPIT_MFD1_X = 1;
 export const COCKPIT_MFD1_Y = V_RES - COCKPIT_MFD_SIZE - 1;
 export const COCKPIT_MFD2_X = H_RES - COCKPIT_MFD_SIZE - 1;
@@ -47,6 +48,7 @@ export class CockpitEntity implements Entity {
     private aiPitch: number = 0;
     private aiRoll: number = 0;
 
+    private mapPlaneMarkerHeading: number = 0;
     private weaponsTarget: GroundTargetEntity | undefined;
     private weaponsTargetRange: number = 0; // Km
     private weaponsTargetBearing: number = 0; // degrees, 0 is North, increases CW
@@ -72,6 +74,7 @@ export class CockpitEntity implements Entity {
             .setY(0)
             .normalize();
         this.aiPitch = forward.angleTo(prjForward) * (forward.y >= 0 ? 1 : -1);
+        this.mapPlaneMarkerHeading = vectorBearing(prjForward);
 
         this.tmpQ.setFromUnitVectors(forward, prjForward);
 
@@ -196,6 +199,87 @@ export class CockpitEntity implements Entity {
         painter.setColor(palette.colors.HUD_TEXT);
         painter.rectangle(COCKPIT_MFD1_X - 1, COCKPIT_MFD1_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
         painter.clear(COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+
+        this.renderPlaneMarker(painter, palette);
+    }
+
+    private renderPlaneMarker(painter: CanvasPainter, palette: Palette) {
+        let aligned = true;
+        let flipX = 1;
+        let flipY = 1;
+        if (this.mapPlaneMarkerHeading >= (360 - 22) && this.mapPlaneMarkerHeading <= (0 + 23)) {
+            aligned = true;
+            flipX = 1;
+            flipY = 1;
+        } else if (this.mapPlaneMarkerHeading >= (45 - 22) && this.mapPlaneMarkerHeading <= (45 + 23)) {
+            aligned = false;
+            flipX = 1;
+            flipY = 1;
+        } else if (this.mapPlaneMarkerHeading >= (90 - 22) && this.mapPlaneMarkerHeading <= (90 + 23)) {
+            aligned = true;
+            flipX = -1;
+            flipY = 1;
+        } else if (this.mapPlaneMarkerHeading >= (135 - 22) && this.mapPlaneMarkerHeading <= (135 + 23)) {
+            aligned = false;
+            flipX = 1;
+            flipY = -1;
+        } else if (this.mapPlaneMarkerHeading >= (180 - 22) && this.mapPlaneMarkerHeading <= (180 + 23)) {
+            aligned = true;
+            flipX = 1;
+            flipY = -1;
+        } else if (this.mapPlaneMarkerHeading >= (225 - 22) && this.mapPlaneMarkerHeading <= (225 + 23)) {
+            aligned = false;
+            flipX = -1;
+            flipY = -1;
+        } else if (this.mapPlaneMarkerHeading >= (270 - 22) && this.mapPlaneMarkerHeading <= (270 + 23)) {
+            aligned = true;
+            flipX = -1;
+            flipY = -1;
+        } else if (this.mapPlaneMarkerHeading >= (315 - 22) && this.mapPlaneMarkerHeading <= (315 + 23)) {
+            aligned = false;
+            flipX = -1;
+            flipY = 1;
+        }
+
+        if (aligned) {
+            this.renderAlignedPlaneMarker(painter, palette, flipX, flipY);
+        } else {
+            this.renderAngledPlaneMarker(painter, palette, flipX, flipY);
+        }
+    }
+
+    private renderAlignedPlaneMarker(painter: CanvasPainter, palette: Palette, flipX: number, flipY: number) {
+        const bottomLeft = flipX > 0 ?
+            { x: -1, y: 1 * flipY } :
+            { x: -1 * flipY, y: -1 };
+        const bottomRight = flipX > 0 ?
+            { x: 1, y: 1 * flipY } :
+            { x: -1 * flipY, y: 1 };
+        const top = flipX > 0 ?
+            { x: 0, y: -1 * flipY } :
+            { x: 1 * flipY, y: 0 };
+        const baseX = COCKPIT_MFD1_X + COCKPIT_MFD_SIZE_HALF;
+        const baseY = COCKPIT_MFD1_Y + COCKPIT_MFD_SIZE_HALF;
+
+        painter.batch()
+            .line(baseX + bottomLeft.x, baseY + bottomLeft.y, baseX, baseY)
+            .line(baseX + bottomRight.x, baseY + bottomRight.y, baseX, baseY)
+            .line(baseX + top.x, baseY + top.y, baseX, baseY)
+            .commit();
+    }
+
+    private renderAngledPlaneMarker(painter: CanvasPainter, palette: Palette, flipX: number, flipY: number) {
+        const left = { x: -1 * flipX, y: 0 * flipY };
+        const bottom = { x: 0 * flipX, y: 1 * flipY };
+        const topRight = { x: 1 * flipX, y: -1 * flipY };
+        const baseX = COCKPIT_MFD1_X + COCKPIT_MFD_SIZE_HALF;
+        const baseY = COCKPIT_MFD1_Y + COCKPIT_MFD_SIZE_HALF;
+
+        painter.batch()
+            .line(baseX + left.x, baseY + left.y, baseX, baseY)
+            .line(baseX + bottom.x, baseY + bottom.y, baseX, baseY)
+            .line(baseX + topRight.x, baseY + topRight.y, baseX, baseY)
+            .commit();
     }
 
     private renderMFD2(painter: CanvasPainter, palette: Palette) {
