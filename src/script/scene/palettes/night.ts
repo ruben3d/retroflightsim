@@ -48,6 +48,8 @@ const colors: PaletteColors = {
     [PaletteCategory.SCENERY_BUILDING_PLASTER_TEAL]: '#103232',
     [PaletteCategory.SCENERY_BUILDING_CONCRETE]: '#242424',
     [PaletteCategory.SCENERY_BUILDING_METAL]: '#282828',
+    [PaletteCategory.SCENERY_BUILDING_METAL_WHITE]: '#2a212b',
+    [PaletteCategory.SCENERY_BUILDING_METAL_RED]: '#160000',
 
     [PaletteCategory.SCENERY_BASE_RUNWAY_LINES]: '#242424',
     [PaletteCategory.SCENERY_BASE_RUNWAY_THRESHOLD]: '#282828',

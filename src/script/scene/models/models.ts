@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assertIsDefined } from '../../utils/asserts';
+import { isZero } from '../../utils/math';
 import { SceneMaterialManager } from '../materials/materials';
 import { PaletteCategory, PaletteTime } from '../palettes/palette';
 import { updateUniforms } from '../utils';
@@ -36,12 +37,18 @@ interface ModelWrapper {
     pending: { model: Model; listener?: ModelLoadedListener }[];
 }
 
-const EPSILON = 0.01;
-const isZero = (n: number) => -EPSILON <= n && n <= EPSILON;
-
-export function matchesPaletteTime(obj: THREE.Object3D, time: PaletteTime): boolean {
+export function modelMatchesPaletteTime(obj: THREE.Object3D, time: PaletteTime): boolean {
     const modelTime = obj.userData.time as string | undefined;
     return !modelTime || modelTime === time;
+}
+
+export enum ModelAnimation {
+    ROTATE_UP = 'rotateUp'
+}
+
+export function modelHasAnim(obj: THREE.Object3D, type: ModelAnimation): boolean {
+    const modelAnim = obj.userData.anim as ModelAnimation | undefined;
+    return modelAnim !== undefined && modelAnim === type;
 }
 
 export class ModelManager {

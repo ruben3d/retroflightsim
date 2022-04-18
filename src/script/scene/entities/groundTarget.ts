@@ -67,7 +67,7 @@ export class GroundTargetEntity implements Entity {
     }
 
     update(delta: number): void {
-        //
+        this.lodHelper.update(delta);
     }
 
     render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {

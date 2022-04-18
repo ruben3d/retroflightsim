@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { matchesPaletteTime, Model } from '../scene/models/models';
+import { modelMatchesPaletteTime, Model, modelHasAnim, ModelAnimation } from '../scene/models/models';
 import { Palette } from '../scene/palettes/palette';
 import { assertIsDefined } from '../utils/asserts';
 
@@ -17,14 +17,22 @@ export function modelMaxSize(model: Model, scale: THREE.Vector3): number {
 
 export const DEFAULT_LOD_BIAS = 3;
 
+const ANIM_ROTATE_UP_SPEED = 0.4; // Revolutions per second
 const REF_WIDTH = 320; // Pixels
 
 export class LODHelper {
 
+    private elapsed: number = 0;
+
     private objFlats: THREE.Object3D = new THREE.Object3D();
     private objVolumes: THREE.Object3D = new THREE.Object3D();
+    private objVolumesAnim: THREE.Object3D = new THREE.Object3D();
 
     constructor(private model: Model, private bias: number) { }
+
+    update(delta: number): void {
+        this.elapsed += delta;
+    }
 
     addToRenderList(
         position: THREE.Vector3, quaternion: THREE.Quaternion, scale: THREE.Vector3,
@@ -39,10 +47,10 @@ export class LODHelper {
         if (lodLevel >= this.model.lod.length) return;
 
         if (hasFlats && this.model.lod[lodLevel].flats.length > 0) {
-            this.subRender(position, quaternion, scale, this.objFlats, this.model.lod[lodLevel].flats, flatsId, lists, palette);
+            this.subRender(position, quaternion, scale, this.objFlats, this.objVolumesAnim, this.model.lod[lodLevel].flats, flatsId, lists, palette);
         }
         if (hasVolumes && this.model.lod[lodLevel].volumes.length > 0) {
-            this.subRender(position, quaternion, scale, this.objVolumes, this.model.lod[lodLevel].volumes, volumesId, lists, palette);
+            this.subRender(position, quaternion, scale, this.objVolumes, this.objVolumesAnim, this.model.lod[lodLevel].volumes, volumesId, lists, palette);
         }
     }
 
@@ -64,20 +72,35 @@ export class LODHelper {
 
     private subRender(
         position: THREE.Vector3, quaternion: THREE.Quaternion, scale: THREE.Vector3,
-        dst: THREE.Object3D, collection: THREE.Object3D[], listId: string, lists: Map<string, THREE.Scene>,
+        dst: THREE.Object3D, dstAnim: THREE.Object3D, collection: THREE.Object3D[], listId: string, lists: Map<string, THREE.Scene>,
         palette: Palette) {
 
+        let hasAnim = false;
         const list = lists.get(listId);
         assertIsDefined(list);
         dst.clear();
+        dstAnim.clear();
         collection.forEach(m => {
-            if (matchesPaletteTime(m, palette.time)) {
-                dst.add(m);
+            if (modelMatchesPaletteTime(m, palette.time)) {
+                if (modelHasAnim(m, ModelAnimation.ROTATE_UP)) {
+                    hasAnim = true;
+                    dstAnim.add(m);
+                } else {
+                    dst.add(m);
+                }
             }
         });
         dst.position.copy(position);
         dst.quaternion.copy(quaternion);
         dst.scale.copy(scale);
         list.add(dst);
+
+        if (hasAnim) {
+            dstAnim.position.copy(position);
+            dstAnim.quaternion.copy(quaternion);
+            dstAnim.rotateY(2 * Math.PI * this.elapsed * ANIM_ROTATE_UP_SPEED);
+            dstAnim.scale.copy(scale);
+            list.add(dstAnim);
+        }
     }
 }

@@ -48,7 +48,7 @@ export class GameUpdateTask implements KernelTask {
 export class GameRenderTask implements KernelTask {
 
     constructor(private game: Game) { }
-    
+
     update(delta: number) {
         this.game.render();
     }
@@ -336,6 +336,10 @@ export class Game {
         this.addAirBase(this.scene, this.models);
 
         this.addRefinery(this.scene, this.models);
+
+        const samradar = new GroundTargetEntity(this.models.getModel('assets/samradar01.glb'), 0, 'SAM Radar', 'Stosneehar');
+        samradar.position.set(500, 0, -400);
+        this.scene.add(samradar);
 
         const warehouse = new GroundTargetEntity(this.models.getModel('assets/hangar01.gltf'), undefined, 'Warehouse', 'Radlydd');
         warehouse.position.set(-16000, 0, 11000);
