@@ -154,6 +154,9 @@ function updateJoystickHelp(id: string, axisCount: number) {
 function disableJoystickHelp() {
     const joystick = document.getElementById('joystick');
     assertIsDefined(joystick);
+    const joystickId = document.getElementById('joystick-id');
+    assertIsDefined(joystickId);
 
     joystick.classList.add('hidden');
+    joystickId.innerText = 'No device detected';
 }
