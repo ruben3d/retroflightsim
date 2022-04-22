@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { COCKPIT_FOV, PLANE_DISTANCE_TO_GROUND, H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from '../defs';
+import { COCKPIT_FOV, PLANE_DISTANCE_TO_GROUND, H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES, COCKPIT_FAR } from '../defs';
 import { CANVAS_RENDER_TARGET, Renderer, RenderLayer, RenderTargetType } from "../render/renderer";
 import { SceneCamera } from '../scene/cameras/camera';
 import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
@@ -24,6 +24,8 @@ import { ExteriorBehindCameraUpdater } from './cameraUpdaters/exteriorBehindCame
 import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
 import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteriorSideCameraUpdater';
 import { KernelTask } from '../core/kernel';
+import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
+import { restoreMainCameraParameters } from './stateUtils';
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
@@ -34,6 +36,7 @@ enum PlayerViewState {
     EXTERIOR_BEHIND,
     EXTERIOR_LEFT,
     EXTERIOR_RIGHT,
+    TARGET_TO,
 }
 
 export class GameUpdateTask implements KernelTask {
@@ -78,8 +81,8 @@ export class Game {
     private exteriorEntities: Entity[] = [];
 
     constructor(private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
-        this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, 40000));
-        this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, 40000));
+        this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
+        this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
@@ -88,6 +91,7 @@ export class Game {
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_RIGHT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.RIGHT));
+        this.cameraUpdaters.set(PlayerViewState.TARGET_TO, new TargetToCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
 
         const playerLayers: RenderLayer[] = [
@@ -150,6 +154,10 @@ export class Game {
     }
 
     update(delta: number) {
+        if (this.view === PlayerViewState.TARGET_TO && !this.player.weaponsTarget) {
+            this.setCockpitFrontView();
+        }
+
         this.scene.update(delta);
         this.cameraUpdater.update(delta);
         this.playerCamera.update();
@@ -195,11 +203,18 @@ export class Game {
                     this.setExteriorSideView();
                     break;
                 }
+                case '4': {
+                    if (this.view !== PlayerViewState.TARGET_TO && this.player.weaponsTarget) {
+                        this.setTargetToView();
+                    }
+                    break;
+                }
             }
         });
     }
 
     private setCockpitFrontView() {
+        restoreMainCameraParameters(this.playerCamera.main);
         this.view = PlayerViewState.COCKPIT_FRONT;
         this.player.exteriorView = false;
         this.cameraUpdater = this.getCameraUpdater(this.view);
@@ -212,15 +227,21 @@ export class Game {
     }
 
     private setExteriorBehindView() {
+        restoreMainCameraParameters(this.playerCamera.main);
         this.setExteriorView(PlayerViewState.EXTERIOR_BEHIND);
     }
 
     private setExteriorSideView() {
+        restoreMainCameraParameters(this.playerCamera.main);
         if (this.view !== PlayerViewState.EXTERIOR_RIGHT) {
             this.setExteriorView(PlayerViewState.EXTERIOR_RIGHT);
         } else {
             this.setExteriorView(PlayerViewState.EXTERIOR_LEFT);
         }
+    }
+
+    private setTargetToView() {
+        this.setExteriorView(PlayerViewState.TARGET_TO);
     }
 
     private setExteriorView(view: PlayerViewState) {

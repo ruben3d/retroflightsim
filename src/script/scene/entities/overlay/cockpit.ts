@@ -4,12 +4,12 @@ import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette } from "../../palettes/palette";
-import { COCKPIT_FOV, H_RES, H_RES_HALF, V_RES } from "../../../defs";
+import { H_RES, H_RES_HALF, V_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorBearing } from '../../../utils/math';
 import { formatBearing } from './overlayUtils';
-import { visibleWidthAtDistance } from '../../../render/helpers';
+import { updateTargetCamera } from '../../utils';
 
 
 const AI_SIZE = 29;
@@ -31,12 +31,6 @@ export const COCKPIT_MFD1_Y = V_RES - COCKPIT_MFD_SIZE - 1;
 export const COCKPIT_MFD2_X = H_RES - COCKPIT_MFD_SIZE - 1;
 export const COCKPIT_MFD2_Y = V_RES - COCKPIT_MFD_SIZE - 1;
 
-const MFD_TARGET_SIZE_FACTOR = 1.5;
-const MFD_TARGET_MAX_SIZE = 250;
-const MFD_TARGET_CAMERA_MIN_ALTITUDE = 15;
-const MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD = 5000;
-const MFD_TARGET_CAMERA_CONSTANT_NEAR = 10;
-const MFD_TARGET_CAMERA_CONSTANT_FAR = 10000;
 
 export class CockpitEntity implements Entity {
 
@@ -101,21 +95,7 @@ export class CockpitEntity implements Entity {
                 .normalize();
             this.weaponsTargetBearing = vectorBearing(this.tmpV);
 
-            const d = this.actor.position.distanceTo(this.weaponsTarget.position);
-            this.weaponsTargetZoomFactor = this.getWeaponsTargetZoomFactor(this.weaponsTarget, d);
-
-            this.targetCamera.position.copy(this.actor.position).setY(Math.max(MFD_TARGET_CAMERA_MIN_ALTITUDE, this.actor.position.y));
-            this.tmpV.addVectors(this.weaponsTarget.position, this.weaponsTarget.localCenter);
-            this.targetCamera.lookAt(this.tmpV);
-            this.targetCamera.fov = COCKPIT_FOV * 1 / this.weaponsTargetZoomFactor;
-            if (d > MFD_TARGET_CAMERA_ADAPTIVE_THRESHOLD) {
-                this.targetCamera.near = this.actor.position.distanceTo(this.weaponsTarget.position) / 2;
-                this.targetCamera.far = this.actor.position.distanceTo(this.weaponsTarget.position) * 2;
-            } else {
-                this.targetCamera.near = MFD_TARGET_CAMERA_CONSTANT_NEAR;
-                this.targetCamera.far = MFD_TARGET_CAMERA_CONSTANT_FAR;
-            }
-            this.targetCamera.updateProjectionMatrix();
+            this.weaponsTargetZoomFactor = updateTargetCamera(this.actor, this.camera, this.targetCamera);
         }
     }
 
@@ -303,11 +283,5 @@ export class CockpitEntity implements Entity {
             painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - CHAR_HEIGHT - CHAR_MARGIN,
                 `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT);
         }
-    }
-
-    private getWeaponsTargetZoomFactor(weaponsTarget: GroundTargetEntity, distance: number): number {
-        const farWidth = visibleWidthAtDistance(this.camera, distance);
-        const relativeSize = MFD_TARGET_SIZE_FACTOR * Math.min(MFD_TARGET_MAX_SIZE, weaponsTarget.maxSize) / farWidth;
-        return Math.pow(2, relativeSize >= 1 ? 0 : Math.max(0, Math.floor(-Math.log2(relativeSize))));
     }
 }

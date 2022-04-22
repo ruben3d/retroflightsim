@@ -18,3 +18,4 @@ export const PLANE_COCKPIT_OFFSET_Z = 8.0; // World units
 export const MAX_ALTITUDE = 2000; // World units
 
 export const COCKPIT_FOV = 50;
+export const COCKPIT_FAR = 40000;
