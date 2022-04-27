@@ -26,6 +26,7 @@ import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteri
 import { KernelTask } from '../core/kernel';
 import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
 import { restoreMainCameraParameters } from './stateUtils';
+import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
 
 
 const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
@@ -37,6 +38,7 @@ enum PlayerViewState {
     EXTERIOR_LEFT,
     EXTERIOR_RIGHT,
     TARGET_TO,
+    TARGET_FROM,
 }
 
 export class GameUpdateTask implements KernelTask {
@@ -86,12 +88,13 @@ export class Game {
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
-        this.player = new PlayerEntity(this.models.getModel('assets/f22.gltf'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
+        this.player = new PlayerEntity(this.models.getModel('assets/f22.glb'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_RIGHT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.RIGHT));
         this.cameraUpdaters.set(PlayerViewState.TARGET_TO, new TargetToCameraUpdater(this.player, this.playerCamera.main));
+        this.cameraUpdaters.set(PlayerViewState.TARGET_FROM, new TargetFromCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
 
         const playerLayers: RenderLayer[] = [
@@ -154,7 +157,7 @@ export class Game {
     }
 
     update(delta: number) {
-        if (this.view === PlayerViewState.TARGET_TO && !this.player.weaponsTarget) {
+        if ((this.view === PlayerViewState.TARGET_TO || this.view === PlayerViewState.TARGET_FROM) && !this.player.weaponsTarget) {
             this.setCockpitFrontView();
         }
 
@@ -204,8 +207,8 @@ export class Game {
                     break;
                 }
                 case '4': {
-                    if (this.view !== PlayerViewState.TARGET_TO && this.player.weaponsTarget) {
-                        this.setTargetToView();
+                    if (this.player.weaponsTarget) {
+                        this.setTargetView();
                     }
                     break;
                 }
@@ -240,8 +243,13 @@ export class Game {
         }
     }
 
-    private setTargetToView() {
-        this.setExteriorView(PlayerViewState.TARGET_TO);
+    private setTargetView() {
+        restoreMainCameraParameters(this.playerCamera.main);
+        if (this.view !== PlayerViewState.TARGET_TO) {
+            this.setExteriorView(PlayerViewState.TARGET_TO);
+        } else {
+            this.setExteriorView(PlayerViewState.TARGET_FROM);
+        }
     }
 
     private setExteriorView(view: PlayerViewState) {
@@ -446,6 +454,24 @@ export class Game {
         hangar4.position.set(1670, 0, -810);
         hangar4.quaternion.setFromAxisAngle(UP, Math.PI);
         scene.add(hangar4);
+
+        const planes = [
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -840), r: Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -870), r: Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -900), r: Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -930), r: Math.PI / 2 },
+        ];
+        planes.forEach(p => {
+            const plane = new StaticSceneryEntity(models.getModel('assets/f22.glb'));
+            plane.position.copy(p.p);
+            plane.quaternion.setFromAxisAngle(UP, p.r);
+            scene.add(plane);
+
+            const shadow = new StaticSceneryEntity(models.getModel('assets/f22_shadow.gltf'));
+            shadow.position.copy(p.p).setY(0);
+            shadow.quaternion.setFromAxisAngle(UP, p.r);
+            scene.add(shadow);
+        });
 
         const tower = new StaticSceneryEntity(models.getModel('assets/control01.gltf'));
         tower.position.set(1580, 0, -500);

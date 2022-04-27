@@ -42,7 +42,7 @@ export class PlayerEntity implements Entity {
     // Bearing increases CCW, radians
     constructor(model: Model, shadow: Model, position: THREE.Vector3, bearing: number) {
         this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
-        this.lodHelperShadow = new LODHelper(shadow, DEFAULT_LOD_BIAS);
+        this.lodHelperShadow = new LODHelper(shadow, 5);
         this.obj.position.copy(position);
         this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
     }

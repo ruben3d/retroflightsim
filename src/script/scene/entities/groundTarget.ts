@@ -62,6 +62,10 @@ export class GroundTargetEntity implements Entity {
         return this.model.center;
     }
 
+    get center(): THREE.Vector3 {
+        return this.model.center;
+    }
+
     init(scene: Scene): void {
         //
     }
