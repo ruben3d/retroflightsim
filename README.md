@@ -76,6 +76,6 @@ The system supports a single device connected only. If the device has less than 
 * `1`: Cockpit
 * `2`: Exterior follow
 * `3`: Exterior left/right
-* `4`: To target
+* `4`: To/from target
 
 On reaching the limits of the detailed scenario the player position wraps around.
