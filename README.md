@@ -9,11 +9,12 @@ Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight 
 ## Screenshots
 
 [<img src="doc/ega-day.png" width="320" height="200" />](doc/ega-day.png)
-[<img src="doc/vga-day.png" width="320" height="200" />](doc/vga-day.png)
-[<img src="doc/svga-day.png" width="320" height="200" />](doc/svga-day.png)
-
 [<img src="doc/ega-night.png" width="320" height="200" />](doc/ega-night.png)
+
+[<img src="doc/vga-day.png" width="320" height="200" />](doc/vga-day.png)
 [<img src="doc/vga-night.png" width="320" height="200" />](doc/vga-night.png)
+
+[<img src="doc/svga-day.png" width="320" height="200" />](doc/svga-day.png)
 [<img src="doc/svga-night.png" width="320" height="200" />](doc/svga-night.png)
 
 ## How to build
