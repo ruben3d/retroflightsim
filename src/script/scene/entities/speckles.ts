@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Palette, PaletteCategory } from '../palettes/palette';
+import { Palette, PaletteCategory } from '../../config/palettes/palette';
 import { Scene, SceneLayers } from "../scene";
 import { Entity } from "../entity";
 import { updateUniforms } from '../utils';
@@ -41,7 +41,7 @@ export class SpecklesEntity implements Entity {
         //
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, palette: Palette): void {
         const layer = layers.get(SceneLayers.EntityFlats);
         if (!layer) return;
 
@@ -55,6 +55,10 @@ export class SpecklesEntity implements Entity {
         }
 
         this.tiles.forEach(tile => layer.add(tile));
+    }
+
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
+        // Nothing
     }
 
     private buildTile(materials: SceneMaterialManager): THREE.Points {

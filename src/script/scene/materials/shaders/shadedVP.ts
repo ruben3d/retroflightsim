@@ -4,11 +4,19 @@ export const ShadedVertProgram: string = `
   uniform float halfWidth;
   uniform float halfHeight;
   uniform mat3 normalModelMatrix;
+  uniform int shadingType;
 
   varying float shade;
 
   void main() {
-    vec3 worldNormal = normalize(normalModelMatrix * normal);
+    vec3 worldNormal;
+
+    if (shadingType == 2) {
+      worldNormal = normalize(normalModelMatrix * normal);
+    } else {
+      worldNormal = normal;
+    }
+
     float shadeUp = 0.9 + dot(worldNormal, vec3(0.0, 1.0, 0.0)) * 0.1;
     float shadeRight = 0.8 + (1.0-abs(dot(worldNormal, vec3(0.0, 0.0, 1.0)))) * 0.2;
     shade = shadeUp * shadeRight;

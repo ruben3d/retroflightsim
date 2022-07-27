@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { H_RES, H_RES_HALF, V_RES, V_RES_HALF } from '../defs';
-import { DefaultPalette, Palette, PaletteCategory } from '../scene/palettes/palette';
+import { DefaultPalette, Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
 import { Scene, SceneLayers } from '../scene/scene';
 import { assertExpr, assertIsDefined } from '../utils/asserts';
 import { CanvasPainter } from './screen/canvasPainter';
@@ -28,6 +27,7 @@ interface BaseRenderTarget {
 interface CanvasRenderTarget extends BaseRenderTarget {
     type: RenderTargetType.CANVAS;
     target: THREE.CanvasTexture;
+    painter: CanvasPainter;
 }
 
 interface WebGLRenderTarget extends BaseRenderTarget {
@@ -36,31 +36,30 @@ interface WebGLRenderTarget extends BaseRenderTarget {
 }
 
 export interface RenderLayer {
-    target?: string;
+    target: string;
     camera: THREE.Camera;
     lists: string[];
 }
-
-export const MAIN_RENDER_TARGET = 'MAIN_RENDER_TARGET';
-export const CANVAS_RENDER_TARGET = 'CANVAS_RENDER_TARGET';
 
 export class Renderer {
     private container: HTMLElement;
     private renderer: THREE.WebGL1Renderer;
     private composeScene: THREE.Scene = new THREE.Scene();
-    private composeCamera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-H_RES / 2, H_RES / 2, V_RES / 2, -V_RES / 2, -10, 10);
+    private composeCamera: THREE.OrthographicCamera;
     private renderTargets: Map<string, RenderTarget> = new Map();
-    private painter: CanvasPainter;
     private palette: Palette = DefaultPalette;
+    private textShadow: boolean = false;
     private renderLists: Map<string, THREE.Scene>;
-    private currentRenderLists: Map<string, THREE.Scene> = new Map();
+    private current3DRenderLists: Map<string, THREE.Scene> = new Map();
+    private current2DRenderLists: Set<string> = new Set();
 
-    constructor(options?: RendererOptions) {
+    constructor(private composeWidth: number, private composeHeight: number) {
         const container = document.getElementById('container');
         if (!container) {
             throw new Error('<div id="container"> not found');
         }
         this.container = container;
+        this.composeCamera = new THREE.OrthographicCamera(-composeWidth / 2, composeWidth / 2, composeHeight / 2, -composeHeight / 2, -10, 10);
 
         this.renderer = new THREE.WebGL1Renderer({ antialias: false });
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -70,12 +69,6 @@ export class Renderer {
         this.container.appendChild(this.renderer.domElement);
         window.addEventListener('resize', this.updateViewportSize.bind(this));
 
-        const { canvas, painter } = this.setupContext2D(options);
-        this.painter = painter;
-
-        this.createRenderTarget(MAIN_RENDER_TARGET, RenderTargetType.WEBGL, 0, 0, H_RES, V_RES);
-        this.createRenderTarget(CANVAS_RENDER_TARGET, RenderTargetType.CANVAS, 0, 0, H_RES, V_RES, canvas);
-
         this.renderLists = new Map(Object.keys(SceneLayers).map(id => ([id, new THREE.Scene()])));
 
         this.composeCamera.position.setZ(1);
@@ -83,6 +76,16 @@ export class Renderer {
 
     setPalette(palette: Palette) {
         this.palette = palette;
+    }
+
+    setTextShadow(hasShadow: boolean) {
+        this.textShadow = hasShadow;
+    }
+
+    setComposeSize(width: number, height: number) {
+        this.composeWidth = width;
+        this.composeHeight = height;
+        this.updateViewportSize();
     }
 
     render(scene: Scene, renderLayers: RenderLayer[]) {
@@ -95,33 +98,12 @@ export class Renderer {
 
         for (const layer of renderLayers) {
 
-            const renderTarget = this.renderTargets.get(layer.target || MAIN_RENDER_TARGET);
-            assertIsDefined(renderTarget);
-            if (renderTarget.ready === false) {
-                renderTarget.ready = true;
-                if (renderTarget.type === RenderTargetType.CANVAS) {
-                    this.painter.clear();
-                    renderTarget.target.needsUpdate = true;
-                } else {
-                    this.renderer.setRenderTarget(renderTarget.target);
-                    this.renderer.setClearColor(this.palette.colors[PaletteCategory.BACKGROUND]);
-                    this.renderer.clear();
-                }
-                this.composeScene.add(renderTarget.compositorObj);
-            }
+            const renderTarget = this.prepareRenderTarget(layer.target);
 
-            this.currentRenderLists.clear();
-            for (const listId of layer.lists) {
-                const list = this.renderLists.get(listId);
-                assertIsDefined(list);
-                list.clear();
-                this.currentRenderLists.set(listId, list);
-            }
-            scene.buildRenderListsAndPaintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.currentRenderLists, this.painter, this.palette);
-            for (const listId of layer.lists) {
-                const list = this.currentRenderLists.get(listId);
-                assertIsDefined(list);
-                this.renderer.render(list, layer.camera);
+            if (renderTarget.type === RenderTargetType.WEBGL) {
+                this.render3D(renderTarget, scene, layer);
+            } else {
+                this.render2D(renderTarget, scene, layer);
             }
         }
 
@@ -133,10 +115,58 @@ export class Renderer {
         this.renderer.render(this.composeScene, this.composeCamera);
     }
 
-    // TODO Allow more than one canvas target, if there is any need for it
+    prepareRenderTarget(target: string): RenderTarget {
+        const renderTarget = this.renderTargets.get(target);
+        assertIsDefined(renderTarget);
+        if (renderTarget.ready === false) {
+            renderTarget.ready = true;
+            if (renderTarget.type === RenderTargetType.CANVAS) {
+                renderTarget.painter.clear();
+                renderTarget.target.needsUpdate = true;
+            } else {
+                renderTarget.compositorObj.position.set(
+                    renderTarget.x + renderTarget.width / 2 - this.composeWidth / 2,
+                    -renderTarget.y - renderTarget.height / 2 + this.composeHeight / 2,
+                    0
+                );
+                this.renderer.setRenderTarget(renderTarget.target);
+                this.renderer.setClearColor(PaletteColor(this.palette, PaletteCategory.BACKGROUND));
+                this.renderer.clear();
+            }
+            this.composeScene.add(renderTarget.compositorObj);
+        }
+        return renderTarget;
+    }
+
+    render3D(renderTarget: WebGLRenderTarget, scene: Scene, layer: RenderLayer) {
+        this.current3DRenderLists.clear();
+        for (const listId of layer.lists) {
+            const list = this.renderLists.get(listId);
+            assertIsDefined(list);
+            list.clear();
+            this.current3DRenderLists.set(listId, list);
+        }
+        scene.buildRenderLists(renderTarget.width, renderTarget.height, layer.camera, this.current3DRenderLists, this.palette);
+        for (const listId of layer.lists) {
+            const list = this.current3DRenderLists.get(listId);
+            assertIsDefined(list);
+            this.renderer.render(list, layer.camera);
+        }
+    }
+
+    render2D(renderTarget: CanvasRenderTarget, scene: Scene, layer: RenderLayer) {
+        this.current2DRenderLists.clear();
+        for (const listId of layer.lists) {
+            assertExpr(this.renderLists.has(listId));
+            this.current2DRenderLists.add(listId);
+        }
+        renderTarget.painter.setTextShadow(this.textShadow);
+        scene.paintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.current2DRenderLists, renderTarget.painter, this.palette);
+    }
+
     createRenderTarget(id: string, type: RenderTargetType.WEBGL, x: number, y: number, width: number, height: number): void;
-    createRenderTarget(id: string, type: RenderTargetType.CANVAS, x: number, y: number, width: number, height: number, canvas: HTMLCanvasElement): void;
-    createRenderTarget(id: string, type: RenderTargetType, x: number, y: number, width: number, height: number, canvas?: HTMLCanvasElement): void {
+    createRenderTarget(id: string, type: RenderTargetType.CANVAS, x: number, y: number, width: number, height: number, options?: RendererOptions): void;
+    createRenderTarget(id: string, type: RenderTargetType, x: number, y: number, width: number, height: number, options?: RendererOptions): void {
         assertExpr(this.renderTargets.has(id) === false, `Render target "${id}" exists already`);
 
         const ready = false;
@@ -150,10 +180,11 @@ export class Renderer {
                 new THREE.PlaneGeometry(width, height),
                 new THREE.MeshBasicMaterial({ map: target.texture, depthWrite: false })
             );
-            compositorObj.position.set(x + width / 2 - H_RES_HALF, -y - height / 2 + V_RES_HALF, 0);
+            compositorObj.position.set(x + width / 2 - this.composeWidth / 2, -y - height / 2 + this.composeHeight / 2, 0);
             const renderTarget: RenderTarget = { type, target, compositorObj, ready, x, y, width, height };
             this.renderTargets.set(id, renderTarget);
         } else {
+            const { canvas, painter } = this.setupContext2D(width, height, options);
             assertIsDefined(canvas);
             const target = new THREE.CanvasTexture(canvas, undefined, undefined, undefined, THREE.NearestFilter, THREE.NearestFilter);
             const compositorObj = new THREE.Mesh(
@@ -161,15 +192,15 @@ export class Renderer {
                 new THREE.MeshBasicMaterial({ map: target, depthWrite: false, transparent: true })
             );
             compositorObj.position.set(x, y, 0);
-            const renderTarget: RenderTarget = { type, target, compositorObj, ready, x, y, width, height };
+            const renderTarget: RenderTarget = { type, target, painter, compositorObj, ready, x, y, width, height };
             this.renderTargets.set(id, renderTarget);
         }
     }
 
-    private setupContext2D(options: RendererOptions | undefined): { canvas: HTMLCanvasElement, painter: CanvasPainter } {
+    private setupContext2D(width: number, height: number, options: RendererOptions | undefined): { canvas: HTMLCanvasElement, painter: CanvasPainter } {
         const canvas = document.createElement('canvas');
-        canvas.width = H_RES;
-        canvas.height = V_RES;
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext("2d") || undefined;
         if (!ctx) {
             throw Error('Unable to create CanvasRenderingContext2D');
@@ -182,19 +213,19 @@ export class Renderer {
         const viewportWidth = this.container.clientWidth || 1;
         const viewportHeight = this.container.clientHeight || 1;
         const viewportAspect = viewportWidth / viewportHeight;
-        const aspect = H_RES / V_RES;
+        const aspect = this.composeWidth / this.composeHeight;
         if (viewportAspect > aspect) {
-            const width = viewportAspect / aspect * H_RES;
+            const width = viewportAspect / aspect * this.composeWidth;
             this.composeCamera.left = -width / 2;
             this.composeCamera.right = width / 2;
-            this.composeCamera.top = V_RES / 2;
-            this.composeCamera.bottom = -V_RES / 2;
+            this.composeCamera.top = this.composeHeight / 2;
+            this.composeCamera.bottom = -this.composeHeight / 2;
         } else {
-            const height = aspect / viewportAspect * V_RES;
+            const height = aspect / viewportAspect * this.composeHeight;
             this.composeCamera.top = height / 2;
             this.composeCamera.bottom = -height / 2;
-            this.composeCamera.left = -H_RES / 2;
-            this.composeCamera.right = H_RES / 2;
+            this.composeCamera.left = -this.composeWidth / 2;
+            this.composeCamera.right = this.composeWidth / 2;
         }
         this.composeCamera.updateProjectionMatrix();
         this.renderer.setSize(viewportWidth, viewportHeight);

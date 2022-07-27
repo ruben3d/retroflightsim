@@ -56,23 +56,27 @@ export enum TextAlignment {
     RIGHT
 }
 
+const COLOR_SHADOW = '#000000';
+
 export class TextRenderer {
     private smallFont: HTMLImageElement;
     private smallFontColors: Map<string, HTMLCanvasElement> = new Map();
 
     constructor(private ctx: CanvasRenderingContext2D, colors: string[] = []) {
+        const allColors = [COLOR_SHADOW, ...colors]
         this.smallFont = new Image();
         this.smallFont.src = 'assets/smallFont.png';
         if (this.smallFont.complete) {
-            this.onImageLoaded(colors);
+            this.onImageLoaded(allColors);
         } else {
-            this.smallFont.addEventListener('load', this.onImageLoaded.bind(this, colors));
+            this.smallFont.addEventListener('load', this.onImageLoaded.bind(this, allColors));
             this.smallFont.addEventListener('error', () => { throw Error(`Unable to load "${this.smallFont.src}"`) });
         }
     }
 
-    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment) {
-        const canvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
+    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, shadow: boolean = false) {
+        const srcCanvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
+        const shadowCanvas = this.smallFontColors.get(COLOR_SHADOW) || this.smallFont;
         let x0 = x;
         if (alignment === TextAlignment.RIGHT) {
             x0 = x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
@@ -82,9 +86,17 @@ export class TextRenderer {
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
             const { srcX, srcY } = this.codeToCoords(c);
-            this.ctx.drawImage(canvas,
+            const dstX = x0 + i * (CHAR_WIDTH + CHAR_MARGIN);
+
+            if (shadow) {
+                this.ctx.drawImage(shadowCanvas,
+                    srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
+                    dstX + 1, y + 1, CHAR_WIDTH, CHAR_HEIGHT);
+            }
+
+            this.ctx.drawImage(srcCanvas,
                 srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
-                x0 + i * (CHAR_WIDTH + CHAR_MARGIN), y, CHAR_WIDTH, CHAR_HEIGHT);
+                dstX, y, CHAR_WIDTH, CHAR_HEIGHT);
         }
     }
 

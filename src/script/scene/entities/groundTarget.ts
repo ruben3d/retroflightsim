@@ -3,7 +3,7 @@ import { DEFAULT_LOD_BIAS, LODHelper, modelMaxSize } from '../../render/helpers'
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
-import { Palette } from "../palettes/palette";
+import { Palette } from "../../config/palettes/palette";
 import { Scene, SceneLayers } from "../scene";
 
 export class GroundTargetEntity implements Entity {
@@ -74,10 +74,14 @@ export class GroundTargetEntity implements Entity {
         this.lodHelper.update(delta);
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
         this.lodHelper.addToRenderList(
             this.position, this.quaternion, this.scale,
             targetWidth, camera, palette,
             SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+    }
+
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
+        // Nothing
     }
 }

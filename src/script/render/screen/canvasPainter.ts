@@ -152,6 +152,7 @@ export class CanvasPainter {
     private textRenderer: TextRenderer;
     private batchPainter: BatchCanvasPainter;
     private clipPainter: ClipCanvasPainter;
+    private textShadow: boolean = false;
 
     constructor(private ctx: CanvasRenderingContext2D, textColors: string[] = []) {
         this.textRenderer = new TextRenderer(ctx, textColors);
@@ -169,6 +170,10 @@ export class CanvasPainter {
 
     setBackground(color: string) {
         this.ctx.fillStyle = color;
+    }
+
+    setTextShadow(hasShadow: boolean) {
+        this.textShadow = hasShadow;
     }
 
     // Actions
@@ -212,7 +217,7 @@ export class CanvasPainter {
     }
 
     text(x: number, y: number, text: string, color?: string, alignment: TextAlignment = TextAlignment.LEFT) {
-        this.textRenderer.text(x, y, text, color, alignment);
+        this.textRenderer.text(x, y, text, color, alignment, this.textShadow);
     }
 
     batch(): BatchCanvasPainter {

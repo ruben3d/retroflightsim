@@ -1,10 +1,13 @@
+import { ConfigService } from "../config/configService";
 import { JoystickControlDevice } from "../input/devices/joystickControlDevice";
 import { KeyboardControlAction, KeyboardControlDevice, KeyboardControlLayoutId, KeyboardControlLayouts } from "../input/devices/keyboardControlDevice";
+import { TechProfiles } from "../state/gameDefs";
 import { assertIsDefined } from "../utils/asserts";
 
 
-export function setupOSD(keyboardInput: KeyboardControlDevice, joystickInput: JoystickControlDevice) {
+export function setupOSD(config: ConfigService, keyboardInput: KeyboardControlDevice, joystickInput: JoystickControlDevice) {
     setupButtons();
+    setupGenerationOptions(config);
     setupKeyboardHelp(keyboardInput);
     setupJoystickHelp(joystickInput);
 }
@@ -45,6 +48,26 @@ function setupButtons() {
             helpButton.classList.remove('active');
             helpSection.classList.remove('active');
         }
+    });
+}
+
+function setupGenerationOptions(config: ConfigService) {
+    const genEGA = document.getElementById('gen-ega');
+    assertIsDefined(genEGA);
+    const genVGA = document.getElementById('gen-vga');
+    assertIsDefined(genVGA);
+    const genSVGA = document.getElementById('gen-svga');
+    assertIsDefined(genSVGA);
+
+
+    genEGA.addEventListener('change', () => {
+        config.setActiveProfile(TechProfiles.EGA);
+    });
+    genVGA.addEventListener('change', () => {
+        config.setActiveProfile(TechProfiles.VGA);
+    });
+    genSVGA.addEventListener('change', () => {
+        config.setActiveProfile(TechProfiles.SVGA);
     });
 }
 

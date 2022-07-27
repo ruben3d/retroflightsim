@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import { FogQuality } from '../config/profiles/profile';
 import { COCKPIT_FOV, H_RES, V_RES } from '../defs';
 import { visibleWidthAtDistance } from '../render/helpers';
 import { GroundTargetEntity } from './entities/groundTarget';
 import { PlayerEntity } from './entities/player';
-import { SceneMaterialUniforms } from './materials/materials';
+import { SceneMaterialData, SceneMaterialUniforms } from './materials/materials';
 
 const camDir = new THREE.Vector3();
 const camPos = new THREE.Vector3();
@@ -12,6 +13,7 @@ const pos = new THREE.Vector3();
 export function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, geometry: THREE.BufferGeometry, material: THREE.Material, group: THREE.Group) {
     const m = (material as THREE.ShaderMaterial);
     const u = m.uniforms as SceneMaterialUniforms;
+    const data = m.userData as SceneMaterialData | undefined;
 
     if ('isPerspectiveCamera' in camera === false) {
         camDir.set(0, -1, 0);
@@ -20,15 +22,26 @@ export function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, 
     }
     camPos.copy(camera.position);
     const camD = camPos.negate().dot(camDir);
+    const fogType = data ? data.fog : FogQuality.LOW;
 
-    if (m.userData?.shaded) {
+    if (data?.shaded) {
         this.getWorldPosition(pos.copy(this.position));
+
+        if (fogType === FogQuality.HIGH) {
+            u.distance.value = pos.distanceTo(camera.position);
+        } else if (fogType === FogQuality.LOW) {
+            u.distance.value = pos.dot(camDir) + camD;
+        } else {
+            u.distance.value = 0;
+        }
+
         (u.normalModelMatrix.value as THREE.Matrix3).getNormalMatrix(this.matrixWorld);
-        u.distance.value = pos.dot(camDir) + camD;
     } else {
+        (u.vCameraPos.value as THREE.Vector3).copy(camera.position);
         (u.vCameraNormal.value as THREE.Vector3).copy(camDir);
         u.vCameraD.value = camD;
     }
+    u.fogType.value = fogType;
 
     const target = renderer.getRenderTarget();
     u.halfWidth.value = Math.floor((target?.width || H_RES) * 0.5);
@@ -51,7 +64,6 @@ export function updateTargetCamera(actor: PlayerEntity, mainCamera: THREE.Perspe
 
     const d = actor.position.distanceTo(weaponsTarget.position);
     const weaponsTargetZoomFactor = getWeaponsTargetZoomFactor(mainCamera, weaponsTarget, d);
-    console.log(weaponsTargetZoomFactor);
 
     targetCamera.position.copy(actor.position).setY(Math.max(TARGET_CAMERA_MIN_ALTITUDE, actor.position.y));
     camPos.addVectors(weaponsTarget.position, weaponsTarget.localCenter);

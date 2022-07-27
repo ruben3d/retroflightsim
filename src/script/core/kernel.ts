@@ -19,13 +19,21 @@ export class Kernel {
     private targetFPSprogress: number = 0.0;
 
     constructor(private targetFPS?: number) {
-        if (targetFPS) {
-            this.targetFPSLength = 1.0 / targetFPS * 1000.0;
-        }
+        this.setTargetFPS(targetFPS);
     }
 
     addTask(task: KernelTask) {
         this.tasks.push(task);
+    }
+
+    setTargetFPS(targetFPS?: number) {
+        if (targetFPS) {
+            this.targetFPSLength = 1.0 / targetFPS * 1000.0;
+        } else {
+            this.targetFPSLength = 0.0;
+        }
+        this.targetFPS = targetFPS;
+        this.targetFPSprogress = 0.0;
     }
 
     start() {

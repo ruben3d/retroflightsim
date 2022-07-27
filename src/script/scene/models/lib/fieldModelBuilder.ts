@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SceneMaterialManager } from "../../materials/materials";
-import { PaletteCategory } from '../../palettes/palette';
+import { PaletteCategory } from '../../../config/palettes/palette';
 import { updateUniforms } from '../../utils';
 import { Model, ModelLibBuilder } from "../models";
 

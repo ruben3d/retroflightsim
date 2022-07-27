@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CanvasPainter } from '../render/screen/canvasPainter';
 import { Entity } from './entity';
-import { Palette } from './palettes/palette';
+import { Palette } from '../config/palettes/palette';
 
 export const UP = new THREE.Vector3(0, 1, 0);
 export const FORWARD = new THREE.Vector3(0, 0, -1);
@@ -29,11 +29,20 @@ export class Scene {
         }
     }
 
-    buildRenderListsAndPaintCanvas(targetWidth: number, targetHeight: number, camera: THREE.Camera, renderLists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette) {
+    buildRenderLists(targetWidth: number, targetHeight: number, camera: THREE.Camera, renderLists: Map<string, THREE.Scene>, palette: Palette) {
         for (let i = 0; i < this.entities.length; i++) {
             const entity = this.entities[i];
             if (entity.enabled) {
-                entity.render(targetWidth, targetHeight, camera, renderLists, painter, palette);
+                entity.render3D(targetWidth, targetHeight, camera, renderLists, palette);
+            }
+        }
+    }
+
+    paintCanvas(targetWidth: number, targetHeight: number, camera: THREE.Camera, renderLists: Set<string>, painter: CanvasPainter, palette: Palette) {
+        for (let i = 0; i < this.entities.length; i++) {
+            const entity = this.entities[i];
+            if (entity.enabled) {
+                entity.render2D(targetWidth, targetHeight, camera, renderLists, painter, palette);
             }
         }
     }

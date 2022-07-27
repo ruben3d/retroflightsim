@@ -5,7 +5,7 @@ import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { isZero } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
-import { Palette } from "../palettes/palette";
+import { Palette } from "../../config/palettes/palette";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 
@@ -103,7 +103,7 @@ export class PlayerEntity implements Entity {
         if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
 
         this.shadowPosition.copy(this.position).setY(0);
         this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize().multiplyScalar(-1));
@@ -121,6 +121,10 @@ export class PlayerEntity implements Entity {
                 targetWidth, camera, palette,
                 SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
         }
+    }
+
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
+        // Nothing
     }
 
     setPitch(pitch: number) {

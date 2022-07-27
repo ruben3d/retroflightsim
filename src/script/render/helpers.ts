@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { modelMatchesPaletteTime, Model, modelHasAnim, ModelAnimation } from '../scene/models/models';
-import { Palette } from '../scene/palettes/palette';
+import { Palette } from '../config/palettes/palette';
 import { assertIsDefined } from '../utils/asserts';
 
 

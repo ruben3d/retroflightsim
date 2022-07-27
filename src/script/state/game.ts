@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { COCKPIT_FOV, PLANE_DISTANCE_TO_GROUND, H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES, COCKPIT_FAR } from '../defs';
-import { CANVAS_RENDER_TARGET, Renderer, RenderLayer, RenderTargetType } from "../render/renderer";
+import { COCKPIT_FOV, PLANE_DISTANCE_TO_GROUND, H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES, COCKPIT_FAR, LO_H_RES, LO_V_RES, HI_H_RES, HI_V_RES } from '../defs';
+import { Renderer, RenderLayer, RenderTargetType } from "../render/renderer";
 import { SceneCamera } from '../scene/cameras/camera';
 import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
 import { GroundTargetEntity } from '../scene/entities/groundTarget';
-import { CockpitEntity, COCKPIT_MFD_SIZE, COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD1_X, COCKPIT_MFD1_Y } from '../scene/entities/overlay/cockpit';
+import { CockpitEntity, CockpitMFD1X, CockpitMFD1Y, CockpitMFD2X, CockpitMFD2Y, CockpitMFDSize } from '../scene/entities/overlay/cockpit';
 import { HUDEntity } from '../scene/entities/overlay/hud';
 import { PlayerEntity } from '../scene/entities/player';
 import { SceneryField, SceneryFieldSettings } from '../scene/entities/sceneryField';
@@ -13,9 +13,9 @@ import { SpecklesEntity } from '../scene/entities/speckles';
 import { StaticSceneryEntity } from '../scene/entities/staticScenery';
 import { SceneMaterialManager } from "../scene/materials/materials";
 import { ModelManager } from "../scene/models/models";
-import { NightPalette } from '../scene/palettes/night';
-import { NoonPalette } from '../scene/palettes/noon';
-import { Palette, PaletteCategory } from '../scene/palettes/palette';
+import { VGAMidnightPalette } from '../config/palettes/vga-midnight';
+import { VGANoonPalette } from '../config/palettes/vga-noon';
+import { Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
 import { RIGHT, Scene, SceneLayers, UP } from '../scene/scene';
 import { assertIsDefined } from '../utils/asserts';
 import { Entity } from '../scene/entity';
@@ -27,10 +27,18 @@ import { KernelTask } from '../core/kernel';
 import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
 import { restoreMainCameraParameters } from './stateUtils';
 import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
+import { ConfigService } from '../config/configService';
+import { DisplayResolution, FogQuality } from '../config/profiles/profile';
 
 
-const WEAPONSTARGET_RENDER_TARGET = 'WEAPONSTARGET_RENDER_TARGET';
-const MAP_RENDER_TARGET = 'MAP_RENDER_TARGET';
+const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
+const CANVAS_RENDER_TARGET_LO = 'CANVAS_RENDER_TARGET_LO';
+const MAIN_RENDER_TARGET_HI = 'MAIN_RENDER_TARGET_HI';
+const CANVAS_RENDER_TARGET_HI = 'CANVAS_RENDER_TARGET_HI';
+const WEAPONSTARGET_RENDER_TARGET_LO = 'WEAPONSTARGET_RENDER_TARGET_LO';
+const MAP_RENDER_TARGET_LO = 'MAP_RENDER_TARGET_LO';
+const WEAPONSTARGET_RENDER_TARGET_HI = 'WEAPONSTARGET_RENDER_TARGET_HI';
+const MAP_RENDER_TARGET_HI = 'MAP_RENDER_TARGET_HI';
 
 enum PlayerViewState {
     COCKPIT_FRONT,
@@ -70,19 +78,22 @@ export class Game {
     private cameraUpdater: CameraUpdater;
     private player: PlayerEntity;
 
-    private palettes = [NoonPalette, NightPalette];
+    private palettes = [VGANoonPalette, VGAMidnightPalette];
     private currentPalette = 0;
 
-    private cockpitRenderLayers: RenderLayer[];
-    private cockpitTargetRenderLayers: RenderLayer[];
-    private exteriorRenderLayers: RenderLayer[];
+    private cockpitRenderLayersLo: RenderLayer[];
+    private cockpitTargetRenderLayersLo: RenderLayer[];
+    private exteriorRenderLayersLo: RenderLayer[];
+    private cockpitRenderLayersHi: RenderLayer[];
+    private cockpitTargetRenderLayersHi: RenderLayer[];
+    private exteriorRenderLayersHi: RenderLayer[];
 
     private view: PlayerViewState = PlayerViewState.COCKPIT_FRONT;
 
     private cockpitEntities: Entity[] = [];
     private exteriorEntities: Entity[] = [];
 
-    constructor(private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
+    constructor(private configService: ConfigService, private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
         this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
         this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
@@ -96,60 +107,135 @@ export class Game {
         this.cameraUpdaters.set(PlayerViewState.TARGET_TO, new TargetToCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.TARGET_FROM, new TargetFromCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
+        this.configService.addChangeListener(profile => {
+            if (profile.resolution === DisplayResolution.LO_RES) {
+                this.renderer.setComposeSize(LO_H_RES, LO_V_RES);
+            } else {
+                this.renderer.setComposeSize(HI_H_RES, HI_V_RES);
+            }
+            this.palettes = [profile.noonPalette, profile.midnightPalette];
+            this.materials.setPalette(this.getPalette());
+            this.materials.setFog(profile.fogQuality);
+            this.materials.setShadingType(profile.shading);
+            this.renderer.setPalette(this.getPalette());
+            this.renderer.setTextShadow(profile.textShadow);
+        });
 
-        const playerLayers: RenderLayer[] = [
+        const playerLayersLo: RenderLayer[] = [
             {
+                target: MAIN_RENDER_TARGET_LO,
                 camera: this.playerCamera.bgSky,
                 lists: [SceneLayers.BackgroundSky]
             },
             {
+                target: MAIN_RENDER_TARGET_LO,
                 camera: this.playerCamera.bgGround,
                 lists: [SceneLayers.BackgroundGround]
             },
             {
+                target: MAIN_RENDER_TARGET_LO,
                 camera: this.playerCamera.main,
                 lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
             }
         ];
-        const targetLayers: RenderLayer[] = [
+        const playerLayersHi: RenderLayer[] = [
             {
-                target: WEAPONSTARGET_RENDER_TARGET,
+                target: MAIN_RENDER_TARGET_HI,
+                camera: this.playerCamera.bgSky,
+                lists: [SceneLayers.BackgroundSky]
+            },
+            {
+                target: MAIN_RENDER_TARGET_HI,
+                camera: this.playerCamera.bgGround,
+                lists: [SceneLayers.BackgroundGround]
+            },
+            {
+                target: MAIN_RENDER_TARGET_HI,
+                camera: this.playerCamera.main,
+                lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+            }
+        ];
+        const targetLayersLo: RenderLayer[] = [
+            {
+                target: WEAPONSTARGET_RENDER_TARGET_LO,
                 camera: this.targetCamera.bgSky,
                 lists: [SceneLayers.BackgroundSky]
             },
             {
-                target: WEAPONSTARGET_RENDER_TARGET,
+                target: WEAPONSTARGET_RENDER_TARGET_LO,
                 camera: this.targetCamera.bgGround,
                 lists: [SceneLayers.BackgroundGround]
             },
             {
-                target: WEAPONSTARGET_RENDER_TARGET,
+                target: WEAPONSTARGET_RENDER_TARGET_LO,
                 camera: this.targetCamera.main,
                 lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
             }
         ];
-        const mapLayers: RenderLayer[] = [
+        const targetLayersHi: RenderLayer[] = [
             {
-                target: MAP_RENDER_TARGET,
+                target: WEAPONSTARGET_RENDER_TARGET_HI,
+                camera: this.targetCamera.bgSky,
+                lists: [SceneLayers.BackgroundSky]
+            },
+            {
+                target: WEAPONSTARGET_RENDER_TARGET_HI,
+                camera: this.targetCamera.bgGround,
+                lists: [SceneLayers.BackgroundGround]
+            },
+            {
+                target: WEAPONSTARGET_RENDER_TARGET_HI,
+                camera: this.targetCamera.main,
+                lists: [SceneLayers.Terrain, SceneLayers.EntityFlats, SceneLayers.EntityVolumes]
+            }
+        ];
+        const mapLayersLo: RenderLayer[] = [
+            {
+                target: MAP_RENDER_TARGET_LO,
                 camera: this.mapCamera,
                 lists: [SceneLayers.Terrain]
             }
         ];
-        const canvasLayers: RenderLayer[] = [
+        const mapLayersHi: RenderLayer[] = [
             {
-                target: CANVAS_RENDER_TARGET,
+                target: MAP_RENDER_TARGET_HI,
+                camera: this.mapCamera,
+                lists: [SceneLayers.Terrain]
+            }
+        ];
+        const canvasLayersLo: RenderLayer[] = [
+            {
+                target: CANVAS_RENDER_TARGET_LO,
                 camera: this.playerCamera.main,
                 lists: [SceneLayers.Overlay]
             }
         ];
-        this.cockpitRenderLayers = [...playerLayers, ...mapLayers, ...canvasLayers];
-        this.cockpitTargetRenderLayers = [...playerLayers, ...mapLayers, ...targetLayers, ...canvasLayers];
-        this.exteriorRenderLayers = [...playerLayers, ...canvasLayers];
+        const canvasLayersHi: RenderLayer[] = [
+            {
+                target: CANVAS_RENDER_TARGET_HI,
+                camera: this.playerCamera.main,
+                lists: [SceneLayers.Overlay]
+            }
+        ];
+        this.cockpitRenderLayersLo = [...playerLayersLo, ...mapLayersLo, ...canvasLayersLo];
+        this.cockpitTargetRenderLayersLo = [...playerLayersLo, ...mapLayersLo, ...targetLayersLo, ...canvasLayersLo];
+        this.exteriorRenderLayersLo = [...playerLayersLo, ...canvasLayersLo];
+        this.cockpitRenderLayersHi = [...playerLayersHi, ...mapLayersHi, ...canvasLayersHi];
+        this.cockpitTargetRenderLayersHi = [...playerLayersHi, ...mapLayersHi, ...targetLayersHi, ...canvasLayersHi];
+        this.exteriorRenderLayersHi = [...playerLayersHi, ...canvasLayersHi];
     }
 
     setup() {
-        this.renderer.createRenderTarget(MAP_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
-        this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET, RenderTargetType.WEBGL, COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+        this.renderer.createRenderTarget(MAIN_RENDER_TARGET_LO, RenderTargetType.WEBGL, 0, 0, LO_H_RES, LO_V_RES);
+        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_LO, RenderTargetType.CANVAS, 0, 0, LO_H_RES, LO_V_RES, { textColors: [PaletteColor(VGAMidnightPalette, PaletteCategory.HUD_TEXT)] });
+        this.renderer.createRenderTarget(MAIN_RENDER_TARGET_HI, RenderTargetType.WEBGL, 0, 0, HI_H_RES, HI_V_RES);
+        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_HI, RenderTargetType.CANVAS, 0, 0, HI_H_RES, HI_V_RES, { textColors: [PaletteColor(VGAMidnightPalette, PaletteCategory.HUD_TEXT)] });
+        const LO_MFD_SIZE = CockpitMFDSize(LO_V_RES);
+        this.renderer.createRenderTarget(MAP_RENDER_TARGET_LO, RenderTargetType.WEBGL, CockpitMFD1X(LO_H_RES, LO_V_RES, LO_MFD_SIZE), CockpitMFD1Y(LO_H_RES, LO_V_RES, LO_MFD_SIZE), LO_MFD_SIZE, LO_MFD_SIZE);
+        this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET_LO, RenderTargetType.WEBGL, CockpitMFD2X(LO_H_RES, LO_V_RES, LO_MFD_SIZE), CockpitMFD2Y(LO_H_RES, LO_V_RES, LO_MFD_SIZE), LO_MFD_SIZE, LO_MFD_SIZE);
+        const HI_MFD_SIZE = CockpitMFDSize(HI_V_RES);
+        this.renderer.createRenderTarget(MAP_RENDER_TARGET_HI, RenderTargetType.WEBGL, CockpitMFD1X(HI_H_RES, HI_V_RES, HI_MFD_SIZE), CockpitMFD1Y(HI_H_RES, HI_V_RES, HI_MFD_SIZE), HI_MFD_SIZE, HI_MFD_SIZE);
+        this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET_HI, RenderTargetType.WEBGL, CockpitMFD2X(HI_H_RES, HI_V_RES, HI_MFD_SIZE), CockpitMFD2Y(HI_H_RES, HI_V_RES, HI_MFD_SIZE), HI_MFD_SIZE, HI_MFD_SIZE);
         this.renderer.setPalette(this.getPalette());
         this.materials.setPalette(this.getPalette());
         this.setupControls();
@@ -168,11 +254,13 @@ export class Game {
     }
 
     render() {
-        let layers = this.cockpitRenderLayers;
+        const isLowRes = this.configService.getProfile().resolution === DisplayResolution.LO_RES;
+
+        let layers = isLowRes ? this.cockpitRenderLayersLo : this.cockpitRenderLayersHi;
         if (this.view !== PlayerViewState.COCKPIT_FRONT) {
-            layers = this.exteriorRenderLayers;
+            layers = isLowRes ? this.exteriorRenderLayersLo : this.exteriorRenderLayersHi;
         } else if (this.player.weaponsTarget) {
-            layers = this.cockpitTargetRenderLayers;
+            layers = isLowRes ? this.cockpitTargetRenderLayersLo : this.cockpitTargetRenderLayersHi;
         }
         this.renderer.render(this.scene, layers);
     }

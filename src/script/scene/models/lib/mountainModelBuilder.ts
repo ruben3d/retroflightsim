@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SceneMaterialManager } from "../../materials/materials";
-import { PaletteCategory } from '../../palettes/palette';
+import { PaletteCategory } from '../../../config/palettes/palette';
 import { updateUniforms } from '../../utils';
 import { Model, ModelLibBuilder } from "../models";
 
@@ -19,6 +19,7 @@ export class MountainModelLibBuilder implements ModelLibBuilder {
         const geometry = new THREE.ConeBufferGeometry(this.radius, this.height, FACES, undefined, true).toNonIndexed();
         geometry.computeVertexNormals();
         geometry.translate(0, this.height / 2, 0);
+        geometry.rotateY(Math.PI / 4);
         const mesh = new THREE.Mesh(geometry, materials.build({
             category: this.color,
             depthWrite: true,

@@ -8,17 +8,22 @@ import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBui
 import { FieldModelLibBuilder, FieldModelType } from './scene/models/lib/fieldModelBuilder';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { ModelManager } from './scene/models/models';
-import { NightPalette } from './scene/palettes/night';
-import { DefaultPalette, PaletteCategory } from './scene/palettes/palette';
+import { DefaultPalette, PaletteCategory } from './config/palettes/palette';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
+import { ConfigService } from './config/configService';
+import { EGAProfile } from './config/profiles/ega';
+import { VGAProfile } from './config/profiles/vga';
+import { SVGAProfile } from './config/profiles/svga';
+import { FPS_CAP, H_RES, V_RES } from './defs';
+import { TechProfiles } from './state/gameDefs';
+import { DisplayShading, FogQuality } from './config/profiles/profile';
 
 
-let keyboardInput: KeyboardControlDevice;
-let joystickInput: JoystickControlDevice;
-
-function setup(): Kernel {
-    const renderer = new Renderer({ textColors: [NightPalette.colors[PaletteCategory.HUD_TEXT]] });
-    const materials = new SceneMaterialManager(DefaultPalette);
+function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControlDevice] {
+    const config = new ConfigService({ [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile });
+    config.setActiveProfile(TechProfiles.VGA);
+    const renderer = new Renderer(H_RES, V_RES);
+    const materials = new SceneMaterialManager(DefaultPalette, FogQuality.LOW, DisplayShading.STATIC);
     const models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),
@@ -31,23 +36,26 @@ function setup(): Kernel {
         new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
     ]);
 
-    const game = new Game(models, materials, renderer);
+    const game = new Game(config, models, materials, renderer);
     game.setup();
 
-    keyboardInput = new KeyboardControlDevice(game.getPlayer());
-    joystickInput = new JoystickControlDevice(game.getPlayer());
+    const keyboardInput = new KeyboardControlDevice(game.getPlayer());
+    const joystickInput = new JoystickControlDevice(game.getPlayer());
 
-    const kernel = new Kernel(15);
+    const kernel = new Kernel(FPS_CAP);
     kernel.addTask(materials);
     kernel.addTask(keyboardInput);
     kernel.addTask(joystickInput);
     kernel.addTask(new GameUpdateTask(game));
     kernel.addTask(new GameRenderTask(game));
-    return kernel;
+
+    config.addChangeListener(profile => kernel.setTargetFPS(profile.fpsCap ? FPS_CAP : undefined));
+
+    return [kernel, config, keyboardInput, joystickInput];
 }
 
 window.addEventListener("load", () => {
-    const kernel = setup();
+    const [kernel, config, keyboardInput, joystickInput] = setup();
     kernel.start();
-    setupOSD(keyboardInput, joystickInput);
+    setupOSD(config, keyboardInput, joystickInput);
 });

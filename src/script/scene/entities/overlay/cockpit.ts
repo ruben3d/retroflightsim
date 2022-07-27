@@ -3,8 +3,8 @@ import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/text";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../../scene";
 import { Entity } from "../../entity";
-import { Palette } from "../../palettes/palette";
-import { H_RES, H_RES_HALF, V_RES } from "../../../defs";
+import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
+import { LO_H_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorBearing } from '../../../utils/math';
@@ -12,25 +12,30 @@ import { formatBearing } from './overlayUtils';
 import { updateTargetCamera } from '../../utils';
 
 
-const AI_SIZE = 29;
-const AI_SIZE_HALF = Math.floor(AI_SIZE / 2);
-const AI_X = H_RES_HALF - AI_SIZE_HALF;
-const AI_Y = V_RES - AI_SIZE + 1;
-const AI_COLOR_GROUND = '#ffa200';
-const AI_COLOR_SKY = '#2c558e';
+// Pixels
+export function CockpitMFDSize(height: number): number {
+    return Math.floor(height / 3.333);
+}
 
-const AI_X_MAX = AI_X + AI_SIZE - 1;
-const AI_Y_MAX = AI_Y + AI_SIZE - 1;
-const AI_CENTER_X = AI_X + AI_SIZE_HALF;
-const AI_CENTER_Y = AI_Y + AI_SIZE_HALF;
+// Pixels
+export function CockpitMFD1X(width: number, height: number, size: number): number {
+    return 1;
+}
 
-export const COCKPIT_MFD_SIZE = Math.floor(V_RES / 3.333); // Pixels
-const COCKPIT_MFD_SIZE_HALF = Math.floor(COCKPIT_MFD_SIZE / 2);
-export const COCKPIT_MFD1_X = 1;
-export const COCKPIT_MFD1_Y = V_RES - COCKPIT_MFD_SIZE - 1;
-export const COCKPIT_MFD2_X = H_RES - COCKPIT_MFD_SIZE - 1;
-export const COCKPIT_MFD2_Y = V_RES - COCKPIT_MFD_SIZE - 1;
+// Pixels
+export function CockpitMFD1Y(width: number, height: number, size: number): number {
+    return height - size - 1;
+}
 
+// Pixels
+export function CockpitMFD2X(width: number, height: number, size: number): number {
+    return width - size - 1;
+}
+
+// Pixels
+export function CockpitMFD2Y(width: number, height: number, size: number): number {
+    return height - size - 1;
+}
 
 export class CockpitEntity implements Entity {
 
@@ -99,15 +104,40 @@ export class CockpitEntity implements Entity {
         }
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
-        if (!lists.has(SceneLayers.Overlay)) return;
-
-        this.renderAttitudeIndicator(painter, palette);
-        this.renderMFD1(painter, palette);
-        this.renderMFD2(painter, palette);
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
+        // Nothing
     }
 
-    private renderAttitudeIndicator(painter: CanvasPainter, palette: Palette) {
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
+        if (!lists.has(SceneLayers.Overlay)) return;
+
+        const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
+
+        this.renderAttitudeIndicator(targetWidth, targetHeight, painter, palette);
+
+        const MFDSize = CockpitMFDSize(targetHeight);
+        this.renderMFD1(
+            CockpitMFD1X(targetWidth, targetHeight, MFDSize),
+            CockpitMFD1Y(targetWidth, targetHeight, MFDSize),
+            MFDSize, painter, hudColor);
+        this.renderMFD2(
+            CockpitMFD2X(targetWidth, targetHeight, MFDSize),
+            CockpitMFD2Y(targetWidth, targetHeight, MFDSize),
+            MFDSize, painter, hudColor, palette);
+    }
+
+    private renderAttitudeIndicator(targetWidth: number, targetHeight: number, painter: CanvasPainter, palette: Palette) {
+
+        const halfWidth = targetWidth / 2;
+
+        const AI_SIZE = 29 * Math.floor(targetWidth / LO_H_RES);
+        const AI_SIZE_HALF = Math.floor(AI_SIZE / 2);
+        const AI_X = halfWidth - AI_SIZE_HALF;
+        const AI_Y = targetHeight - AI_SIZE + 1;
+        const AI_X_MAX = AI_X + AI_SIZE - 1;
+        const AI_Y_MAX = AI_Y + AI_SIZE - 1;
+        const AI_CENTER_X = AI_X + AI_SIZE_HALF;
+        const AI_CENTER_Y = AI_Y + AI_SIZE_HALF;
 
         const offset = this.aiPitch / (Math.PI / 2);
         const center = this.tmpV2.set(AI_CENTER_X, 0, AI_CENTER_Y);
@@ -128,12 +158,15 @@ export class CockpitEntity implements Entity {
 
         const clip = painter.clip().circle(AI_CENTER_X, AI_CENTER_Y, AI_SIZE_HALF).clip();
 
-        painter.setColor(AI_COLOR_GROUND);
+        const colorGround = PaletteColor(palette, PaletteCategory.COCKPIT_AI_GROUND);
+        const colorSky = PaletteColor(palette, PaletteCategory.COCKPIT_AI_SKY);
 
-        painter.setBackground(AI_COLOR_SKY);
+        painter.setColor(colorGround);
+
+        painter.setBackground(colorSky);
         painter.rectangle(AI_X, AI_Y, AI_SIZE - 1, AI_SIZE - 1, true);
 
-        painter.setBackground(AI_COLOR_GROUND);
+        painter.setBackground(colorGround);
         if (C0_X < C1_X) {
             if (C0_X > AI_X && C0_Y < AI_Y_MAX) {
                 painter.rectangle(AI_X, C0_Y, C0_X - AI_X, AI_Y_MAX - C0_Y, true);
@@ -175,15 +208,15 @@ export class CockpitEntity implements Entity {
             .commit();
     }
 
-    private renderMFD1(painter: CanvasPainter, palette: Palette) {
-        painter.setColor(palette.colors.HUD_TEXT);
-        painter.rectangle(COCKPIT_MFD1_X - 1, COCKPIT_MFD1_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
-        painter.clear(COCKPIT_MFD1_X, COCKPIT_MFD1_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
+    private renderMFD1(x: number, y: number, size: number, painter: CanvasPainter, hudColor: string) {
+        painter.setColor(hudColor);
+        painter.rectangle(x - 1, y - 1, size + 2, size + 2);
+        painter.clear(x, y, size, size);
 
-        this.renderPlaneMarker(painter, palette);
+        this.renderPlaneMarker(x, y, size, painter);
     }
 
-    private renderPlaneMarker(painter: CanvasPainter, palette: Palette) {
+    private renderPlaneMarker(x: number, y: number, size: number, painter: CanvasPainter) {
         let aligned = true;
         let flipX = 1;
         let flipY = 1;
@@ -222,13 +255,13 @@ export class CockpitEntity implements Entity {
         }
 
         if (aligned) {
-            this.renderAlignedPlaneMarker(painter, palette, flipX, flipY);
+            this.renderAlignedPlaneMarker(x, y, size, painter, flipX, flipY);
         } else {
-            this.renderAngledPlaneMarker(painter, palette, flipX, flipY);
+            this.renderAngledPlaneMarker(x, y, size, painter, flipX, flipY);
         }
     }
 
-    private renderAlignedPlaneMarker(painter: CanvasPainter, palette: Palette, flipX: number, flipY: number) {
+    private renderAlignedPlaneMarker(x: number, y: number, size: number, painter: CanvasPainter, flipX: number, flipY: number) {
         const bottomLeft = flipX > 0 ?
             { x: -1, y: 1 * flipY } :
             { x: -1 * flipY, y: -1 };
@@ -238,8 +271,9 @@ export class CockpitEntity implements Entity {
         const top = flipX > 0 ?
             { x: 0, y: -1 * flipY } :
             { x: 1 * flipY, y: 0 };
-        const baseX = COCKPIT_MFD1_X + COCKPIT_MFD_SIZE_HALF;
-        const baseY = COCKPIT_MFD1_Y + COCKPIT_MFD_SIZE_HALF;
+        const COCKPIT_MFD_SIZE_HALF = Math.floor(size / 2);
+        const baseX = x + COCKPIT_MFD_SIZE_HALF;
+        const baseY = y + COCKPIT_MFD_SIZE_HALF;
 
         painter.batch()
             .line(baseX + bottomLeft.x, baseY + bottomLeft.y, baseX, baseY)
@@ -248,12 +282,13 @@ export class CockpitEntity implements Entity {
             .commit();
     }
 
-    private renderAngledPlaneMarker(painter: CanvasPainter, palette: Palette, flipX: number, flipY: number) {
+    private renderAngledPlaneMarker(x: number, y: number, size: number, painter: CanvasPainter, flipX: number, flipY: number) {
         const left = { x: -1 * flipX, y: 0 * flipY };
         const bottom = { x: 0 * flipX, y: 1 * flipY };
         const topRight = { x: 1 * flipX, y: -1 * flipY };
-        const baseX = COCKPIT_MFD1_X + COCKPIT_MFD_SIZE_HALF;
-        const baseY = COCKPIT_MFD1_Y + COCKPIT_MFD_SIZE_HALF;
+        const COCKPIT_MFD_SIZE_HALF = Math.floor(size / 2);
+        const baseX = x + COCKPIT_MFD_SIZE_HALF;
+        const baseY = y + COCKPIT_MFD_SIZE_HALF;
 
         painter.batch()
             .line(baseX + left.x, baseY + left.y, baseX, baseY)
@@ -262,26 +297,26 @@ export class CockpitEntity implements Entity {
             .commit();
     }
 
-    private renderMFD2(painter: CanvasPainter, palette: Palette) {
-        painter.setColor(palette.colors.HUD_TEXT);
-        painter.rectangle(COCKPIT_MFD2_X - 1, COCKPIT_MFD2_Y - 1, COCKPIT_MFD_SIZE + 2, COCKPIT_MFD_SIZE + 2);
+    private renderMFD2(x: number, y: number, size: number, painter: CanvasPainter, hudColor: string, palette: Palette) {
+        painter.setColor(hudColor);
+        painter.rectangle(x - 1, y - 1, size + 2, size + 2);
 
         if (this.weaponsTarget === undefined) {
-            painter.setBackground('#142901');
-            painter.rectangle(COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE, true);
-            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - CHAR_HEIGHT - CHAR_MARGIN, 'No target', palette.colors.HUD_TEXT);
+            painter.setBackground(PaletteColor(palette, PaletteCategory.COCKPIT_MFD_BACKGROUND));
+            painter.rectangle(x, y, size, size, true);
+            painter.text(x + CHAR_MARGIN, y + size - CHAR_HEIGHT - CHAR_MARGIN, 'No target', hudColor);
         } else {
-            painter.clear(COCKPIT_MFD2_X, COCKPIT_MFD2_Y, COCKPIT_MFD_SIZE, COCKPIT_MFD_SIZE);
-            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + CHAR_MARGIN,
-                this.weaponsTarget.targetType, palette.colors.HUD_TEXT);
-            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + CHAR_MARGIN * 2 + CHAR_HEIGHT,
-                `at ${this.weaponsTarget.targetLocation}`, palette.colors.HUD_TEXT);
-            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
-                `BRG ${formatBearing(this.weaponsTargetBearing)}`, palette.colors.HUD_TEXT);
-            painter.text(COCKPIT_MFD2_X + COCKPIT_MFD_SIZE - CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
-                `${this.weaponsTargetZoomFactor.toFixed(0)}x`, palette.colors.HUD_TEXT, TextAlignment.RIGHT);
-            painter.text(COCKPIT_MFD2_X + CHAR_MARGIN, COCKPIT_MFD2_Y + COCKPIT_MFD_SIZE - CHAR_HEIGHT - CHAR_MARGIN,
-                `Range ${this.weaponsTargetRange.toFixed(1)} KM`, palette.colors.HUD_TEXT);
+            painter.clear(x, y, size, size);
+            painter.text(x + CHAR_MARGIN, y + CHAR_MARGIN,
+                this.weaponsTarget.targetType, hudColor);
+            painter.text(x + CHAR_MARGIN, y + CHAR_MARGIN * 2 + CHAR_HEIGHT,
+                `at ${this.weaponsTarget.targetLocation}`, hudColor);
+            painter.text(x + CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+                `BRG ${formatBearing(this.weaponsTargetBearing)}`, hudColor);
+            painter.text(x + size - CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+                `${this.weaponsTargetZoomFactor.toFixed(0)}x`, hudColor, TextAlignment.RIGHT);
+            painter.text(x + CHAR_MARGIN, y + size - CHAR_HEIGHT - CHAR_MARGIN,
+                `Range ${this.weaponsTargetRange.toFixed(1)} KM`, hudColor);
         }
     }
 }

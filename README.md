@@ -8,10 +8,13 @@ Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight 
 
 ## Screenshots
 
-[<img src="doc/ss08.png" width="320" height="200" />](doc/ss08.png)
-[<img src="doc/ss07.png" width="320" height="200" />](doc/ss07.png)
-[<img src="doc/ss05.png" width="320" height="200" />](doc/ss05.png)
-[<img src="doc/ss09.png" width="320" height="200" />](doc/ss09.png)
+[<img src="doc/ega-day.png" width="320" height="200" />](doc/ega-day.png)
+[<img src="doc/vga-day.png" width="320" height="200" />](doc/vga-day.png)
+[<img src="doc/svga-day.png" width="320" height="200" />](doc/svga-day.png)
+
+[<img src="doc/ega-night.png" width="320" height="200" />](doc/ega-night.png)
+[<img src="doc/vga-night.png" width="320" height="200" />](doc/vga-night.png)
+[<img src="doc/svga-night.png" width="320" height="200" />](doc/svga-night.png)
 
 ## How to build
 
@@ -34,6 +37,21 @@ $ npm run serve
 Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 
 ## Instructions
+
+### Settings
+
+<img src="doc/settings.png" />
+
+#### Generation
+
+The generation of choice will simulate the experience of a game of that era:
+* 286/EGA: late 80s
+* 386/VGA: early 90s
+* 486/SVGA: mid-90s before texture mapping 
+
+#### Keyboard layout
+
+Choose your keyboard layout, for users using AZERTY or Dvorak keyboards.
 
 ### Plane controls
 

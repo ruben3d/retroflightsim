@@ -1,5 +1,5 @@
 import { CanvasPainter } from '../render/screen/canvasPainter';
-import { Palette } from './palettes/palette';
+import { Palette } from '../config/palettes/palette';
 import { Scene } from './scene';
 
 export enum ENTITY_TAGS {
@@ -12,5 +12,6 @@ export interface Entity {
     enabled: boolean;
     init(scene: Scene): void;
     update(delta: number): void;
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void;
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void;
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void;
 }

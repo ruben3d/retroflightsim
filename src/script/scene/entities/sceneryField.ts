@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Palette } from '../palettes/palette';
+import { Palette } from '../../config/palettes/palette';
 import { ModelManager } from "../models/models";
 import { Scene, SceneLayers, UP } from "../scene";
 import { Entity } from "../entity";
@@ -65,7 +65,7 @@ export class SceneryField implements Entity {
         //
     }
 
-    render(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, painter: CanvasPainter, palette: Palette): void {
+    render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, layers: Map<string, THREE.Scene>, palette: Palette): void {
         if (!layers.has(SceneLayers.EntityFlats) && !layers.has(SceneLayers.EntityVolumes)) return;
         this.tmpVector2.set(camera.position.x, camera.position.z);
         if (!this.paddedArea.containsPoint(this.tmpVector2)) return;
@@ -81,10 +81,14 @@ export class SceneryField implements Entity {
                     item.entity.position.set(x + item.offset.x, 0, z + item.offset.z);
                     this.tmpVector2.set(item.entity.position.x, item.entity.position.z);
                     if (!this.area.containsPoint(this.tmpVector2)) continue;
-                    item.entity.render(targetWidth, targetHeight, camera, layers, painter, palette);
+                    item.entity.render3D(targetWidth, targetHeight, camera, layers, palette);
                 }
             }
         }
+    }
+
+    render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
+        // Nothing
     }
 
     private buildTile(models: ModelManager): FieldTile {

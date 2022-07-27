@@ -3,7 +3,7 @@ import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { assertIsDefined } from '../../utils/asserts';
 import { isZero } from '../../utils/math';
 import { SceneMaterialManager } from '../materials/materials';
-import { PaletteCategory, PaletteTime } from '../palettes/palette';
+import { PaletteCategory, PaletteTime } from '../../config/palettes/palette';
 import { updateUniforms } from '../utils';
 
 export interface ModelLodLevel {
@@ -140,6 +140,7 @@ export class ModelManager {
                 if (isFlat) {
                     level.flats.push(obj);
                 } else {
+                    obj.geometry.rotateY(0.0001); //! HACK: Fixes issue dithering axis-aligned triangles
                     level.volumes.push(obj);
                 }
 
