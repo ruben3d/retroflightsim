@@ -1,6 +1,7 @@
 
 export enum PaletteCategory {
     HUD_TEXT = 'HUD_TEXT',
+    HUD_TEXT_EFFECT = 'HUD_TEXT_EFFECT',
 
     COCKPIT_AI_SKY = 'COCKPIT_AI_SKY',
     COCKPIT_AI_GROUND = 'COCKPIT_AI_GROUND',
@@ -114,6 +115,7 @@ export function FogValueCategory(cat: PaletteCategory): PaletteFogCategories {
 
 const defaultPaletteColors: PaletteColors = {
     [PaletteCategory.HUD_TEXT]: '', // Use default
+    [PaletteCategory.HUD_TEXT_EFFECT]: '', // Use default
 
     [PaletteCategory.COCKPIT_AI_SKY]: '#00ffff',
     [PaletteCategory.COCKPIT_AI_GROUND]: '#ff8800',

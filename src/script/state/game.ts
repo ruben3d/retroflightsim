@@ -29,6 +29,12 @@ import { restoreMainCameraParameters } from './stateUtils';
 import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
 import { ConfigService } from '../config/configService';
 import { DisplayResolution, FogQuality } from '../config/profiles/profile';
+import { CGANoonPalette } from '../config/palettes/cga-noon';
+import { EGANoonPalette } from '../config/palettes/ega-noon';
+import { EGAMidnightPalette } from '../config/palettes/ega-midnight';
+import { SVGANoonPalette } from '../config/palettes/svga-noon';
+import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
+import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -118,7 +124,7 @@ export class Game {
             this.materials.setFog(profile.fogQuality);
             this.materials.setShadingType(profile.shading);
             this.renderer.setPalette(this.getPalette());
-            this.renderer.setTextShadow(profile.textShadow);
+            this.renderer.setTextEffect(profile.textEffect);
         });
 
         const playerLayersLo: RenderLayer[] = [
@@ -226,10 +232,15 @@ export class Game {
     }
 
     setup() {
+        const textColors = Array.from(new Set(
+            [CGANoonPalette, CGAMidnightPalette, EGANoonPalette, EGAMidnightPalette, VGANoonPalette, VGAMidnightPalette, SVGANoonPalette, SVGAMidnightPalette]
+                .flatMap(p => ([PaletteColor(p, PaletteCategory.HUD_TEXT), PaletteColor(p, PaletteCategory.HUD_TEXT_EFFECT)]))
+        ));
+
         this.renderer.createRenderTarget(MAIN_RENDER_TARGET_LO, RenderTargetType.WEBGL, 0, 0, LO_H_RES, LO_V_RES);
-        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_LO, RenderTargetType.CANVAS, 0, 0, LO_H_RES, LO_V_RES, { textColors: [PaletteColor(VGAMidnightPalette, PaletteCategory.HUD_TEXT)] });
+        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_LO, RenderTargetType.CANVAS, 0, 0, LO_H_RES, LO_V_RES, { textColors });
         this.renderer.createRenderTarget(MAIN_RENDER_TARGET_HI, RenderTargetType.WEBGL, 0, 0, HI_H_RES, HI_V_RES);
-        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_HI, RenderTargetType.CANVAS, 0, 0, HI_H_RES, HI_V_RES, { textColors: [PaletteColor(VGAMidnightPalette, PaletteCategory.HUD_TEXT)] });
+        this.renderer.createRenderTarget(CANVAS_RENDER_TARGET_HI, RenderTargetType.CANVAS, 0, 0, HI_H_RES, HI_V_RES, { textColors });
         const LO_MFD_SIZE = CockpitMFDSize(LO_V_RES);
         this.renderer.createRenderTarget(MAP_RENDER_TARGET_LO, RenderTargetType.WEBGL, CockpitMFD1X(LO_H_RES, LO_V_RES, LO_MFD_SIZE), CockpitMFD1Y(LO_H_RES, LO_V_RES, LO_MFD_SIZE), LO_MFD_SIZE, LO_MFD_SIZE);
         this.renderer.createRenderTarget(WEAPONSTARGET_RENDER_TARGET_LO, RenderTargetType.WEBGL, CockpitMFD2X(LO_H_RES, LO_V_RES, LO_MFD_SIZE), CockpitMFD2Y(LO_H_RES, LO_V_RES, LO_MFD_SIZE), LO_MFD_SIZE, LO_MFD_SIZE);

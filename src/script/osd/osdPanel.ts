@@ -52,6 +52,8 @@ function setupButtons() {
 }
 
 function setupGenerationOptions(config: ConfigService) {
+    const genCGA = document.getElementById('gen-cga');
+    assertIsDefined(genCGA);
     const genEGA = document.getElementById('gen-ega');
     assertIsDefined(genEGA);
     const genVGA = document.getElementById('gen-vga');
@@ -59,7 +61,9 @@ function setupGenerationOptions(config: ConfigService) {
     const genSVGA = document.getElementById('gen-svga');
     assertIsDefined(genSVGA);
 
-
+    genCGA.addEventListener('change', () => {
+        config.setActiveProfile(TechProfiles.CGA);
+    });
     genEGA.addEventListener('change', () => {
         config.setActiveProfile(TechProfiles.EGA);
     });

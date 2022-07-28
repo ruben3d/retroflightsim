@@ -1,4 +1,4 @@
-import { TextAlignment, TextRenderer } from "./text";
+import { TextAlignment, TextEffect, TextRenderer } from "./text";
 
 
 function XOR(p: boolean, q: boolean): boolean {
@@ -152,7 +152,8 @@ export class CanvasPainter {
     private textRenderer: TextRenderer;
     private batchPainter: BatchCanvasPainter;
     private clipPainter: ClipCanvasPainter;
-    private textShadow: boolean = false;
+    private textEffect: TextEffect = TextEffect.NONE;
+    private textEffectColor: string = '#000000';
 
     constructor(private ctx: CanvasRenderingContext2D, textColors: string[] = []) {
         this.textRenderer = new TextRenderer(ctx, textColors);
@@ -172,8 +173,9 @@ export class CanvasPainter {
         this.ctx.fillStyle = color;
     }
 
-    setTextShadow(hasShadow: boolean) {
-        this.textShadow = hasShadow;
+    setTextEffect(effect: TextEffect, effectColor: string) {
+        this.textEffect = effect;
+        this.textEffectColor = effectColor;
     }
 
     // Actions
@@ -217,7 +219,7 @@ export class CanvasPainter {
     }
 
     text(x: number, y: number, text: string, color?: string, alignment: TextAlignment = TextAlignment.LEFT) {
-        this.textRenderer.text(x, y, text, color, alignment, this.textShadow);
+        this.textRenderer.text(x, y, text, color, alignment, this.textEffect, this.textEffectColor);
     }
 
     batch(): BatchCanvasPainter {

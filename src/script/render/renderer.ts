@@ -3,6 +3,7 @@ import { DefaultPalette, Palette, PaletteCategory, PaletteColor } from '../confi
 import { Scene, SceneLayers } from '../scene/scene';
 import { assertExpr, assertIsDefined } from '../utils/asserts';
 import { CanvasPainter } from './screen/canvasPainter';
+import { TextEffect } from './screen/text';
 
 export interface RendererOptions {
     textColors?: string[];
@@ -48,7 +49,7 @@ export class Renderer {
     private composeCamera: THREE.OrthographicCamera;
     private renderTargets: Map<string, RenderTarget> = new Map();
     private palette: Palette = DefaultPalette;
-    private textShadow: boolean = false;
+    private textEffect: TextEffect = TextEffect.NONE;
     private renderLists: Map<string, THREE.Scene>;
     private current3DRenderLists: Map<string, THREE.Scene> = new Map();
     private current2DRenderLists: Set<string> = new Set();
@@ -78,8 +79,8 @@ export class Renderer {
         this.palette = palette;
     }
 
-    setTextShadow(hasShadow: boolean) {
-        this.textShadow = hasShadow;
+    setTextEffect(effect: TextEffect) {
+        this.textEffect = effect;
     }
 
     setComposeSize(width: number, height: number) {
@@ -160,7 +161,7 @@ export class Renderer {
             assertExpr(this.renderLists.has(listId));
             this.current2DRenderLists.add(listId);
         }
-        renderTarget.painter.setTextShadow(this.textShadow);
+        renderTarget.painter.setTextEffect(this.textEffect, PaletteColor(this.palette, PaletteCategory.HUD_TEXT_EFFECT));
         scene.paintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.current2DRenderLists, renderTarget.painter, this.palette);
     }
 

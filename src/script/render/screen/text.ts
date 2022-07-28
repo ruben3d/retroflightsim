@@ -56,14 +56,18 @@ export enum TextAlignment {
     RIGHT
 }
 
-const COLOR_SHADOW = '#000000';
+export enum TextEffect {
+    NONE,
+    SHADOW,
+    BACKGROUND
+}
 
 export class TextRenderer {
     private smallFont: HTMLImageElement;
     private smallFontColors: Map<string, HTMLCanvasElement> = new Map();
 
     constructor(private ctx: CanvasRenderingContext2D, colors: string[] = []) {
-        const allColors = [COLOR_SHADOW, ...colors]
+        const allColors = [...colors];
         this.smallFont = new Image();
         this.smallFont.src = 'assets/smallFont.png';
         if (this.smallFont.complete) {
@@ -74,21 +78,27 @@ export class TextRenderer {
         }
     }
 
-    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, shadow: boolean = false) {
+    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, effect: TextEffect = TextEffect.NONE, effectColor: string = '') {
         const srcCanvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
-        const shadowCanvas = this.smallFontColors.get(COLOR_SHADOW) || this.smallFont;
         let x0 = x;
         if (alignment === TextAlignment.RIGHT) {
             x0 = x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
         } else if (alignment === TextAlignment.CENTER) {
             x0 = x - Math.floor((text.length * CHAR_WIDTH + (text.length - 1) * CHAR_MARGIN) / 2);
         }
+
+        if (effect === TextEffect.BACKGROUND) {
+            this.ctx.fillStyle = effectColor;
+            this.ctx.fillRect(x0 - 1, y - 1, text.length * (CHAR_WIDTH + CHAR_MARGIN) + 1, CHAR_HEIGHT + 2);
+        }
+
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
             const { srcX, srcY } = this.codeToCoords(c);
             const dstX = x0 + i * (CHAR_WIDTH + CHAR_MARGIN);
 
-            if (shadow) {
+            if (effect === TextEffect.SHADOW) {
+                const shadowCanvas = this.smallFontColors.get(effectColor) || this.smallFont;
                 this.ctx.drawImage(shadowCanvas,
                     srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
                     dstX + 1, y + 1, CHAR_WIDTH, CHAR_HEIGHT);

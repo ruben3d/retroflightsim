@@ -162,9 +162,9 @@ export class HUDEntity implements Entity {
 
         const clip = painter.clip()
             .rectangle(x - BEARING_HALF_WIDTH * BEARING_SPACING - CHAR_WIDTH - 1,
-                y - 8,
+                y - 9,
                 BEARING_WIDTH * BEARING_SPACING + 2 * CHAR_WIDTH,
-                CHAR_HEIGHT + 2)
+                CHAR_HEIGHT + 3)
             .clip();
         for (let i = -BEARING_HALF_WIDTH - 2; i <= BEARING_HALF_WIDTH + 2; i++) {
             const value = this.bearing + i * BEARING_STEP - offset;

@@ -8,6 +8,9 @@ Quick and dirty attempt to replicate the visuals of late 80s / early 90s flight 
 
 ## Screenshots
 
+[<img src="doc/cga-day.png" width="320" height="200" />](doc/cga-day.png)
+[<img src="doc/cga-night.png" width="320" height="200" />](doc/cga-night.png)
+
 [<img src="doc/ega-day.png" width="320" height="200" />](doc/ega-day.png)
 [<img src="doc/ega-night.png" width="320" height="200" />](doc/ega-night.png)
 
@@ -46,6 +49,7 @@ Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 #### Generation
 
 The generation of choice will simulate the experience of a game of that era:
+* 286/CGA: mid-80s
 * 286/EGA: late 80s
 * 386/VGA: early 90s
 * 486/SVGA: mid-90s before texture mapping 

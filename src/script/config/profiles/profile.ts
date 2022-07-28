@@ -1,3 +1,4 @@
+import { TextEffect } from "../../render/screen/text";
 import { Palette } from "../palettes/palette";
 
 export enum DisplayResolution {
@@ -19,7 +20,7 @@ export enum FogQuality {
 
 export interface TechProfile {
     fpsCap: boolean;
-    textShadow: boolean;
+    textEffect: TextEffect;
     shading: DisplayShading;
     resolution: DisplayResolution;
     fogQuality: FogQuality;

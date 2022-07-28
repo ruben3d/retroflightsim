@@ -28,7 +28,9 @@ export interface SceneFlatMaterialUniforms {
     vCameraPos: { value: THREE.Vector3; };
     vCameraNormal: { value: THREE.Vector3; };
     vCameraD: { value: number; };
+    shadingType: { value: number; };
     color: { value: THREE.Color; };
+    colorSecondary: { value: THREE.Color; };
     fogDensity: { value: number; };
     fogColor: { value: THREE.Color; };
     fogType: { value: number; };
@@ -56,6 +58,7 @@ export interface SceneCommonMaterialData {
     line: boolean;
     point: boolean;
     fog: FogQuality;
+    shading: DisplayShading;
 }
 
 export interface SceneFlatMaterialData {
@@ -65,7 +68,6 @@ export interface SceneFlatMaterialData {
 
 export interface SceneShadedMaterialData {
     shaded: true;
-    shading: DisplayShading;
 }
 
 export class SceneMaterialManager implements KernelTask {
@@ -187,6 +189,7 @@ export class SceneMaterialManager implements KernelTask {
             ...{
                 halfWidth: { value: 0 },
                 halfHeight: { value: 0 },
+                shadingType: { value: this.shading },
                 color: { value: new THREE.Color(PaletteColor(this.palette, properties.category)) },
                 colorSecondary: { value: new THREE.Color(PaletteColorShade(this.palette, properties.category)) },
                 fogType: { value: this.fog },
@@ -194,7 +197,6 @@ export class SceneMaterialManager implements KernelTask {
                 fogColor: { value: new THREE.Color(PaletteColor(this.palette, FogColorCategory(properties.category))) }
             },
             ...properties.shaded ? {
-                shadingType: { value: this.shading },
                 distance: { value: 0 },
                 normalModelMatrix: { value: new THREE.Matrix3() }
             } : {
@@ -264,11 +266,9 @@ export class SceneMaterialManager implements KernelTask {
 
         this.materials.forEach(m => {
             const d = m.userData as SceneMaterialData;
-            if (d.shaded) {
-                d.shading = shadingType;
-                const u = m.uniforms as SceneMaterialUniforms;
-                u.shadingType.value = shadingType;
-            }
+            d.shading = shadingType;
+            const u = m.uniforms as SceneMaterialUniforms;
+            u.shadingType.value = shadingType;
         });
     }
 }

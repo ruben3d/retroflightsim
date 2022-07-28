@@ -1,4 +1,12 @@
+import { ConfigService } from './config/configService';
+import { DefaultPalette, PaletteCategory } from './config/palettes/palette';
+import { CGAProfile } from './config/profiles/cga';
+import { EGAProfile } from './config/profiles/ega';
+import { DisplayShading, FogQuality } from './config/profiles/profile';
+import { SVGAProfile } from './config/profiles/svga';
+import { VGAProfile } from './config/profiles/vga';
 import { Kernel } from './core/kernel';
+import { FPS_CAP, H_RES, V_RES } from './defs';
 import { JoystickControlDevice } from './input/devices/joystickControlDevice';
 import { KeyboardControlDevice } from './input/devices/keyboardControlDevice';
 import { setupOSD } from './osd/osdPanel';
@@ -8,19 +16,12 @@ import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBui
 import { FieldModelLibBuilder, FieldModelType } from './scene/models/lib/fieldModelBuilder';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { ModelManager } from './scene/models/models';
-import { DefaultPalette, PaletteCategory } from './config/palettes/palette';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
-import { ConfigService } from './config/configService';
-import { EGAProfile } from './config/profiles/ega';
-import { VGAProfile } from './config/profiles/vga';
-import { SVGAProfile } from './config/profiles/svga';
-import { FPS_CAP, H_RES, V_RES } from './defs';
 import { TechProfiles } from './state/gameDefs';
-import { DisplayShading, FogQuality } from './config/profiles/profile';
 
 
 function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControlDevice] {
-    const config = new ConfigService({ [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile });
+    const config = new ConfigService({ [TechProfiles.CGA]: CGAProfile, [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile });
     config.setActiveProfile(TechProfiles.VGA);
     const renderer = new Renderer(H_RES, V_RES);
     const materials = new SceneMaterialManager(DefaultPalette, FogQuality.LOW, DisplayShading.STATIC);
