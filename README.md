@@ -44,8 +44,6 @@ Then open `localhost:8000` in your web browser (tested on Chrome/Linux).
 
 ### Settings
 
-<img src="doc/settings.png" />
-
 #### Generation
 
 The generation of choice will simulate the experience of a game of that era:
