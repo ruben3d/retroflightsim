@@ -8,6 +8,7 @@ import { Model } from '../models/models';
 import { Palette } from "../../config/palettes/palette";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
+import { AudioClip } from '../../audio/audioSystem';
 
 
 export class PlayerEntity implements Entity {
@@ -18,6 +19,9 @@ export class PlayerEntity implements Entity {
     private shadowPosition = new THREE.Vector3();
     private shadowQuaternion = new THREE.Quaternion();
     private shadowScale = new THREE.Vector3();
+
+    private engineAudio: AudioClip;
+    private enginePlaying: boolean = false;
 
     private obj = new THREE.Object3D();
 
@@ -40,11 +44,12 @@ export class PlayerEntity implements Entity {
     exteriorView: boolean = false;
 
     // Bearing increases CCW, radians
-    constructor(model: Model, shadow: Model, position: THREE.Vector3, bearing: number) {
+    constructor(model: Model, shadow: Model, engineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
         this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
         this.lodHelperShadow = new LODHelper(shadow, 5);
         this.obj.position.copy(position);
         this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
+        this.engineAudio = engineAudio;
     }
 
     init(scene: Scene): void {
@@ -101,6 +106,27 @@ export class PlayerEntity implements Entity {
         if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
         if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
         if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
+
+        this.updateAudio();
+    }
+
+    private updateAudio() {
+        if (this.throttle > 0) {
+            if (this.enginePlaying === false) {
+                this.engineAudio.play();
+                this.enginePlaying = true;
+            }
+            const x = this.throttle;
+            const factorRate = 1 - (1 - x) * (1 - x); // easeOutQuad
+            const factorGain = 1 - Math.pow(1 - x, 5); // easeOutQuint
+            this.engineAudio.rate = 0.25 + 1.75 * factorRate;
+            this.engineAudio.gain = 1.0 * factorGain;
+        } else {
+            if (this.enginePlaying === true) {
+                this.engineAudio.stop();
+                this.enginePlaying = false;
+            }
+        }
     }
 
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {

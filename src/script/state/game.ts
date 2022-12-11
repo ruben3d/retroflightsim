@@ -35,6 +35,7 @@ import { EGAMidnightPalette } from '../config/palettes/ega-midnight';
 import { SVGANoonPalette } from '../config/palettes/svga-noon';
 import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
 import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
+import { AudioSystem } from '../audio/audioSystem';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -99,13 +100,19 @@ export class Game {
     private cockpitEntities: Entity[] = [];
     private exteriorEntities: Entity[] = [];
 
-    constructor(private configService: ConfigService, private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer) {
+    constructor(private configService: ConfigService, private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer,
+        private audio: AudioSystem) {
+
         this.playerCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, H_RES / V_RES, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
         this.targetCamera = new SceneCamera(new THREE.PerspectiveCamera(COCKPIT_FOV, 1, PLANE_DISTANCE_TO_GROUND, COCKPIT_FAR));
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
-        this.player = new PlayerEntity(this.models.getModel('assets/f22.glb'), this.models.getModel('assets/f22_shadow.gltf'), new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
+        this.player = new PlayerEntity(
+            this.models.getModel('assets/f22.glb'),
+            this.models.getModel('assets/f22_shadow.gltf'),
+            this.audio.getGlobal('assets/engine-loop-02.ogg', true),
+            new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));

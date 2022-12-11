@@ -1,3 +1,4 @@
+import { AudioSystem } from './audio/audioSystem';
 import { ConfigService } from './config/configService';
 import { DefaultPalette, PaletteCategory } from './config/palettes/palette';
 import { CGAProfile } from './config/profiles/cga';
@@ -36,8 +37,8 @@ function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControl
         new MountainModelLibBuilder('hill', 700, 300, PaletteCategory.SCENERY_MOUNTAIN_GRASS),
         new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
     ]);
-
-    const game = new Game(config, models, materials, renderer);
+    const audio = new AudioSystem();
+    const game = new Game(config, models, materials, renderer, audio);
     game.setup();
 
     const keyboardInput = new KeyboardControlDevice(game.getPlayer());
