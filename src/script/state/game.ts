@@ -112,6 +112,7 @@ export class Game {
             this.models.getModel('assets/f22.glb'),
             this.models.getModel('assets/f22_shadow.gltf'),
             this.audio.getGlobal('assets/engine-loop-02.ogg', true),
+            this.audio.getGlobal('assets/engine-loop-01.ogg', true),
             new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));

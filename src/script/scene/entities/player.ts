@@ -20,7 +20,8 @@ export class PlayerEntity implements Entity {
     private shadowQuaternion = new THREE.Quaternion();
     private shadowScale = new THREE.Vector3();
 
-    private engineAudio: AudioClip;
+    private inEngineAudio: AudioClip;
+    private outEngineAudio: AudioClip;
     private enginePlaying: boolean = false;
 
     private obj = new THREE.Object3D();
@@ -41,15 +42,16 @@ export class PlayerEntity implements Entity {
     readonly tags: string[] = [];
 
     enabled: boolean = true;
-    exteriorView: boolean = false;
+    private _exteriorView: boolean = false;
 
     // Bearing increases CCW, radians
-    constructor(model: Model, shadow: Model, engineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
+    constructor(model: Model, shadow: Model, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
         this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
         this.lodHelperShadow = new LODHelper(shadow, 5);
         this.obj.position.copy(position);
         this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
-        this.engineAudio = engineAudio;
+        this.inEngineAudio = inEngineAudio;
+        this.outEngineAudio = outEngineAudio;
     }
 
     init(scene: Scene): void {
@@ -111,22 +113,41 @@ export class PlayerEntity implements Entity {
     }
 
     private updateAudio() {
+        const engineAudio = this._exteriorView ? this.outEngineAudio : this.inEngineAudio;
         if (this.throttle > 0) {
             if (this.enginePlaying === false) {
-                this.engineAudio.play();
+                engineAudio.play();
                 this.enginePlaying = true;
             }
             const x = this.throttle;
             const factorRate = 1 - (1 - x) * (1 - x); // easeOutQuad
             const factorGain = 1 - Math.pow(1 - x, 5); // easeOutQuint
-            this.engineAudio.rate = 0.25 + 1.75 * factorRate;
-            this.engineAudio.gain = 1.0 * factorGain;
+            engineAudio.rate = 0.25 + 1.75 * factorRate;
+            engineAudio.gain = 1.0 * factorGain;
         } else {
             if (this.enginePlaying === true) {
-                this.engineAudio.stop();
+                engineAudio.stop();
                 this.enginePlaying = false;
             }
         }
+    }
+
+    set exteriorView(isExteriorView: boolean) {
+        if (isExteriorView === this._exteriorView) return;
+
+        this._exteriorView = isExteriorView;
+        if (this.enginePlaying && !isExteriorView) {
+            this.outEngineAudio.stop();
+            this.inEngineAudio.play();
+        }
+        else if (this.enginePlaying && isExteriorView) {
+            this.outEngineAudio.play();
+            this.inEngineAudio.stop();
+        }
+    }
+
+    get exteriorView(): boolean {
+        return this._exteriorView;
     }
 
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
@@ -141,7 +162,7 @@ export class PlayerEntity implements Entity {
             targetWidth, camera, palette,
             SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
 
-        if (this.exteriorView) {
+        if (this._exteriorView) {
             this.lodHelper.addToRenderList(
                 this.position, this.quaternion, this.obj.scale,
                 targetWidth, camera, palette,
