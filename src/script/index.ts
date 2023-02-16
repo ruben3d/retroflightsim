@@ -24,8 +24,8 @@ import { TechProfiles } from './state/gameDefs';
 function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControlDevice] {
     const config = new ConfigService({ [TechProfiles.CGA]: CGAProfile, [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile });
     config.setActiveProfile(TechProfiles.VGA);
-    const renderer = new Renderer(H_RES, V_RES);
     const materials = new SceneMaterialManager(DefaultPalette, FogQuality.LOW, DisplayShading.STATIC);
+    const renderer = new Renderer(materials, H_RES, V_RES);
     const models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),

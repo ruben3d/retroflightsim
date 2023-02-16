@@ -36,6 +36,8 @@ export class PlayerEntity implements Entity {
     private target: GroundTargetEntity | undefined;
     private targetIndex: number | undefined
 
+    private _nightVision: boolean = false;
+
     private _v = new THREE.Vector3();
     private _w = new THREE.Vector3();
 
@@ -150,6 +152,10 @@ export class PlayerEntity implements Entity {
         return this._exteriorView;
     }
 
+    get nightVision(): boolean {
+        return this._nightVision;
+    }
+
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
 
         this.shadowPosition.copy(this.position).setY(0);
@@ -223,6 +229,10 @@ export class PlayerEntity implements Entity {
             switch (event.key) {
                 case 't': {
                     this.pickTarget();
+                    break;
+                }
+                case 'i': {
+                    this._nightVision = !this._nightVision;
                     break;
                 }
             }

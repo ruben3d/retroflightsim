@@ -26,4 +26,5 @@ export interface TechProfile {
     fogQuality: FogQuality;
     noonPalette: Palette;
     midnightPalette: Palette;
+    nightVisionPalette?: Palette;
 }

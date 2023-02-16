@@ -15,7 +15,7 @@ import { SceneMaterialManager } from "../scene/materials/materials";
 import { ModelManager } from "../scene/models/models";
 import { VGAMidnightPalette } from '../config/palettes/vga-midnight';
 import { VGANoonPalette } from '../config/palettes/vga-noon';
-import { Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
+import { Palette, PaletteCategory, PaletteColor, PaletteTime } from '../config/palettes/palette';
 import { RIGHT, Scene, SceneLayers, UP } from '../scene/scene';
 import { assertIsDefined } from '../utils/asserts';
 import { Entity } from '../scene/entity';
@@ -28,7 +28,7 @@ import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
 import { restoreMainCameraParameters } from './stateUtils';
 import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
 import { ConfigService } from '../config/configService';
-import { DisplayResolution, FogQuality } from '../config/profiles/profile';
+import { DisplayResolution } from '../config/profiles/profile';
 import { CGANoonPalette } from '../config/palettes/cga-noon';
 import { EGANoonPalette } from '../config/palettes/ega-noon';
 import { EGAMidnightPalette } from '../config/palettes/ega-midnight';
@@ -36,6 +36,7 @@ import { SVGANoonPalette } from '../config/palettes/svga-noon';
 import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
 import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
 import { AudioSystem } from '../audio/audioSystem';
+import { VGANightVisionPalette } from '../config/palettes/vga-nightvision';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -128,7 +129,6 @@ export class Game {
                 this.renderer.setComposeSize(HI_H_RES, HI_V_RES);
             }
             this.palettes = [profile.noonPalette, profile.midnightPalette];
-            this.materials.setPalette(this.getPalette());
             this.materials.setFog(profile.fogQuality);
             this.materials.setShadingType(profile.shading);
             this.renderer.setPalette(this.getPalette());
@@ -280,6 +280,14 @@ export class Game {
             layers = isLowRes ? this.exteriorRenderLayersLo : this.exteriorRenderLayersHi;
         } else if (this.player.weaponsTarget) {
             layers = isLowRes ? this.cockpitTargetRenderLayersLo : this.cockpitTargetRenderLayersHi;
+            const nightVisionPalette = this.player.nightVision && this.getPalette().time === PaletteTime.NIGHT ?
+                this.configService.getProfile().nightVisionPalette : undefined;
+            for (let i = 0; i < layers.length; i++) {
+                const layer = layers[i];
+                if (layer.target === WEAPONSTARGET_RENDER_TARGET_HI || layer.target === WEAPONSTARGET_RENDER_TARGET_LO) {
+                    layer.palette = nightVisionPalette;
+                }
+            }
         }
         this.renderer.render(this.scene, layers);
     }
@@ -293,7 +301,6 @@ export class Game {
             switch (event.key) {
                 case 'n': {
                     this.currentPalette = (this.currentPalette + 1) % this.palettes.length;
-                    this.materials.setPalette(this.getPalette());
                     this.renderer.setPalette(this.getPalette());
                     break;
                 }

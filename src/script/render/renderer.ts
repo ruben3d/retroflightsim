@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DefaultPalette, Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
+import { SceneMaterialManager } from '../scene/materials/materials';
 import { Scene, SceneLayers } from '../scene/scene';
 import { assertExpr, assertIsDefined } from '../utils/asserts';
 import { CanvasPainter } from './screen/canvasPainter';
@@ -40,6 +41,7 @@ export interface RenderLayer {
     target: string;
     camera: THREE.Camera;
     lists: string[];
+    palette?: Palette;
 }
 
 export class Renderer {
@@ -54,11 +56,9 @@ export class Renderer {
     private current3DRenderLists: Map<string, THREE.Scene> = new Map();
     private current2DRenderLists: Set<string> = new Set();
 
-    constructor(private composeWidth: number, private composeHeight: number) {
+    constructor(private materials: SceneMaterialManager, private composeWidth: number, private composeHeight: number) {
         const container = document.getElementById('container');
-        if (!container) {
-            throw new Error('<div id="container"> not found');
-        }
+        assertIsDefined(container, '<div id="container"> not found');
         this.container = container;
         this.composeCamera = new THREE.OrthographicCamera(-composeWidth / 2, composeWidth / 2, composeHeight / 2, -composeHeight / 2, -10, 10);
 
@@ -77,6 +77,7 @@ export class Renderer {
 
     setPalette(palette: Palette) {
         this.palette = palette;
+        this.materials.setPalette(palette);
     }
 
     setTextEffect(effect: TextEffect) {
@@ -91,6 +92,8 @@ export class Renderer {
 
     render(scene: Scene, renderLayers: RenderLayer[]) {
 
+        let prevPalette = this.palette;
+        this.materials.setPalette(this.palette);
         this.composeScene.clear();
 
         for (const renderTarget of this.renderTargets.values()) {
@@ -98,13 +101,18 @@ export class Renderer {
         }
 
         for (const layer of renderLayers) {
+            const palette = layer.palette || this.palette;
+            if (palette !== prevPalette) {
+                prevPalette = palette;
+                this.materials.setPalette(palette);
+            }
 
-            const renderTarget = this.prepareRenderTarget(layer.target);
+            const renderTarget = this.prepareRenderTarget(layer.target, palette);
 
             if (renderTarget.type === RenderTargetType.WEBGL) {
-                this.render3D(renderTarget, scene, layer);
+                this.render3D(renderTarget, scene, layer, palette);
             } else {
-                this.render2D(renderTarget, scene, layer);
+                this.render2D(renderTarget, scene, layer, palette);
             }
         }
 
@@ -116,7 +124,7 @@ export class Renderer {
         this.renderer.render(this.composeScene, this.composeCamera);
     }
 
-    prepareRenderTarget(target: string): RenderTarget {
+    prepareRenderTarget(target: string, palette: Palette): RenderTarget {
         const renderTarget = this.renderTargets.get(target);
         assertIsDefined(renderTarget);
         if (renderTarget.ready === false) {
@@ -131,7 +139,7 @@ export class Renderer {
                     0
                 );
                 this.renderer.setRenderTarget(renderTarget.target);
-                this.renderer.setClearColor(PaletteColor(this.palette, PaletteCategory.BACKGROUND));
+                this.renderer.setClearColor(PaletteColor(palette, PaletteCategory.BACKGROUND));
                 this.renderer.clear();
             }
             this.composeScene.add(renderTarget.compositorObj);
@@ -139,7 +147,7 @@ export class Renderer {
         return renderTarget;
     }
 
-    render3D(renderTarget: WebGLRenderTarget, scene: Scene, layer: RenderLayer) {
+    render3D(renderTarget: WebGLRenderTarget, scene: Scene, layer: RenderLayer, palette: Palette) {
         this.current3DRenderLists.clear();
         for (const listId of layer.lists) {
             const list = this.renderLists.get(listId);
@@ -147,7 +155,7 @@ export class Renderer {
             list.clear();
             this.current3DRenderLists.set(listId, list);
         }
-        scene.buildRenderLists(renderTarget.width, renderTarget.height, layer.camera, this.current3DRenderLists, this.palette);
+        scene.buildRenderLists(renderTarget.width, renderTarget.height, layer.camera, this.current3DRenderLists, palette);
         for (const listId of layer.lists) {
             const list = this.current3DRenderLists.get(listId);
             assertIsDefined(list);
@@ -155,14 +163,14 @@ export class Renderer {
         }
     }
 
-    render2D(renderTarget: CanvasRenderTarget, scene: Scene, layer: RenderLayer) {
+    render2D(renderTarget: CanvasRenderTarget, scene: Scene, layer: RenderLayer, palette: Palette) {
         this.current2DRenderLists.clear();
         for (const listId of layer.lists) {
             assertExpr(this.renderLists.has(listId));
             this.current2DRenderLists.add(listId);
         }
-        renderTarget.painter.setTextEffect(this.textEffect, PaletteColor(this.palette, PaletteCategory.HUD_TEXT_EFFECT));
-        scene.paintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.current2DRenderLists, renderTarget.painter, this.palette);
+        renderTarget.painter.setTextEffect(this.textEffect, PaletteColor(palette, PaletteCategory.HUD_TEXT_EFFECT));
+        scene.paintCanvas(renderTarget.width, renderTarget.height, layer.camera, this.current2DRenderLists, renderTarget.painter, palette);
     }
 
     createRenderTarget(id: string, type: RenderTargetType.WEBGL, x: number, y: number, width: number, height: number): void;

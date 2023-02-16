@@ -246,6 +246,7 @@ export class SceneMaterialManager implements KernelTask {
             u.fogDensity.value = palette.values[FogValueCategory(c)];
             u.fogColor.value.setStyle(PaletteColor(palette, FogColorCategory(c)));
         });
+        this.updateFxFire(this.elapsed);
     }
 
     // This shouldn't be handled by the material system
