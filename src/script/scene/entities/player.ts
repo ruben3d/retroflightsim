@@ -74,7 +74,7 @@ export class PlayerEntity implements Entity {
         this.obj.quaternion.copy(this.flightModel.quaternion);
         this.velocity.copy(this.flightModel.velocityVector);
 
-        //this.updateAudio();
+        this.updateAudio();
     }
 
     private updateAudio() {
