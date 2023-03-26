@@ -1,43 +1,61 @@
+import { FlightModel } from "../physics/model/flightModel";
 import { assertExpr, assertIsDefined } from "../utils/asserts";
 import { TechProfile } from "./profiles/profile";
 
-export type ConfigServiceListener = (profile: TechProfile, newId: string, oldId: string) => void;
+export type ProfileChangeListener = (profile: TechProfile, newId: string, oldId: string) => void;
+export type FlightModelChangeListener = (flightModel: FlightModel, newId: string, oldId: string) => void;
 
 export class ConfigService {
 
-    activeProfile: string;
-    profiles: Map<string, TechProfile> = new Map();
-    listeners: Set<ConfigServiceListener> = new Set();
+    readonly techProfiles: ConfigSet<TechProfile>;
+    readonly flightModels: ConfigSet<FlightModel>;
 
-    constructor(profiles: { [id: string]: TechProfile }) {
-        this.profiles = new Map(Object.entries(profiles));
-        assertExpr(this.profiles.size > 0);
-        this.activeProfile = Object.keys(profiles)[0];
+    constructor(profiles: { [id: string]: TechProfile }, flightModels: { [id: string]: FlightModel }) {
+        this.techProfiles = new ConfigSet(profiles);
+        this.flightModels = new ConfigSet(flightModels);
+    }
+}
+
+export type ConfigSetChangeListener<T> = (item: T, newId: string, oldId: string) => void;
+
+class ConfigSet<T> {
+    private active: string;
+    private set: Map<string, T>;
+    private listeners: Set<ConfigSetChangeListener<T>> = new Set();
+
+    constructor(obj: { [id: string]: T }) {
+        [this.active, this.set] = this.setupMap(obj);
     }
 
-    setActiveProfile(id: string) {
-        if (id === this.activeProfile) return;
-        assertExpr(this.profiles.has(id));
+    private setupMap(obj: { [id: string]: T }): [string, Map<string, T>] {
+        const map = new Map(Object.entries(obj));
+        assertExpr(map.size > 0);
+        return [Object.keys(map)[0], map];
+    }
 
-        const oldId = this.activeProfile;
-        this.activeProfile = id;
-        const profile = this.getProfile();
+    setActive(id: string) {
+        if (id === this.active) return;
+        assertExpr(this.set.has(id));
+
+        const oldId = this.active;
+        this.active = id;
+        const set = this.getActive();
         for (const l of this.listeners.values()) {
-            l(profile, id, oldId);
+            l(set, id, oldId);
         }
     }
 
-    getProfile(): TechProfile {
-        const profile = this.profiles.get(this.activeProfile);
-        assertIsDefined(profile);
-        return profile;
+    getActive(): T {
+        const item = this.set.get(this.active);
+        assertIsDefined(item);
+        return item;
     }
 
-    addChangeListener(listener: ConfigServiceListener) {
+    addChangeListener(listener: ConfigSetChangeListener<T>) {
         this.listeners.add(listener);
     }
 
-    removeChangeListener(listener: ConfigServiceListener) {
+    removeChangeListener(listener: ConfigSetChangeListener<T>) {
         this.listeners.delete(listener);
     }
 }

@@ -5,7 +5,7 @@ import { FORWARD, Scene, SceneLayers } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { PlayerEntity } from "../player";
-import { vectorBearing } from '../../../utils/math';
+import { vectorHeading } from '../../../utils/math';
 import { toFeet, toKnots } from './overlayUtils';
 import { GroundTargetEntity } from '../groundTarget';
 
@@ -14,7 +14,7 @@ export class ExteriorDataEntity implements Entity {
 
     constructor(private actor: PlayerEntity) { }
 
-    private bearing: number = 0; // degrees, 0 is North, increases CW
+    private heading: number = 0; // degrees, 0 is North, increases CW
     private altitude: number = 0; // feet
     private speed: number = 0; // knots
     private weaponsTarget: GroundTargetEntity | undefined;
@@ -36,7 +36,7 @@ export class ExteriorDataEntity implements Entity {
             .applyQuaternion(this.actor.quaternion)
             .setY(0)
             .normalize();
-        this.bearing = vectorBearing(this.tmpVector);
+        this.heading = vectorHeading(this.tmpVector);
 
         this.speed = toKnots(this.actor.rawSpeed);
 
@@ -56,7 +56,7 @@ export class ExteriorDataEntity implements Entity {
 
         const halfWidth = targetWidth / 2;
 
-        const bearingX = halfWidth - 75;
+        const headingX = halfWidth - 75;
         const airspeedX = halfWidth - (CHAR_WIDTH + CHAR_MARGIN) * 5;
         const altitudeX = halfWidth + 45;
         const navY = targetHeight - CHAR_HEIGHT * 2;
@@ -65,7 +65,7 @@ export class ExteriorDataEntity implements Entity {
         const targetInfoY = navY - CHAR_HEIGHT * 2;
 
         this.renderAltitude(altitudeX, navY, painter, hudColor);
-        this.renderBearing(bearingX, navY, painter, hudColor);
+        this.renderHeading(headingX, navY, painter, hudColor);
         this.renderAirSpeed(airspeedX, navY, painter, hudColor);
         this.renderTargetInfo(targetInfoX, targetInfoY, painter, hudColor);
     }
@@ -74,8 +74,8 @@ export class ExteriorDataEntity implements Entity {
         painter.text(x, y, `Altitude ${this.altitude.toFixed(0)}`, hudColor, TextAlignment.LEFT);
     }
 
-    private renderBearing(x: number, y: number, painter: CanvasPainter, hudColor: string) {
-        painter.text(x, y, `Heading ${this.bearing.toFixed(0)}`, hudColor, TextAlignment.LEFT);
+    private renderHeading(x: number, y: number, painter: CanvasPainter, hudColor: string) {
+        painter.text(x, y, `Heading ${this.heading.toFixed(0)}`, hudColor, TextAlignment.LEFT);
     }
 
     private renderAirSpeed(x: number, y: number, painter: CanvasPainter, hudColor: string) {

@@ -6,8 +6,8 @@ import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
-import { vectorBearing } from '../../../utils/math';
-import { formatBearing, toFeet, toKnots } from './overlayUtils';
+import { vectorHeading } from '../../../utils/math';
+import { formatHeading, toFeet, toKnots } from './overlayUtils';
 
 
 const ALTITUDE_HEIGHT = 32;
@@ -16,11 +16,11 @@ const ALTITUDE_STEP = 5;
 const ALTITUDE_LOWP_THRESHOLD = 1000;
 const ALTITUDE_HALF_HEIGHT = ALTITUDE_HEIGHT / 2;
 
-const BEARING_WIDTH = 26;
+const HEADING_WIDTH = 26;
 // Do not change these...
-const BEARING_HALF_WIDTH = BEARING_WIDTH / 2;
-const BEARING_SPACING = 5;
-const BEARING_STEP = 5;
+const HEADING_HALF_WIDTH = HEADING_WIDTH / 2;
+const HEADING_SPACING = 5;
+const HEADING_STEP = 5;
 
 const AIRSPEED_HEIGHT = 32;
 // Do not change these...
@@ -38,11 +38,14 @@ export class HUDEntity implements Entity {
 
     constructor(private actor: PlayerEntity) { }
 
-    private bearing: number = 0; // degrees, 0 is North, increases CW
+    private heading: number = 0; // degrees, 0 is North, increases CW
     private altitude: number = 0; // feet
     private throttle: number = 0; // Normalised percentage [0, 1]
     private speed: number = 0; // knots
+    private velocityDirection: THREE.Vector3 = new THREE.Vector3();
     private weaponsTarget: GroundTargetEntity | undefined;
+    private stallStatus: number = -1; // [-1,1]. Values >= 0 indicate stall
+    private isLanded: boolean = false;
 
     private tmpVector = new THREE.Vector3();
     private tmpPlane = new THREE.Plane();
@@ -62,13 +65,18 @@ export class HUDEntity implements Entity {
             .applyQuaternion(this.actor.quaternion)
             .setY(0)
             .normalize();
-        this.bearing = vectorBearing(this.tmpVector);
+        this.heading = vectorHeading(this.tmpVector);
 
         this.throttle = this.actor.throttleUnit;
 
         this.speed = toKnots(this.actor.rawSpeed);
 
+        this.velocityDirection.copy(this.actor.velocityVector).normalize();
+
         this.weaponsTarget = this.actor.weaponsTarget;
+
+        this.stallStatus = this.actor.stallStatus;
+        this.isLanded = this.actor.isLanded;
     }
 
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
@@ -79,6 +87,7 @@ export class HUDEntity implements Entity {
         if (!lists.has(SceneLayers.Overlay)) return;
 
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
+        const hudWarnColor = PaletteColor(palette, PaletteCategory.HUD_TEXT_WARN);
         painter.setColor(hudColor);
 
         const halfWidth = targetWidth / 2;
@@ -88,17 +97,19 @@ export class HUDEntity implements Entity {
         const altitudeY = halfHeight;
         this.renderAltitude(altitudeX, altitudeY, targetWidth, painter, hudColor);
 
-        const bearingX = halfWidth;
-        const bearingY = 10;
-        this.renderBearing(bearingX, bearingY, painter, hudColor);
+        const headingX = halfWidth;
+        const headingY = 10;
+        this.renderHeading(headingX, headingY, painter, hudColor);
 
         const airSpeedX = 19;
         const airSpeedY = halfHeight;
         this.renderAirSpeed(airSpeedX, airSpeedY, painter, hudColor);
 
         this.renderThrottle(painter, hudColor);
-        this.renderTarget(targetWidth, targetHeight, halfWidth, halfHeight, painter, hudColor, camera);
+        this.renderTarget(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
         this.renderBoresight(halfWidth, halfHeight, painter);
+        this.renderFlightPathMarker(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
+        this.renderStallStatus(airSpeedX, airSpeedY, painter, hudWarnColor);
     }
 
     private renderAltitude(x: number, y: number, width: number, painter: CanvasPainter, hudColor: string) {
@@ -150,29 +161,29 @@ export class HUDEntity implements Entity {
         }
     }
 
-    private renderBearing(x: number, y: number, painter: CanvasPainter, hudColor: string) {
-        const offset = this.bearing % BEARING_SPACING;
+    private renderHeading(x: number, y: number, painter: CanvasPainter, hudColor: string) {
+        const offset = this.heading % HEADING_SPACING;
         const batch = painter.batch();
-        for (let i = -BEARING_HALF_WIDTH; i <= BEARING_HALF_WIDTH; i++) {
-            const height = (this.bearing + i * BEARING_STEP - offset) % 10 === 0 ? 2 : 0;
-            batch.vLine(x + i * BEARING_SPACING - offset, y - height, y);
+        for (let i = -HEADING_HALF_WIDTH; i <= HEADING_HALF_WIDTH; i++) {
+            const height = (this.heading + i * HEADING_STEP - offset) % 10 === 0 ? 2 : 0;
+            batch.vLine(x + i * HEADING_SPACING - offset, y - height, y);
         }
         batch.vLine(x, y + 2, y + 4);
         batch.commit();
 
         const clip = painter.clip()
-            .rectangle(x - BEARING_HALF_WIDTH * BEARING_SPACING - CHAR_WIDTH - 1,
+            .rectangle(x - HEADING_HALF_WIDTH * HEADING_SPACING - CHAR_WIDTH - 1,
                 y - 9,
-                BEARING_WIDTH * BEARING_SPACING + 2 * CHAR_WIDTH,
+                HEADING_WIDTH * HEADING_SPACING + 2 * CHAR_WIDTH,
                 CHAR_HEIGHT + 3)
             .clip();
-        for (let i = -BEARING_HALF_WIDTH - 2; i <= BEARING_HALF_WIDTH + 2; i++) {
-            const value = this.bearing + i * BEARING_STEP - offset;
+        for (let i = -HEADING_HALF_WIDTH - 2; i <= HEADING_HALF_WIDTH + 2; i++) {
+            const value = this.heading + i * HEADING_STEP - offset;
             if (value % 45 === 0) {
                 painter.text(
-                    x + i * BEARING_SPACING - offset,
+                    x + i * HEADING_SPACING - offset,
                     y - 8,
-                    formatBearing(value), hudColor, TextAlignment.CENTER);
+                    formatHeading(value), hudColor, TextAlignment.CENTER);
             }
         }
         clip.clear();
@@ -223,7 +234,7 @@ export class HUDEntity implements Entity {
         painter.text(2, 2, `THR: ${(100 * this.throttle).toFixed(0)}`, hudColor);
     }
 
-    private renderTarget(width: number, height: number, halfWidth: number, halfHeight: number, painter: CanvasPainter, hudColor: string, camera: THREE.Camera) {
+    private renderTarget(width: number, height: number, halfWidth: number, halfHeight: number, painter: CanvasPainter, camera: THREE.Camera) {
         if (this.weaponsTarget === undefined) return;
 
         camera.getWorldDirection(this.tmpVector);
@@ -247,5 +258,41 @@ export class HUDEntity implements Entity {
             .vLine(halfWidth, halfHeight - 3 - 3, halfHeight - 3)
             .vLine(halfWidth, halfHeight + 3, halfHeight + 3 + 3)
             .commit();
+    }
+
+    private renderFlightPathMarker(width: number, height: number, halfWidth: number, halfHeight: number, painter: CanvasPainter, camera: THREE.Camera) {
+        this.tmpVector.copy(camera.position)
+            .add(this.velocityDirection)
+            .project(camera);
+        const x = Math.round((this.tmpVector.x * halfWidth) + halfWidth);
+        const y = Math.round(-(this.tmpVector.y * halfHeight) + halfHeight);
+        if (0 <= x && x < width &&
+            0 <= y && y < height) {
+            painter.batch()
+                // Circle
+                .hLine(x - 1, x + 1, y - 2)
+                .hLine(x - 1, x + 1, y + 2)
+                .vLine(x - 2, y - 1, y + 1)
+                .vLine(x + 2, y - 1, y + 1)
+                // Spikes
+                .hLine(x - 5, x - 3, y)
+                .hLine(x + 3, x + 5, y)
+                .vLine(x, y - 4, y - 3)
+                .commit();
+        }
+    }
+
+    private renderStallStatus(x: number, y: number, painter: CanvasPainter, hudWarnColor: string) {
+        const HALF_HEIGHT_PIXELS = AIRSPEED_HALF_HEIGHT * 2;
+        painter.setColor(hudWarnColor);
+        painter.vLine(x + 1, y + HALF_HEIGHT_PIXELS, y + HALF_HEIGHT_PIXELS - Math.floor((this.stallStatus + 1.0) * HALF_HEIGHT_PIXELS));
+
+        if (this.stallStatus >= 0 && !this.isLanded) {
+            painter.text(x + 9,
+                y - Math.floor(CHAR_HEIGHT * 1.5) - CHAR_MARGIN,
+                'STALL',
+                hudWarnColor,
+                TextAlignment.LEFT);
+        }
     }
 }

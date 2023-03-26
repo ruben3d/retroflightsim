@@ -4,6 +4,8 @@ import { Palette, PaletteCategory, PaletteColors, PaletteTime, PaletteValues } f
 const colors: PaletteColors = {
     [PaletteCategory.HUD_TEXT]: EGA_WHITE_BRIGHT,
     [PaletteCategory.HUD_TEXT_EFFECT]: EGA_BLACK,
+    [PaletteCategory.HUD_TEXT_SECONDARY]: EGA_WHITE,
+    [PaletteCategory.HUD_TEXT_WARN]: EGA_RED_BRIGHT,
 
     [PaletteCategory.COCKPIT_AI_SKY]: EGA_CYAN_BRIGHT,
     [PaletteCategory.COCKPIT_AI_GROUND]: EGA_YELLOW,

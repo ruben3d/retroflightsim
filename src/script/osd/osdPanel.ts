@@ -1,13 +1,14 @@
 import { ConfigService } from "../config/configService";
 import { JoystickControlDevice } from "../input/devices/joystickControlDevice";
 import { KeyboardControlAction, KeyboardControlDevice, KeyboardControlLayoutId, KeyboardControlLayouts } from "../input/devices/keyboardControlDevice";
-import { TechProfiles } from "../state/gameDefs";
+import { FlightModels, TechProfiles } from "../state/gameDefs";
 import { assertIsDefined } from "../utils/asserts";
 
 
 export function setupOSD(config: ConfigService, keyboardInput: KeyboardControlDevice, joystickInput: JoystickControlDevice) {
     setupButtons();
     setupGenerationOptions(config);
+    setupFlightModel(config);
     setupKeyboardHelp(keyboardInput);
     setupJoystickHelp(joystickInput);
 }
@@ -62,16 +63,35 @@ function setupGenerationOptions(config: ConfigService) {
     assertIsDefined(genSVGA);
 
     genCGA.addEventListener('change', () => {
-        config.setActiveProfile(TechProfiles.CGA);
+        config.techProfiles.setActive(TechProfiles.CGA);
     });
     genEGA.addEventListener('change', () => {
-        config.setActiveProfile(TechProfiles.EGA);
+        config.techProfiles.setActive(TechProfiles.EGA);
     });
     genVGA.addEventListener('change', () => {
-        config.setActiveProfile(TechProfiles.VGA);
+        config.techProfiles.setActive(TechProfiles.VGA);
     });
     genSVGA.addEventListener('change', () => {
-        config.setActiveProfile(TechProfiles.SVGA);
+        config.techProfiles.setActive(TechProfiles.SVGA);
+    });
+}
+
+function setupFlightModel(config: ConfigService) {
+    const debugFlightModel = document.getElementById('flightmodel-debug');
+    assertIsDefined(debugFlightModel);
+    const arcadeFlightModel = document.getElementById('flightmodel-arcade');
+    assertIsDefined(arcadeFlightModel);
+    const realisticFlightModel = document.getElementById('flightmodel-realistic');
+    assertIsDefined(realisticFlightModel);
+
+    debugFlightModel.addEventListener('change', () => {
+        config.flightModels.setActive(FlightModels.DEBUG);
+    });
+    arcadeFlightModel.addEventListener('change', () => {
+        config.flightModels.setActive(FlightModels.ARCADE);
+    });
+    realisticFlightModel.addEventListener('change', () => {
+        config.flightModels.setActive(FlightModels.REALISTIC);
     });
 }
 

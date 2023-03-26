@@ -1,4 +1,5 @@
 body {
+    user-select: none;
     background-color: #fafafa;
     display: flex;
     height: 100vh;
@@ -137,6 +138,7 @@ a:hover {
 }
 
 #credits {
+    user-select: auto;
     z-index: 1;
     position: absolute;
     top: 0;

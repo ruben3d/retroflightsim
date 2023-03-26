@@ -36,7 +36,7 @@ import { SVGANoonPalette } from '../config/palettes/svga-noon';
 import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
 import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
 import { AudioSystem } from '../audio/audioSystem';
-import { VGANightVisionPalette } from '../config/palettes/vga-nightvision';
+import { ArcadeFlightModel } from '../physics/model/arcadeFlightModel';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -111,10 +111,11 @@ export class Game {
         this.mapCamera.position.set(0, 500, 0);
         this.player = new PlayerEntity(
             this.models.getModel('assets/f22.glb'),
-            this.models.getModel('assets/f22_shadow.gltf'),
+            this.models.getModel('assets/f22_shadow.glb'),
+            new ArcadeFlightModel(),
             this.audio.getGlobal('assets/engine-loop-02.ogg', true),
             this.audio.getGlobal('assets/engine-loop-01.ogg', true),
-            new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), Math.PI);
+            new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), 0);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));
@@ -122,7 +123,7 @@ export class Game {
         this.cameraUpdaters.set(PlayerViewState.TARGET_TO, new TargetToCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.TARGET_FROM, new TargetFromCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
-        this.configService.addChangeListener(profile => {
+        this.configService.techProfiles.addChangeListener(profile => {
             if (profile.resolution === DisplayResolution.LO_RES) {
                 this.renderer.setComposeSize(LO_H_RES, LO_V_RES);
             } else {
@@ -134,6 +135,9 @@ export class Game {
             this.renderer.setPalette(this.getPalette());
             this.renderer.setTextEffect(profile.textEffect);
         });
+        this.configService.flightModels.addChangeListener(flightModel => {
+            this.player.setFlightModel(flightModel);
+        })
 
         const playerLayersLo: RenderLayer[] = [
             {
@@ -242,7 +246,12 @@ export class Game {
     setup() {
         const textColors = Array.from(new Set(
             [CGANoonPalette, CGAMidnightPalette, EGANoonPalette, EGAMidnightPalette, VGANoonPalette, VGAMidnightPalette, SVGANoonPalette, SVGAMidnightPalette]
-                .flatMap(p => ([PaletteColor(p, PaletteCategory.HUD_TEXT), PaletteColor(p, PaletteCategory.HUD_TEXT_EFFECT)]))
+                .flatMap(p => ([
+                    PaletteColor(p, PaletteCategory.HUD_TEXT),
+                    PaletteColor(p, PaletteCategory.HUD_TEXT_WARN),
+                    PaletteColor(p, PaletteCategory.HUD_TEXT_SECONDARY),
+                    PaletteColor(p, PaletteCategory.HUD_TEXT_EFFECT)
+                ]))
         ));
 
         this.renderer.createRenderTarget(MAIN_RENDER_TARGET_LO, RenderTargetType.WEBGL, 0, 0, LO_H_RES, LO_V_RES);
@@ -273,7 +282,7 @@ export class Game {
     }
 
     render() {
-        const isLowRes = this.configService.getProfile().resolution === DisplayResolution.LO_RES;
+        const isLowRes = this.configService.techProfiles.getActive().resolution === DisplayResolution.LO_RES;
 
         let layers = isLowRes ? this.cockpitRenderLayersLo : this.cockpitRenderLayersHi;
         if (this.view !== PlayerViewState.COCKPIT_FRONT) {
@@ -281,7 +290,7 @@ export class Game {
         } else if (this.player.weaponsTarget) {
             layers = isLowRes ? this.cockpitTargetRenderLayersLo : this.cockpitTargetRenderLayersHi;
             const nightVisionPalette = this.player.nightVision && this.getPalette().time === PaletteTime.NIGHT ?
-                this.configService.getProfile().nightVisionPalette : undefined;
+                this.configService.techProfiles.getActive().nightVisionPalette : undefined;
             for (let i = 0; i < layers.length; i++) {
                 const layer = layers[i];
                 if (layer.target === WEAPONSTARGET_RENDER_TARGET_HI || layer.target === WEAPONSTARGET_RENDER_TARGET_LO) {
@@ -570,10 +579,10 @@ export class Game {
         scene.add(hangar4);
 
         const planes = [
-            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -840), r: Math.PI / 2 },
-            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -870), r: Math.PI / 2 },
-            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -900), r: Math.PI / 2 },
-            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -930), r: Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -840), r: -Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -870), r: -Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -900), r: -Math.PI / 2 },
+            { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -930), r: -Math.PI / 2 },
         ];
         planes.forEach(p => {
             const plane = new StaticSceneryEntity(models.getModel('assets/f22.glb'));
@@ -581,7 +590,7 @@ export class Game {
             plane.quaternion.setFromAxisAngle(UP, p.r);
             scene.add(plane);
 
-            const shadow = new StaticSceneryEntity(models.getModel('assets/f22_shadow.gltf'));
+            const shadow = new StaticSceneryEntity(models.getModel('assets/f22_shadow.glb'));
             shadow.position.copy(p.p).setY(0);
             shadow.quaternion.setFromAxisAngle(UP, p.r);
             scene.add(shadow);

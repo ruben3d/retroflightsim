@@ -7,8 +7,8 @@ import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes
 import { LO_H_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
-import { vectorBearing } from '../../../utils/math';
-import { formatBearing } from './overlayUtils';
+import { vectorHeading } from '../../../utils/math';
+import { formatHeading } from './overlayUtils';
 import { updateTargetCamera } from '../../utils';
 
 
@@ -53,9 +53,9 @@ export class CockpitEntity implements Entity {
     private weaponsTargetBearing: number = 0; // degrees, 0 is North, increases CW
     private weaponsTargetZoomFactor: number = 1; // Times standard FOV
 
-    private tmpV = new THREE.Vector3();
-    private tmpV2 = new THREE.Vector3();
-    private tmpQ = new THREE.Quaternion();
+    private _v = new THREE.Vector3();
+    private _w = new THREE.Vector3();
+    private _q = new THREE.Quaternion();
 
     readonly tags: string[] = [];
 
@@ -67,22 +67,21 @@ export class CockpitEntity implements Entity {
 
     update(delta: number): void {
 
-        const forward = this.tmpV.copy(FORWARD)
-            .applyQuaternion(this.actor.quaternion);
-        const prjForward = this.tmpV2.copy(forward)
+        const forward = this.actor.getWorldDirection(this._v);
+        const prjForward = this._w.copy(forward)
             .setY(0)
             .normalize();
         this.aiPitch = forward.angleTo(prjForward) * (forward.y >= 0 ? 1 : -1);
-        this.mapPlaneMarkerHeading = vectorBearing(prjForward);
+        this.mapPlaneMarkerHeading = vectorHeading(prjForward);
 
-        this.tmpQ.setFromUnitVectors(forward, prjForward);
+        this._q.setFromUnitVectors(forward, prjForward);
 
-        const right = this.tmpV.copy(RIGHT)
+        const right = this._v.copy(RIGHT)
             .applyQuaternion(this.actor.quaternion)
-            .applyQuaternion(this.tmpQ);
-        this.tmpQ.setFromUnitVectors(prjForward, FORWARD);
-        right.applyQuaternion(this.tmpQ);
-        this.aiRoll = Math.acos(right.x) * (right.y >= 0 ? -1 : 1);
+            .applyQuaternion(this._q);
+        this._q.setFromUnitVectors(prjForward, FORWARD);
+        right.applyQuaternion(this._q);
+        this.aiRoll = Math.acos(right.x) * (right.y >= 0 ? 1 : -1);
         this.aiRoll = isNaN(this.aiRoll) ? 0.0 : this.aiRoll;
 
         this.mapCamera.position.copy(this.actor.position).setY(500);
@@ -90,15 +89,15 @@ export class CockpitEntity implements Entity {
         this.weaponsTarget = this.actor.weaponsTarget;
 
         if (this.weaponsTarget !== undefined) {
-            this.tmpV
+            this._v
                 .copy(this.weaponsTarget.position)
                 .sub(this.actor.position);
-            this.weaponsTargetRange = this.tmpV.length() / 1000.0;
+            this.weaponsTargetRange = this._v.length() / 1000.0;
 
-            this.tmpV
+            this._v
                 .setY(0)
                 .normalize();
-            this.weaponsTargetBearing = vectorBearing(this.tmpV);
+            this.weaponsTargetBearing = vectorHeading(this._v);
 
             this.weaponsTargetZoomFactor = updateTargetCamera(this.actor, this.camera, this.targetCamera);
         }
@@ -140,9 +139,10 @@ export class CockpitEntity implements Entity {
         const AI_CENTER_Y = AI_Y + AI_SIZE_HALF;
 
         const offset = this.aiPitch / (Math.PI / 2);
-        const center = this.tmpV2.set(AI_CENTER_X, 0, AI_CENTER_Y);
+        const center = this._w.set(AI_CENTER_X, 0, AI_CENTER_Y);
 
-        const normal = this.tmpV.copy(FORWARD)
+        const normal = this._v.copy(FORWARD)
+            .negate()
             .applyAxisAngle(UP, this.aiRoll);
         center.addScaledVector(normal, -offset * AI_SIZE);
 
@@ -312,7 +312,7 @@ export class CockpitEntity implements Entity {
             painter.text(x + CHAR_MARGIN, y + CHAR_MARGIN * 2 + CHAR_HEIGHT,
                 `at ${this.weaponsTarget.targetLocation}`, hudColor);
             painter.text(x + CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
-                `BRG ${formatBearing(this.weaponsTargetBearing)}`, hudColor);
+                `BRG ${formatHeading(this.weaponsTargetBearing)}`, hudColor);
             painter.text(x + size - CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
                 `${this.weaponsTargetZoomFactor.toFixed(0)}x`, hudColor, TextAlignment.RIGHT);
             painter.text(x + CHAR_MARGIN, y + size - CHAR_HEIGHT - CHAR_MARGIN,

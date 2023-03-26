@@ -52,6 +52,12 @@ The generation of choice will simulate the experience of a game of that era:
 * 386/VGA: early 90s
 * 486/SVGA: mid-90s before texture mapping 
 
+#### Flight model
+
+The flight model selects the realism of the simulation:
+* Debug: Very simple flight model intended for debug purposes only. The plane can be stopped midair.
+* Arcade: Vaguely based on realistic parameters but closer to late 80s arcade experiences.
+
 #### Keyboard layout
 
 Choose your keyboard layout, for users using AZERTY or Dvorak keyboards.

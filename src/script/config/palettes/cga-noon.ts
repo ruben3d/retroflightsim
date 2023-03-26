@@ -4,6 +4,8 @@ import { Palette, PaletteCategory, PaletteColors, PaletteTime, PaletteValues } f
 const colors: PaletteColors = {
     [PaletteCategory.HUD_TEXT]: CGA_BLACK,
     [PaletteCategory.HUD_TEXT_EFFECT]: CGA_CYAN,
+    [PaletteCategory.HUD_TEXT_SECONDARY]: CGA_BLACK,
+    [PaletteCategory.HUD_TEXT_WARN]: CGA_MAGENTA,
 
     [PaletteCategory.COCKPIT_AI_SKY]: CGA_CYAN,
     [PaletteCategory.COCKPIT_AI_GROUND]: CGA_MAGENTA,

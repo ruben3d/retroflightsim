@@ -1,14 +1,13 @@
 import * as THREE from 'three';
-import { MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, THROTTLE_RATE, YAW_RATE } from '../../defs';
 import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
-import { isZero } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
 import { Palette } from "../../config/palettes/palette";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 import { AudioClip } from '../../audio/audioSystem';
+import { FlightModel } from '../../physics/model/flightModel';
 
 
 export class PlayerEntity implements Entity {
@@ -19,6 +18,8 @@ export class PlayerEntity implements Entity {
     private shadowPosition = new THREE.Vector3();
     private shadowQuaternion = new THREE.Quaternion();
     private shadowScale = new THREE.Vector3();
+
+    private flightModel: FlightModel;
 
     private inEngineAudio: AudioClip;
     private outEngineAudio: AudioClip;
@@ -31,27 +32,29 @@ export class PlayerEntity implements Entity {
     private yaw: number = 0; // [-1, 1]
     private throttle: number = 0; // [0, 1]
 
-    private speed: number = 0;
-
     private target: GroundTargetEntity | undefined;
     private targetIndex: number | undefined
 
     private _nightVision: boolean = false;
 
     private _v = new THREE.Vector3();
-    private _w = new THREE.Vector3();
 
     readonly tags: string[] = [];
 
     enabled: boolean = true;
     private _exteriorView: boolean = false;
 
+    //------------------
+
+    private velocity: THREE.Vector3 = new THREE.Vector3(); // m/s
+
     // Bearing increases CCW, radians
-    constructor(model: Model, shadow: Model, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
+    constructor(model: Model, shadow: Model, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
         this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
         this.lodHelperShadow = new LODHelper(shadow, 5);
-        this.obj.position.copy(position);
-        this.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
+        this.flightModel = flightModel;
+        this.flightModel.position.copy(position);
+        this.flightModel.quaternion.setFromAxisAngle(UP, bearing);
         this.inEngineAudio = inEngineAudio;
         this.outEngineAudio = outEngineAudio;
     }
@@ -62,56 +65,16 @@ export class PlayerEntity implements Entity {
     }
 
     update(delta: number): void {
-        // Roll control
-        if (!isZero(this.roll)) {
-            this.obj.rotateZ(-this.roll * ROLL_RATE * delta);
-        }
+        this.flightModel.setPitch(this.pitch);
+        this.flightModel.setRoll(this.roll);
+        this.flightModel.setYaw(this.yaw);
+        this.flightModel.setThrottle(this.throttle);
+        this.flightModel.update(delta);
+        this.obj.position.copy(this.flightModel.position);
+        this.obj.quaternion.copy(this.flightModel.quaternion);
+        this.velocity.copy(this.flightModel.velocityVector);
 
-        // Pitch control
-        if (!isZero(this.pitch)) {
-            this.obj.rotateX(this.pitch * PITCH_RATE * delta);
-        }
-
-        // Yaw control
-        if (!isZero(this.yaw)) {
-            this.obj.rotateY(-this.yaw * YAW_RATE * delta);
-        }
-
-        // Automatic yaw when rolling
-        const forward = this.obj.getWorldDirection(this._v);
-        if (-0.99 < forward.y && forward.y < 0.99) {
-            const prjForward = forward.setY(0);
-            const up = this._w.copy(UP).applyQuaternion(this.obj.quaternion);
-            const prjUp = up.projectOnPlane(prjForward).setY(0);
-            const sign = (prjForward.x * prjUp.z - prjForward.z * prjUp.x) > 0 ? 1 : -1;
-            this.obj.rotateOnWorldAxis(UP, sign * prjUp.length() * prjUp.length() * prjForward.length() * 2.0 * YAW_RATE * delta);
-        }
-
-        // Movement
-        this.speed = this.throttle * MAX_SPEED;
-        this.obj.translateZ(-this.speed * delta);
-
-        // Avoid ground crashes
-        if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
-            this.obj.position.y = PLANE_DISTANCE_TO_GROUND;
-            const d = this.obj.getWorldDirection(this._v);
-            d.setY(0).add(this.obj.position);
-            this.obj.lookAt(d);
-        }
-
-        // Avoid flying too high
-        if (this.obj.position.y > MAX_ALTITUDE) {
-            this.obj.position.y = MAX_ALTITUDE;
-        }
-
-        // Avoid flying out of bounds, wraps around
-        const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
-        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
-        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
-        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
-        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
-
-        this.updateAudio();
+        //this.updateAudio();
     }
 
     private updateAudio() {
@@ -132,6 +95,13 @@ export class PlayerEntity implements Entity {
                 this.enginePlaying = false;
             }
         }
+    }
+
+    setFlightModel(flightModel: FlightModel) {
+        this.flightModel = flightModel;
+        this.flightModel.position.copy(this.obj.position);
+        this.flightModel.quaternion.copy(this.obj.quaternion);
+        this.flightModel.velocityVector.copy(this.velocity);
     }
 
     set exteriorView(isExteriorView: boolean) {
@@ -156,10 +126,14 @@ export class PlayerEntity implements Entity {
         return this._nightVision;
     }
 
+    get isLanded(): boolean {
+        return this.flightModel.isLanded();
+    }
+
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
 
         this.shadowPosition.copy(this.position).setY(0);
-        this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize().multiplyScalar(-1));
+        this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize());
         const shadowLength = Math.max(0.2, this._v.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
         const shadowWidth = Math.max(0.2, this._v.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
         this.shadowScale.set(shadowWidth, 1, shadowLength);
@@ -212,16 +186,40 @@ export class PlayerEntity implements Entity {
         return this.obj.quaternion;
     }
 
+    getWorldDirection(v: THREE.Vector3): THREE.Vector3 {
+        return this.obj.getWorldDirection(v);
+    }
+
+    getWorldUp(v: THREE.Vector3): THREE.Vector3 {
+        return v
+            .copy(UP)
+            .applyQuaternion(this.obj.quaternion);
+    }
+
+    getWorldRight(v: THREE.Vector3): THREE.Vector3 {
+        return v
+            .copy(RIGHT)
+            .applyQuaternion(this.obj.quaternion);
+    }
+
     get throttleUnit(): number {
         return this.throttle;
     }
 
     get rawSpeed(): number {
-        return this.speed;
+        return this.velocity.length();
+    }
+
+    get velocityVector(): THREE.Vector3 {
+        return this.velocity;
     }
 
     get weaponsTarget(): GroundTargetEntity | undefined {
         return this.target;
+    }
+
+    get stallStatus(): number {
+        return this.flightModel.getStallStatus();
     }
 
     private setupInput() {

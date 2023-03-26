@@ -5,3 +5,9 @@ export enum TechProfiles {
     VGA = 'VGA',
     SVGA = 'SVGA'
 }
+
+export enum FlightModels {
+    DEBUG = 'DEBUG',
+    ARCADE = 'ARCADE',
+    REALISTIC = 'REALISTIC'
+}

@@ -11,6 +11,9 @@ import { FPS_CAP, H_RES, V_RES } from './defs';
 import { JoystickControlDevice } from './input/devices/joystickControlDevice';
 import { KeyboardControlDevice } from './input/devices/keyboardControlDevice';
 import { setupOSD } from './osd/osdPanel';
+import { ArcadeFlightModel } from './physics/model/arcadeFlightModel';
+import { DebugFlightModel } from './physics/model/debugFlightModel';
+import { RealisticFlightModel } from './physics/model/realisticFlightModel';
 import { Renderer } from './render/renderer';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
@@ -18,12 +21,15 @@ import { FieldModelLibBuilder, FieldModelType } from './scene/models/lib/fieldMo
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
 import { ModelManager } from './scene/models/models';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
-import { TechProfiles } from './state/gameDefs';
+import { FlightModels, TechProfiles } from './state/gameDefs';
 
 
 function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControlDevice] {
-    const config = new ConfigService({ [TechProfiles.CGA]: CGAProfile, [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile });
-    config.setActiveProfile(TechProfiles.VGA);
+    const config = new ConfigService(
+        { [TechProfiles.CGA]: CGAProfile, [TechProfiles.EGA]: EGAProfile, [TechProfiles.VGA]: VGAProfile, [TechProfiles.SVGA]: SVGAProfile },
+        { [FlightModels.DEBUG]: new DebugFlightModel(), [FlightModels.ARCADE]: new ArcadeFlightModel(), [FlightModels.REALISTIC]: new RealisticFlightModel(), }
+    );
+    config.techProfiles.setActive(TechProfiles.VGA);
     const materials = new SceneMaterialManager(DefaultPalette, FogQuality.LOW, DisplayShading.STATIC);
     const renderer = new Renderer(materials, H_RES, V_RES);
     const models = new ModelManager(materials, [
@@ -51,7 +57,7 @@ function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControl
     kernel.addTask(new GameUpdateTask(game));
     kernel.addTask(new GameRenderTask(game));
 
-    config.addChangeListener(profile => kernel.setTargetFPS(profile.fpsCap ? FPS_CAP : undefined));
+    config.techProfiles.addChangeListener(profile => kernel.setTargetFPS(profile.fpsCap ? FPS_CAP : undefined));
 
     return [kernel, config, keyboardInput, joystickInput];
 }
