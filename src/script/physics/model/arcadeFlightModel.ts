@@ -120,7 +120,7 @@ export class ArcadeFlightModel extends FlightModel {
         const fwdY = this.forward.y;
         const rightY = Math.abs(this.right.y);
         const liftFactor = 2 * (speed / 256.0) * ((-0.5 * fwdY + 1.5) * (-0.5 * rightY + 1.5) + (-0.5 * rightY + 1.5)) * airDensity;
-        this.stall = -clamp(liftFactor / minLiftFactor + aoaLift - 1.0, -1.0, 1.0);
+        this.stall = -clamp(liftFactor / minLiftFactor + aoaLift * (1.0 - rightY) - 1.0, -1.0, 1.0);
 
         //! WEIGHT
         const weightFwdFactor = -this.forward.y;

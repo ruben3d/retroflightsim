@@ -6,7 +6,7 @@ import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
-import { vectorHeading } from '../../../utils/math';
+import { clamp, vectorHeading } from '../../../utils/math';
 import { formatHeading, toFeet, toKnots } from './overlayUtils';
 
 
@@ -42,6 +42,7 @@ export class HUDEntity implements Entity {
     private altitude: number = 0; // feet
     private throttle: number = 0; // Normalised percentage [0, 1]
     private speed: number = 0; // knots
+    private verticalSpeed: number = 0; // feets/min
     private velocityDirection: THREE.Vector3 = new THREE.Vector3();
     private weaponsTarget: GroundTargetEntity | undefined;
     private stallStatus: number = -1; // [-1,1]. Values >= 0 indicate stall
@@ -70,6 +71,8 @@ export class HUDEntity implements Entity {
         this.throttle = this.actor.throttleUnit;
 
         this.speed = toKnots(this.actor.rawSpeed);
+
+        this.verticalSpeed = toFeet(this.actor.velocityVector.y) * 60.0;
 
         this.velocityDirection.copy(this.actor.velocityVector).normalize();
 
@@ -109,7 +112,8 @@ export class HUDEntity implements Entity {
         this.renderTarget(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
         this.renderBoresight(halfWidth, halfHeight, painter);
         this.renderFlightPathMarker(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
-        this.renderStallStatus(airSpeedX, airSpeedY, painter, hudWarnColor);
+        this.renderStallStatus(airSpeedX, airSpeedY, painter, hudColor, hudWarnColor);
+        this.renderVerticalVelocityIndicator(altitudeX, altitudeY, painter, hudColor, hudWarnColor);
     }
 
     private renderAltitude(x: number, y: number, width: number, painter: CanvasPainter, hudColor: string) {
@@ -159,6 +163,13 @@ export class HUDEntity implements Entity {
             const num = !lowp && n > ALTITUDE_LOWP_THRESHOLD ? (n - 900) * 10 : n;
             return `${(num / 1000).toFixed(0)}K`;
         }
+    }
+
+    private renderVerticalVelocityIndicator(x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string) {
+        const pixelLength = clamp(Math.floor(this.verticalSpeed / 250.0), -ALTITUDE_HEIGHT, ALTITUDE_HEIGHT); // Eaxh pixel is 250 feet/min
+        painter.setColor(hudWarnColor);
+        painter.vLine(x - 1, y, y - pixelLength);
+        painter.setColor(hudColor);
     }
 
     private renderHeading(x: number, y: number, painter: CanvasPainter, hudColor: string) {
@@ -282,7 +293,7 @@ export class HUDEntity implements Entity {
         }
     }
 
-    private renderStallStatus(x: number, y: number, painter: CanvasPainter, hudWarnColor: string) {
+    private renderStallStatus(x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string) {
         const HALF_HEIGHT_PIXELS = AIRSPEED_HALF_HEIGHT * 2;
         painter.setColor(hudWarnColor);
         painter.vLine(x + 1, y + HALF_HEIGHT_PIXELS, y + HALF_HEIGHT_PIXELS - Math.floor((this.stallStatus + 1.0) * HALF_HEIGHT_PIXELS));
@@ -294,5 +305,6 @@ export class HUDEntity implements Entity {
                 hudWarnColor,
                 TextAlignment.LEFT);
         }
+        painter.setColor(hudColor);
     }
 }
