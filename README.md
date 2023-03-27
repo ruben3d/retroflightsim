@@ -97,7 +97,7 @@ The system supports a single device connected only. If the device has less than 
 
 ### Systems
 * `T`: Select target
-* `I`: Target night view (386 or 486 at night only)
+* `I`: Target night (386) or IR (486) view
 
 ### Views
 * `N`: Day/Night

@@ -39,3 +39,10 @@ export function roundToZero(v: THREE.Vector3, epsilon: number = EPSILON): THREE.
 export function easeOutCirc(x: number): number {
     return Math.sqrt(1 - (x - 1) * (x - 1));
 }
+
+export function easeOutQuad(x: number) {
+    return 1 - (1 - x) * (1 - x);
+}
+export function easeOutQuint(x: number) {
+    return 1 - Math.pow(1 - x, 5);
+}

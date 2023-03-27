@@ -289,8 +289,7 @@ export class Game {
             layers = isLowRes ? this.exteriorRenderLayersLo : this.exteriorRenderLayersHi;
         } else if (this.player.weaponsTarget) {
             layers = isLowRes ? this.cockpitTargetRenderLayersLo : this.cockpitTargetRenderLayersHi;
-            const nightVisionPalette = this.player.nightVision && this.getPalette().time === PaletteTime.NIGHT ?
-                this.configService.techProfiles.getActive().nightVisionPalette : undefined;
+            const nightVisionPalette = this.player.nightVision ? this.configService.techProfiles.getActive().nightVisionPalette : undefined;
             for (let i = 0; i < layers.length; i++) {
                 const layer = layers[i];
                 if (layer.target === WEAPONSTARGET_RENDER_TARGET_HI || layer.target === WEAPONSTARGET_RENDER_TARGET_LO) {

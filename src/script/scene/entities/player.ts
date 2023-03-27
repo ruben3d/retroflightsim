@@ -8,6 +8,7 @@ import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 import { AudioClip } from '../../audio/audioSystem';
 import { FlightModel } from '../../physics/model/flightModel';
+import { easeOutQuad, easeOutQuint } from '../../utils/math';
 
 
 export class PlayerEntity implements Entity {
@@ -32,6 +33,8 @@ export class PlayerEntity implements Entity {
     private yaw: number = 0; // [-1, 1]
     private throttle: number = 0; // [0, 1]
 
+    private velocity: THREE.Vector3 = new THREE.Vector3(); // m/s
+
     private target: GroundTargetEntity | undefined;
     private targetIndex: number | undefined
 
@@ -44,17 +47,13 @@ export class PlayerEntity implements Entity {
     enabled: boolean = true;
     private _exteriorView: boolean = false;
 
-    //------------------
-
-    private velocity: THREE.Vector3 = new THREE.Vector3(); // m/s
-
-    // Bearing increases CCW, radians
-    constructor(model: Model, shadow: Model, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, bearing: number) {
+    // Heading increases CCW, radians
+    constructor(model: Model, shadow: Model, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, heading: number) {
         this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
         this.lodHelperShadow = new LODHelper(shadow, 5);
         this.flightModel = flightModel;
         this.flightModel.position.copy(position);
-        this.flightModel.quaternion.setFromAxisAngle(UP, bearing);
+        this.flightModel.quaternion.setFromAxisAngle(UP, heading);
         this.inEngineAudio = inEngineAudio;
         this.outEngineAudio = outEngineAudio;
     }
@@ -85,8 +84,8 @@ export class PlayerEntity implements Entity {
                 this.enginePlaying = true;
             }
             const x = this.throttle;
-            const factorRate = 1 - (1 - x) * (1 - x); // easeOutQuad
-            const factorGain = 1 - Math.pow(1 - x, 5); // easeOutQuint
+            const factorRate = easeOutQuad(x);
+            const factorGain = easeOutQuint(x);
             engineAudio.rate = 0.25 + 1.75 * factorRate;
             engineAudio.gain = 1.0 * factorGain;
         } else {
