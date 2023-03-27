@@ -50,7 +50,7 @@ export function updateUniforms(this: THREE.Mesh, renderer: THREE.WebGLRenderer, 
     m.uniformsNeedUpdate = true;
 }
 
-const TARGET_SIZE_FACTOR = 1.5;
+const TARGET_SIZE_FACTOR = 2.0;
 const TARGET_MAX_SIZE = 250;
 const TARGET_CAMERA_MIN_ALTITUDE = 15;
 const TARGET_CAMERA_ADAPTIVE_THRESHOLD = 5000;
