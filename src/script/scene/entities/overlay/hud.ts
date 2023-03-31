@@ -109,6 +109,7 @@ export class HUDEntity implements Entity {
     render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
+        //! This should always be an integer!
         const scale = Math.max(1, Math.round(targetWidth / H_RES));
 
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
@@ -121,7 +122,7 @@ export class HUDEntity implements Entity {
 
         this.renderPitchLadder(scale, targetHeight, halfWidth, halfHeight, painter, hudColor, hudSecondaryColor);
 
-        const altitudeX = halfWidth + scale * (LADDER_HALF_WIDTH + 4);
+        const altitudeX = halfWidth + (LADDER_HALF_WIDTH + 4);
         const altitudeY = halfHeight;
         this.renderAltitude(altitudeX, altitudeY, targetWidth, painter, hudColor);
 
@@ -129,11 +130,11 @@ export class HUDEntity implements Entity {
         const headingY = halfHeight - scale * (LADDER_HALF_HEIGHT + 2);
         this.renderHeading(headingX, headingY, painter, hudColor);
 
-        const airSpeedX = halfWidth - scale * (LADDER_HALF_WIDTH + 6);
+        const airSpeedX = halfWidth - (LADDER_HALF_WIDTH + 6);
         const airSpeedY = halfHeight;
         this.renderAirSpeed(airSpeedX, airSpeedY, painter, hudColor);
 
-        const throttleX = halfWidth - scale * (LADDER_HALF_WIDTH + 23);
+        const throttleX = halfWidth - (LADDER_HALF_WIDTH + 23);
         const throttleY = halfHeight - scale * (LADDER_HALF_HEIGHT + 10);
         this.renderThrottle(throttleX, throttleY, painter, hudColor);
 
@@ -275,18 +276,18 @@ export class HUDEntity implements Entity {
 
     private renderPitchLadder(scale: number, height: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudSecondaryColor: string) {
         const fov = toRadians(COCKPIT_FOV);
-        const current = Math.round(toDegrees(-this.pitch) / 10);
-        const minMarker = current - LADDER_EXTRA_MARKERS;
-        const maxMarker = current + LADDER_EXTRA_MARKERS;
+        const current = Math.round(toDegrees(-this.pitch) / 10 * scale);
+        const minMarker = current - LADDER_EXTRA_MARKERS * scale;
+        const maxMarker = current + LADDER_EXTRA_MARKERS * scale;
 
         painter.setColor(hudSecondaryColor);
 
         const clip = painter.clip()
-            .rectangle(x - LADDER_HALF_WIDTH * scale, y - LADDER_HALF_HEIGHT * scale, LADDER_WIDTH * scale, (LADDER_HEIGHT + LADDER_EXTRA_HEIGHT) * scale)
+            .rectangle(x - LADDER_HALF_WIDTH, y - LADDER_HALF_HEIGHT * scale, LADDER_WIDTH, (LADDER_HEIGHT + LADDER_EXTRA_HEIGHT) * scale)
             .clip();
 
         for (let i = minMarker; i <= maxMarker; i++) {
-            const offset = ((this.pitch + toRadians(i * 10)) / fov) * height;
+            const offset = ((this.pitch + toRadians(i * 10 / scale)) / fov) * height;
             const center = this._w.set(x, 0, y);
 
             const normal = this._v.copy(FORWARD)
@@ -329,7 +330,7 @@ export class HUDEntity implements Entity {
             }
             batch.commit();
 
-            const str = (i === 0) ? '00' : `${(i * -10)}`;
+            const str = (i === 0) ? '00' : `${(i * -10 / scale)}`;
             const tX = Math.round(normal.x * HALF_CHAR);
             const tY = Math.round(normal.z * HALF_CHAR);
             const T0_X = Math.floor(normal.z * 2 * (CHAR_WIDTH + CHAR_MARGIN));
