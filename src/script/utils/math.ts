@@ -46,3 +46,14 @@ export function easeOutQuad(x: number) {
 export function easeOutQuint(x: number) {
     return 1 - Math.pow(1 - x, 5);
 }
+
+const PI_OVER_180 = Math.PI / 180.0;
+const N180_OVER_PI = 180.0 / Math.PI;
+
+export function toRadians(degrees: number): number {
+    return PI_OVER_180 * degrees;
+}
+
+export function toDegrees(radians: number): number {
+    return N180_OVER_PI * radians;
+}

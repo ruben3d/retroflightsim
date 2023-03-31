@@ -1,9 +1,9 @@
 import { Palette, PaletteCategory, PaletteColors, PaletteTime, PaletteValues } from "./palette";
 
 const colors: PaletteColors = {
-    [PaletteCategory.HUD_TEXT]: '#51F351',
+    [PaletteCategory.HUD_TEXT]: '#55FF55',
     [PaletteCategory.HUD_TEXT_EFFECT]: '#000000',
-    [PaletteCategory.HUD_TEXT_SECONDARY]: '#51F351',
+    [PaletteCategory.HUD_TEXT_SECONDARY]: '#009A00',
     [PaletteCategory.HUD_TEXT_WARN]: '#FF0000',
 
     [PaletteCategory.COCKPIT_AI_SKY]: '#2c558e',

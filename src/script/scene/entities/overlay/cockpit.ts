@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/text";
-import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../../scene";
+import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
 import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { LO_H_RES } from "../../../defs";
 import { PlayerEntity } from "../player";
 import { GroundTargetEntity } from '../groundTarget';
 import { vectorHeading } from '../../../utils/math';
-import { formatHeading } from './overlayUtils';
+import { calculatePitchRoll, formatHeading } from './overlayUtils';
 import { updateTargetCamera } from '../../utils';
 
 
@@ -55,7 +55,6 @@ export class CockpitEntity implements Entity {
 
     private _v = new THREE.Vector3();
     private _w = new THREE.Vector3();
-    private _q = new THREE.Quaternion();
 
     readonly tags: string[] = [];
 
@@ -67,22 +66,13 @@ export class CockpitEntity implements Entity {
 
     update(delta: number): void {
 
-        const forward = this.actor.getWorldDirection(this._v);
-        const prjForward = this._w.copy(forward)
+        const prjForward = this.actor
+            .getWorldDirection(this._v)
             .setY(0)
             .normalize();
-        this.aiPitch = forward.angleTo(prjForward) * (forward.y >= 0 ? 1 : -1);
         this.mapPlaneMarkerHeading = vectorHeading(prjForward);
 
-        this._q.setFromUnitVectors(forward, prjForward);
-
-        const right = this._v.copy(RIGHT)
-            .applyQuaternion(this.actor.quaternion)
-            .applyQuaternion(this._q);
-        this._q.setFromUnitVectors(prjForward, FORWARD);
-        right.applyQuaternion(this._q);
-        this.aiRoll = Math.acos(right.x) * (right.y >= 0 ? 1 : -1);
-        this.aiRoll = isNaN(this.aiRoll) ? 0.0 : this.aiRoll;
+        [this.aiPitch, this.aiRoll] = calculatePitchRoll(this.actor);
 
         this.mapCamera.position.copy(this.actor.position).setY(500);
 

@@ -3,7 +3,7 @@ import { Palette, PaletteCategory, PaletteColors, PaletteTime, PaletteValues } f
 const colors: PaletteColors = {
     [PaletteCategory.HUD_TEXT]: '#FFFFFF',
     [PaletteCategory.HUD_TEXT_EFFECT]: '#000000',
-    [PaletteCategory.HUD_TEXT_SECONDARY]: '#FFFFFF',
+    [PaletteCategory.HUD_TEXT_SECONDARY]: '#AAAAAA',
     [PaletteCategory.HUD_TEXT_WARN]: '#FF0000',
 
     [PaletteCategory.COCKPIT_AI_SKY]: '#2c558e',

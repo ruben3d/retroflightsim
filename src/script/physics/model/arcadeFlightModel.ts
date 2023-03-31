@@ -5,7 +5,7 @@ import { clamp, easeOutCirc, isZero, roundToZero } from "../../utils/math";
 import { FlightModel } from './flightModel';
 
 const TURNING_RATE = Math.PI * 1.5; // Radians/second
-const STALL_RATE = Math.PI / 4; // Radians/second
+const STALL_RATE = Math.PI / 6; // Radians/second
 const INDUCED_DRAG_FACTOR = 10.0; // Unitless
 const ROLL_DRAG_FACTOR = 0.05; // Unitless
 const GROUND_FRICTION_KINETIC = 0.15; // Unitless
