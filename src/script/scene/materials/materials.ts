@@ -77,6 +77,7 @@ export class SceneMaterialManager implements KernelTask {
     private readonly lineProto: THREE.ShaderMaterial;
     private readonly shadedProto: THREE.ShaderMaterial;
     private readonly pointProto: THREE.ShaderMaterial;
+    private readonly colorCache: ColorCache = new ColorCache();
     private palette: Palette;
     private fog: FogQuality;
     private shading: DisplayShading;
@@ -154,7 +155,7 @@ export class SceneMaterialManager implements KernelTask {
         const color = bit ? PaletteColor(this.palette, PaletteCategory.FX_FIRE) : PaletteColor(this.palette, PaletteCategory.FX_FIRE__B);
         for (let i = 0; i < this.fxFire.length; i++) {
             const u = this.fxFire[i].uniforms as SceneMaterialUniforms;
-            u.color.value.setStyle(color);
+            u.color.value.copy(this.colorCache.getColor(color));
         }
     }
 
@@ -237,15 +238,16 @@ export class SceneMaterialManager implements KernelTask {
     setPalette(palette: Palette) {
         this.palette = palette;
 
-        this.materials.forEach(m => {
+        for (let i = 0; i < this.materials.length; i++) {
+            const m = this.materials[i];
             const d = m.userData as SceneMaterialData;
             const u = m.uniforms as SceneMaterialUniforms;
             const c = d.category;
-            u.color.value.setStyle(PaletteColor(palette, c));
-            u.colorSecondary.value.setStyle(PaletteColorShade(palette, c));
+            u.color.value.copy(this.colorCache.getColor(PaletteColor(palette, c)));
+            u.colorSecondary.value.copy(this.colorCache.getColor(PaletteColorShade(palette, c)));
             u.fogDensity.value = palette.values[FogValueCategory(c)];
-            u.fogColor.value.setStyle(PaletteColor(palette, FogColorCategory(c)));
-        });
+            u.fogColor.value.copy(this.colorCache.getColor(PaletteColor(palette, FogColorCategory(c))));
+        }
         this.updateFxFire(this.elapsed);
     }
 
@@ -253,23 +255,40 @@ export class SceneMaterialManager implements KernelTask {
     setFog(fog: FogQuality) {
         this.fog = fog;
 
-        this.materials.forEach(m => {
+        for (let i = 0; i < this.materials.length; i++) {
+            const m = this.materials[i];
             const d = m.userData as SceneMaterialData;
             d.fog = this.fog;
             const u = m.uniforms as SceneMaterialUniforms;
             u.fogType.value = this.fog;
-        });
+        }
     }
 
     // This shouldn't be handled by the material system
     setShadingType(shadingType: DisplayShading) {
         this.shading = shadingType;
 
-        this.materials.forEach(m => {
+        for (let i = 0; i < this.materials.length; i++) {
+            const m = this.materials[i];
             const d = m.userData as SceneMaterialData;
             d.shading = shadingType;
             const u = m.uniforms as SceneMaterialUniforms;
             u.shadingType.value = shadingType;
-        });
+        }
+    }
+}
+
+class ColorCache {
+    private map: Map<string, THREE.Color> = new Map();
+
+    constructor() { }
+
+    getColor(css: string): THREE.Color {
+        let c = this.map.get(css);
+        if (!c) {
+            c = new THREE.Color(css);
+            this.map.set(css, c);
+        }
+        return c;
     }
 }

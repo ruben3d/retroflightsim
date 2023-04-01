@@ -80,7 +80,8 @@ export class LODHelper {
         assertIsDefined(list);
         dst.clear();
         dstAnim.clear();
-        collection.forEach(m => {
+        for (let i = 0; i < collection.length; i++) {
+            const m = collection[i];
             if (modelMatchesPaletteTime(m, palette.time)) {
                 if (modelHasAnim(m, ModelAnimation.ROTATE_UP)) {
                     hasAnim = true;
@@ -89,7 +90,7 @@ export class LODHelper {
                     dst.add(m);
                 }
             }
-        });
+        }
         dst.position.copy(position);
         dst.quaternion.copy(quaternion);
         dst.scale.copy(scale);
