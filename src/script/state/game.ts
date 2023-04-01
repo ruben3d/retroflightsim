@@ -1,42 +1,42 @@
 import * as THREE from 'three';
-import { COCKPIT_FOV, PLANE_DISTANCE_TO_GROUND, H_RES, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES, COCKPIT_FAR, LO_H_RES, LO_V_RES, HI_H_RES, HI_V_RES } from '../defs';
+import { AudioSystem } from '../audio/audioSystem';
+import { ConfigService } from '../config/configService';
+import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
+import { CGANoonPalette } from '../config/palettes/cga-noon';
+import { EGAMidnightPalette } from '../config/palettes/ega-midnight';
+import { EGANoonPalette } from '../config/palettes/ega-noon';
+import { Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
+import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
+import { SVGANoonPalette } from '../config/palettes/svga-noon';
+import { VGAMidnightPalette } from '../config/palettes/vga-midnight';
+import { VGANoonPalette } from '../config/palettes/vga-noon';
+import { DisplayResolution } from '../config/profiles/profile';
+import { KernelTask } from '../core/kernel';
+import { COCKPIT_FAR, COCKPIT_FOV, HI_H_RES, HI_V_RES, H_RES, LO_H_RES, LO_V_RES, PLANE_DISTANCE_TO_GROUND, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, V_RES } from '../defs';
+import { ArcadeFlightModel } from '../physics/model/arcadeFlightModel';
 import { Renderer, RenderLayer, RenderTargetType } from "../render/renderer";
 import { SceneCamera } from '../scene/cameras/camera';
-import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
 import { GroundTargetEntity } from '../scene/entities/groundTarget';
 import { CockpitEntity, CockpitMFD1X, CockpitMFD1Y, CockpitMFD2X, CockpitMFD2Y, CockpitMFDSize } from '../scene/entities/overlay/cockpit';
+import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
 import { HUDEntity } from '../scene/entities/overlay/hud';
 import { PlayerEntity } from '../scene/entities/player';
 import { SceneryField, SceneryFieldSettings } from '../scene/entities/sceneryField';
 import { SimpleEntity } from '../scene/entities/simpleEntity';
 import { SpecklesEntity } from '../scene/entities/speckles';
 import { StaticSceneryEntity } from '../scene/entities/staticScenery';
+import { Entity } from '../scene/entity';
 import { SceneMaterialManager } from "../scene/materials/materials";
 import { ModelManager } from "../scene/models/models";
-import { VGAMidnightPalette } from '../config/palettes/vga-midnight';
-import { VGANoonPalette } from '../config/palettes/vga-noon';
-import { Palette, PaletteCategory, PaletteColor, PaletteTime } from '../config/palettes/palette';
 import { RIGHT, Scene, SceneLayers, UP } from '../scene/scene';
 import { assertIsDefined } from '../utils/asserts';
-import { Entity } from '../scene/entity';
 import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
-import { ExteriorBehindCameraUpdater } from './cameraUpdaters/exteriorBehindCameraUpdater';
-import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
-import { ExteriorSide, ExteriorSideCameraUpdater } from './cameraUpdaters/exteriorSideCameraUpdater';
-import { KernelTask } from '../core/kernel';
+import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
+import { ExteriorFrontBehindCameraUpdater, ExteriorViewHeading } from './cameraUpdaters/exteriorFrontBehindCameraUpdater';
+import { ExteriorSideCameraUpdater, ExteriorViewSide } from './cameraUpdaters/exteriorSideCameraUpdater';
+import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
 import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
 import { restoreMainCameraParameters } from './stateUtils';
-import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
-import { ConfigService } from '../config/configService';
-import { DisplayResolution } from '../config/profiles/profile';
-import { CGANoonPalette } from '../config/palettes/cga-noon';
-import { EGANoonPalette } from '../config/palettes/ega-noon';
-import { EGAMidnightPalette } from '../config/palettes/ega-midnight';
-import { SVGANoonPalette } from '../config/palettes/svga-noon';
-import { SVGAMidnightPalette } from '../config/palettes/svga-midnight';
-import { CGAMidnightPalette } from '../config/palettes/cga-midnight';
-import { AudioSystem } from '../audio/audioSystem';
-import { ArcadeFlightModel } from '../physics/model/arcadeFlightModel';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -51,6 +51,7 @@ const MAP_RENDER_TARGET_HI = 'MAP_RENDER_TARGET_HI';
 enum PlayerViewState {
     COCKPIT_FRONT,
     EXTERIOR_BEHIND,
+    EXTERIOR_FRONT,
     EXTERIOR_LEFT,
     EXTERIOR_RIGHT,
     TARGET_TO,
@@ -117,9 +118,10 @@ export class Game {
             this.audio.getGlobal('assets/engine-loop-01.ogg', true),
             new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), 0);
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
-        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorBehindCameraUpdater(this.player, this.playerCamera.main));
-        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.LEFT));
-        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_RIGHT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorSide.RIGHT));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorFrontBehindCameraUpdater(this.player, this.playerCamera.main, ExteriorViewHeading.FRONT));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_FRONT, new ExteriorFrontBehindCameraUpdater(this.player, this.playerCamera.main, ExteriorViewHeading.BACK));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_LEFT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorViewSide.LEFT));
+        this.cameraUpdaters.set(PlayerViewState.EXTERIOR_RIGHT, new ExteriorSideCameraUpdater(this.player, this.playerCamera.main, ExteriorViewSide.RIGHT));
         this.cameraUpdaters.set(PlayerViewState.TARGET_TO, new TargetToCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.TARGET_FROM, new TargetFromCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdater = this.getCameraUpdater(this.view);
@@ -319,9 +321,7 @@ export class Game {
                     break;
                 }
                 case '2': {
-                    if (this.view !== PlayerViewState.EXTERIOR_BEHIND) {
-                        this.setExteriorBehindView();
-                    }
+                    this.setExteriorBehindFrontView();
                     break;
                 }
                 case '3': {
@@ -351,9 +351,13 @@ export class Game {
         }
     }
 
-    private setExteriorBehindView() {
+    private setExteriorBehindFrontView() {
         restoreMainCameraParameters(this.playerCamera.main);
-        this.setExteriorView(PlayerViewState.EXTERIOR_BEHIND);
+        if (this.view !== PlayerViewState.EXTERIOR_BEHIND) {
+            this.setExteriorView(PlayerViewState.EXTERIOR_BEHIND);
+        } else {
+            this.setExteriorView(PlayerViewState.EXTERIOR_FRONT);
+        }
     }
 
     private setExteriorSideView() {

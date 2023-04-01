@@ -97,13 +97,13 @@ The system supports a single device connected only. If the device has less than 
 
 ### Systems
 * `T`: Select target
-* `I`: Target night (386) or IR (486) view
+* `I`: Toggle night (386/VGA) or IR (486/SVGA) view
 
 ### Views
-* `N`: Day/Night
+* `N`: Toggle day/night
 * `1`: Cockpit
-* `2`: Exterior follow
-* `3`: Exterior left/right
-* `4`: To/from target
+* `2`: Toggle exterior back/front
+* `3`: Toggle exterior left/right
+* `4`: Toggle to/from target
 
 On reaching the limits of the detailed scenario the player position wraps around.
