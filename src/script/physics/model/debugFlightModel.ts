@@ -12,6 +12,8 @@ export class DebugFlightModel extends FlightModel {
     private _w: THREE.Vector3 = new THREE.Vector3();
 
     step(delta: number): void {
+        this.effectiveThrottle = this.throttle;
+
         // Roll control
         if (!isZero(this.roll)) {
             this.obj.rotateZ(this.roll * ROLL_RATE * delta);
@@ -38,7 +40,7 @@ export class DebugFlightModel extends FlightModel {
         }
 
         // Movement
-        this.speed = this.throttle * MAX_SPEED;
+        this.speed = this.effectiveThrottle * MAX_SPEED;
         this.obj.translateZ(this.speed * delta);
 
         // Avoid ground crashes

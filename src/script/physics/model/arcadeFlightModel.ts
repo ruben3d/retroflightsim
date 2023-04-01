@@ -9,7 +9,10 @@ const STALL_RATE = Math.PI / 6; // Radians/second
 const INDUCED_DRAG_FACTOR = 10.0; // Unitless
 const ROLL_DRAG_FACTOR = 0.05; // Unitless
 const GROUND_FRICTION_KINETIC = 0.15; // Unitless
-const GROUND_FRICTION_STATIC = 0.3; // Unitless
+const GROUND_FRICTION_STATIC = 0.2; // Unitless
+const THROTTLE_UP_RATE = 0.05; // Units/second
+const THROTTLE_DOWN_RATE = 0.1; // Units/second
+const YAW_RATE_LANDED = YAW_RATE * 2.0; // Radians/second
 
 const MAX_THRUST = 20; // m/s^2
 const DRY_MASS: number = 20000; // kg
@@ -41,6 +44,12 @@ export class ArcadeFlightModel extends FlightModel {
     private velocityUnit: THREE.Vector3 = new THREE.Vector3();
 
     step(delta: number): void {
+
+        if (this.effectiveThrottle > this.throttle) {
+            this.effectiveThrottle = Math.max(this.throttle, this.effectiveThrottle - THROTTLE_DOWN_RATE * delta);
+        } else if (this.effectiveThrottle < this.throttle) {
+            this.effectiveThrottle = Math.min(this.throttle, this.effectiveThrottle + THROTTLE_UP_RATE * delta);
+        }
 
         this.forward = this.forward.copy(FORWARD).applyQuaternion(this.obj.quaternion);
         this.up = this.up.copy(UP).applyQuaternion(this.obj.quaternion);
@@ -77,7 +86,7 @@ export class ArcadeFlightModel extends FlightModel {
 
         // Yaw control
         if (!isZero(this.yaw) && !isZero(speed)) {
-            this.obj.rotateY(-this.yaw * YAW_RATE * delta);
+            this.obj.rotateY(-this.yaw * (this.landed ? YAW_RATE_LANDED : YAW_RATE) * delta);
         }
 
         // Automatic yaw when rolling
@@ -97,7 +106,7 @@ export class ArcadeFlightModel extends FlightModel {
         }
 
         //! THRUST
-        roundToZero(this.thrust.copy(this.forward).multiplyScalar(airDensity * MAX_THRUST * this.throttle * DRY_MASS));
+        roundToZero(this.thrust.copy(this.forward).multiplyScalar(airDensity * MAX_THRUST * this.effectiveThrottle * DRY_MASS));
 
         //! DRAG
         const arcadeInducedDrag = this.forward.dot(this.velocityUnit);
@@ -181,7 +190,7 @@ export class ArcadeFlightModel extends FlightModel {
         }
 
         //! Apply
-        this.obj.position.addScaledVector(roundToZero(this.velocity, this.throttle > 0 ? 0.01 : 0.1), delta);
+        this.obj.position.addScaledVector(roundToZero(this.velocity, this.effectiveThrottle > 0 ? 0.01 : 0.1), delta);
         if (this.obj.position.y > PLANE_DISTANCE_TO_GROUND) {
             this.landed = false;
         }

@@ -11,6 +11,8 @@ import { FlightModel } from '../../physics/model/flightModel';
 import { easeOutQuad, easeOutQuint } from '../../utils/math';
 
 
+const ENGINE_LOWEST_VOLUME = 0.05;
+
 export class PlayerEntity implements Entity {
 
     private scene: Scene | undefined;
@@ -25,6 +27,7 @@ export class PlayerEntity implements Entity {
     private inEngineAudio: AudioClip;
     private outEngineAudio: AudioClip;
     private enginePlaying: boolean = false;
+    private engineStarted: boolean = false;
 
     private obj = new THREE.Object3D();
 
@@ -78,22 +81,31 @@ export class PlayerEntity implements Entity {
 
     private updateAudio() {
         const engineAudio = this._exteriorView ? this.outEngineAudio : this.inEngineAudio;
-        if (this.throttle > 0) {
-            if (this.enginePlaying === false) {
-                engineAudio.play();
-                this.enginePlaying = true;
+        let throttle = this.flightModel.gerEffectiveThrottle();
+
+        if (throttle > 0 && this.enginePlaying === false) {
+            engineAudio.play();
+            this.enginePlaying = true;
+        }
+
+        if (this.enginePlaying) {
+            if (throttle > ENGINE_LOWEST_VOLUME) {
+                this.engineStarted = true;
             }
-            const x = this.throttle;
+            if (this.engineStarted) {
+                throttle = Math.max(ENGINE_LOWEST_VOLUME, throttle);
+            }
+            const x = throttle;
             const factorRate = easeOutQuad(x);
             const factorGain = easeOutQuint(x);
             engineAudio.rate = 0.25 + 1.75 * factorRate;
             engineAudio.gain = 1.0 * factorGain;
-        } else {
-            if (this.enginePlaying === true) {
-                engineAudio.stop();
-                this.enginePlaying = false;
-            }
         }
+
+        // if (this.enginePlaying === true) {
+        //     engineAudio.stop();
+        //     this.enginePlaying = false;
+        // }
     }
 
     setFlightModel(flightModel: FlightModel) {

@@ -14,6 +14,7 @@ export abstract class FlightModel {
     protected roll: number = 0; // [-1, 1]
     protected yaw: number = 0; // [-1, 1]
     protected throttle: number = 0; // [0, 1]
+    protected effectiveThrottle: number = 0; // [0, 1]
 
     private deltaRemainder: number = 0;
 
@@ -73,6 +74,10 @@ export abstract class FlightModel {
 
     get velocityVector() {
         return this.velocity;
+    }
+
+    gerEffectiveThrottle(): number {
+        return this.effectiveThrottle;
     }
 
     // [-1,1] - Values >= 0 mean stall
