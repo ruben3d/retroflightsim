@@ -1,15 +1,15 @@
 import * as THREE from 'three';
-import { CanvasPainter } from "../../../render/screen/canvasPainter";
-import { CHAR_HEIGHT, CHAR_MARGIN, TextAlignment } from "../../../render/screen/text";
-import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
-import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
-import { LO_H_RES } from "../../../defs";
-import { PlayerEntity } from "../player";
-import { GroundTargetEntity } from '../groundTarget';
+import { H_RES, LO_H_RES } from "../../../defs";
+import { CanvasPainter } from "../../../render/screen/canvasPainter";
+import { Font, FontDefs, TextAlignment } from "../../../render/screen/text";
 import { vectorHeading } from '../../../utils/math';
-import { calculatePitchRoll, formatHeading } from './overlayUtils';
+import { Entity } from "../../entity";
+import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
 import { updateTargetCamera } from '../../utils';
+import { GroundTargetEntity } from '../groundTarget';
+import { PlayerEntity } from "../player";
+import { calculatePitchRoll, formatHeading } from './overlayUtils';
 
 
 // Pixels
@@ -100,6 +100,13 @@ export class CockpitEntity implements Entity {
     render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
+        //! This should always be an integer!
+        const scale = Math.max(1, Math.round(targetWidth / H_RES));
+
+        const font = scale > 1 ? Font.HUD_LARGE : Font.HUD_SMALL;
+        const fontDef = FontDefs[font];
+        const charHeight = fontDef.charHeight;
+        const charSpacing = fontDef.charSpacing;
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
 
         this.renderAttitudeIndicator(targetWidth, targetHeight, painter, palette);
@@ -112,7 +119,8 @@ export class CockpitEntity implements Entity {
         this.renderMFD2(
             CockpitMFD2X(targetWidth, targetHeight, MFDSize),
             CockpitMFD2Y(targetWidth, targetHeight, MFDSize),
-            MFDSize, painter, hudColor, palette);
+            MFDSize, painter, hudColor, palette,
+            font, charHeight, charSpacing);
     }
 
     private renderAttitudeIndicator(targetWidth: number, targetHeight: number, painter: CanvasPainter, palette: Palette) {
@@ -287,25 +295,25 @@ export class CockpitEntity implements Entity {
             .commit();
     }
 
-    private renderMFD2(x: number, y: number, size: number, painter: CanvasPainter, hudColor: string, palette: Palette) {
+    private renderMFD2(x: number, y: number, size: number, painter: CanvasPainter, hudColor: string, palette: Palette, font: Font, charHeight: number, charSpacing: number) {
         painter.setColor(hudColor);
         painter.rectangle(x - 1, y - 1, size + 2, size + 2);
 
         if (this.weaponsTarget === undefined) {
             painter.setBackground(PaletteColor(palette, PaletteCategory.COCKPIT_MFD_BACKGROUND));
             painter.rectangle(x, y, size, size, true);
-            painter.text(x + CHAR_MARGIN, y + size - CHAR_HEIGHT - CHAR_MARGIN, 'No target', hudColor);
+            painter.text(font, x + charSpacing, y + size - charHeight - charSpacing, 'No target', hudColor);
         } else {
             painter.clear(x, y, size, size);
-            painter.text(x + CHAR_MARGIN, y + CHAR_MARGIN,
+            painter.text(font, x + charSpacing, y + charSpacing,
                 this.weaponsTarget.targetType, hudColor);
-            painter.text(x + CHAR_MARGIN, y + CHAR_MARGIN * 2 + CHAR_HEIGHT,
+            painter.text(font, x + charSpacing, y + charSpacing * 2 + charHeight,
                 `at ${this.weaponsTarget.targetLocation}`, hudColor);
-            painter.text(x + CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+            painter.text(font, x + charSpacing, y + size - 2 * (charHeight + charSpacing),
                 `BRG ${formatHeading(this.weaponsTargetBearing)}`, hudColor);
-            painter.text(x + size - CHAR_MARGIN, y + size - 2 * (CHAR_HEIGHT + CHAR_MARGIN),
+            painter.text(font, x + size - charSpacing, y + size - 2 * (charHeight + charSpacing),
                 `${this.weaponsTargetZoomFactor.toFixed(0)}x`, hudColor, TextAlignment.RIGHT);
-            painter.text(x + CHAR_MARGIN, y + size - CHAR_HEIGHT - CHAR_MARGIN,
+            painter.text(font, x + charSpacing, y + size - charHeight - charSpacing,
                 `Range ${this.weaponsTargetRange.toFixed(1)} KM`, hudColor);
         }
     }

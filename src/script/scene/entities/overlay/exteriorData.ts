@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { CanvasPainter } from "../../../render/screen/canvasPainter";
-import { CHAR_HEIGHT, CHAR_MARGIN, CHAR_WIDTH, TextAlignment } from "../../../render/screen/text";
-import { FORWARD, Scene, SceneLayers } from "../../scene";
-import { Entity } from "../../entity";
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
-import { PlayerEntity } from "../player";
+import { H_RES } from '../../../defs';
+import { CanvasPainter } from "../../../render/screen/canvasPainter";
+import { Font, FontDefs, TextAlignment } from "../../../render/screen/text";
 import { vectorHeading } from '../../../utils/math';
-import { toFeet, toKnots } from './overlayUtils';
+import { Entity } from "../../entity";
+import { FORWARD, Scene, SceneLayers } from "../../scene";
 import { GroundTargetEntity } from '../groundTarget';
+import { PlayerEntity } from "../player";
+import { toFeet, toKnots } from './overlayUtils';
 
 
 export class ExteriorDataEntity implements Entity {
@@ -50,41 +51,48 @@ export class ExteriorDataEntity implements Entity {
     render2D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Set<string>, painter: CanvasPainter, palette: Palette): void {
         if (!lists.has(SceneLayers.Overlay)) return;
 
+        const scale = Math.max(1, Math.round(targetWidth / H_RES));
+
+        const font = scale > 1 ? Font.HUD_LARGE : Font.HUD_SMALL;
+        const fontDef = FontDefs[font];
+        const charWidth = fontDef.charWidth;
+        const charHeight = fontDef.charHeight;
+        const charSpacing = fontDef.charSpacing;
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
 
         painter.setColor(hudColor);
 
         const halfWidth = targetWidth / 2;
 
-        const headingX = halfWidth - 75;
-        const airspeedX = halfWidth - (CHAR_WIDTH + CHAR_MARGIN) * 5;
-        const altitudeX = halfWidth + 45;
-        const navY = targetHeight - CHAR_HEIGHT * 2;
+        const headingX = halfWidth - (charWidth + charSpacing) * 19;
+        const airspeedX = halfWidth - (charWidth + charSpacing) * 5;
+        const altitudeX = halfWidth + (charWidth + charSpacing) * 12;
+        const navY = targetHeight - charHeight * 2;
 
         const targetInfoX = halfWidth;
-        const targetInfoY = navY - CHAR_HEIGHT * 2;
+        const targetInfoY = navY - charHeight * 2;
 
-        this.renderAltitude(altitudeX, navY, painter, hudColor);
-        this.renderHeading(headingX, navY, painter, hudColor);
-        this.renderAirSpeed(airspeedX, navY, painter, hudColor);
-        this.renderTargetInfo(targetInfoX, targetInfoY, painter, hudColor);
+        this.renderAltitude(altitudeX, navY, painter, hudColor, font);
+        this.renderHeading(headingX, navY, painter, hudColor, font);
+        this.renderAirSpeed(airspeedX, navY, painter, hudColor, font);
+        this.renderTargetInfo(targetInfoX, targetInfoY, painter, hudColor, font);
     }
 
-    private renderAltitude(x: number, y: number, painter: CanvasPainter, hudColor: string) {
-        painter.text(x, y, `Altitude ${this.altitude.toFixed(0)}`, hudColor, TextAlignment.LEFT);
+    private renderAltitude(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        painter.text(font, x, y, `Altitude ${this.altitude.toFixed(0)}`, hudColor, TextAlignment.LEFT);
     }
 
-    private renderHeading(x: number, y: number, painter: CanvasPainter, hudColor: string) {
-        painter.text(x, y, `Heading ${this.heading.toFixed(0)}`, hudColor, TextAlignment.LEFT);
+    private renderHeading(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        painter.text(font, x, y, `Heading ${this.heading.toFixed(0)}`, hudColor, TextAlignment.LEFT);
     }
 
-    private renderAirSpeed(x: number, y: number, painter: CanvasPainter, hudColor: string) {
-        painter.text(x, y, `Airspeed ${Math.floor(this.speed).toFixed(0)}`, hudColor, TextAlignment.LEFT);
+    private renderAirSpeed(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        painter.text(font, x, y, `Airspeed ${Math.floor(this.speed).toFixed(0)}`, hudColor, TextAlignment.LEFT);
     }
 
-    private renderTargetInfo(x: number, y: number, painter: CanvasPainter, hudColor: string) {
+    private renderTargetInfo(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
         if (this.weaponsTarget) {
-            painter.text(x, y, `${this.weaponsTarget.targetType} at ${this.weaponsTarget.targetLocation}`, hudColor, TextAlignment.CENTER);
+            painter.text(font, x, y, `${this.weaponsTarget.targetType} at ${this.weaponsTarget.targetLocation}`, hudColor, TextAlignment.CENTER);
         }
     }
 }

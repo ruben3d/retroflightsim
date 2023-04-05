@@ -1,14 +1,69 @@
-export const CHAR_WIDTH = 3;
-export const CHAR_HEIGHT = 5;
-export const CHAR_MARGIN = 1;
+import { assertIsDefined } from "../../utils/asserts";
+
+export enum TextAlignment {
+    CENTER,
+    LEFT,
+    RIGHT
+}
+
+export enum TextEffect {
+    NONE,
+    SHADOW,
+    BACKGROUND
+}
+
+export enum Font {
+    HUD_SMALL = '1',
+    HUD_LARGE = '2'
+}
+
+enum FontCategory {
+    HUD
+}
+
+interface FontDefinition {
+    readonly category: FontCategory;
+    readonly atlas: string;
+    readonly charWidth: number;
+    readonly charHeight: number;
+    readonly charSpacing: number;
+}
+
+const HUDSmallFont: FontDefinition = {
+    category: FontCategory.HUD,
+    atlas: 'assets/font-hud-small.png',
+    charWidth: 3,
+    charHeight: 5,
+    charSpacing: 1
+};
+
+const HUDLargeFont: FontDefinition = {
+    category: FontCategory.HUD,
+    atlas: 'assets/font-hud-large.png',
+    charWidth: 7,
+    charHeight: 11,
+    charSpacing: 1
+};
+
+export const FontDefs = {
+    [Font.HUD_SMALL]: HUDSmallFont,
+    [Font.HUD_LARGE]: HUDLargeFont,
+};
+
+interface FontHandle {
+    def: FontDefinition;
+    source: HTMLImageElement;
+    colors: Map<string, HTMLCanvasElement>;
+}
 
 const ASCII_0 = 48;
 const ASCII_BIG_A = 65;
 const ASCII_SMALL_A = 97;
 const ASCII_LETTERS = 26;
 const ASCII_NUMBERS = 10;
+const FONT_CHAR_PADDING = 1;
 
-const NumberMap = new Map<number, { col: number, row: number }>([
+const HUDFontNumberMap = new Map<number, { col: number, row: number }>([
     [0, { col: 2, row: 3 }],
     [1, { col: 3, row: 3 }],
     [2, { col: 4, row: 3 }],
@@ -21,7 +76,7 @@ const NumberMap = new Map<number, { col: number, row: number }>([
     [9, { col: 3, row: 4 }]
 ]);
 
-const LetterMap = new Map<number, { col: number, row: number }>([
+const HUDFontLetterMap = new Map<number, { col: number, row: number }>([
     [0, { col: 0, row: 0 }],
     [1, { col: 1, row: 0 }],
     [2, { col: 2, row: 0 }],
@@ -50,69 +105,73 @@ const LetterMap = new Map<number, { col: number, row: number }>([
     [25, { col: 1, row: 3 }]
 ]);
 
-export enum TextAlignment {
-    CENTER,
-    LEFT,
-    RIGHT
-}
-
-export enum TextEffect {
-    NONE,
-    SHADOW,
-    BACKGROUND
-}
-
 export class TextRenderer {
-    private smallFont: HTMLImageElement;
-    private smallFontColors: Map<string, HTMLCanvasElement> = new Map();
+    private handles: Map<Font, FontHandle>;
 
     constructor(private ctx: CanvasRenderingContext2D, colors: string[] = []) {
         const allColors = [...colors];
-        this.smallFont = new Image();
-        this.smallFont.src = 'assets/smallFont.png';
-        if (this.smallFont.complete) {
-            this.onImageLoaded(allColors);
-        } else {
-            this.smallFont.addEventListener('load', this.onImageLoaded.bind(this, allColors));
-            this.smallFont.addEventListener('error', () => { throw Error(`Unable to load "${this.smallFont.src}"`) });
-        }
+        this.handles = new Map([
+            [Font.HUD_SMALL, this.buildFontHandle(HUDSmallFont, allColors)],
+            [Font.HUD_LARGE, this.buildFontHandle(HUDLargeFont, allColors)]
+        ]);
     }
 
-    text(x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, effect: TextEffect = TextEffect.NONE, effectColor: string = '') {
-        const srcCanvas = this.smallFontColors.get(color?.toLowerCase() || '') || this.smallFont;
+    private buildFontHandle(def: FontDefinition, colors: string[]): FontHandle {
+        const handle: FontHandle = {
+            def: def,
+            source: new Image(),
+            colors: new Map()
+        };
+        handle.source.src = def.atlas;
+        if (handle.source.complete) {
+            this.onImageLoaded(handle, colors);
+        } else {
+            handle.source.addEventListener('load', this.onImageLoaded.bind(this, handle, colors));
+            handle.source.addEventListener('error', () => { throw Error(`Unable to load "${handle.def.atlas}"`) });
+        }
+        return handle;
+    }
+
+    text(font: Font, x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, effect: TextEffect = TextEffect.NONE, effectColor: string = '') {
+        const h = this.handles.get(font);
+        assertIsDefined(h);
+        const charWidth = h.def.charWidth;
+        const charHeight = h.def.charHeight;
+        const charSpacing = h.def.charSpacing;
+        const srcCanvas = h.colors.get(color?.toLowerCase() || '') || h.source;
         let x0 = x;
         if (alignment === TextAlignment.RIGHT) {
-            x0 = x - text.length * CHAR_WIDTH - (text.length - 1) * CHAR_MARGIN;
+            x0 = x - text.length * charWidth - (text.length - 1) * charSpacing;
         } else if (alignment === TextAlignment.CENTER) {
-            x0 = x - Math.floor((text.length * CHAR_WIDTH + (text.length - 1) * CHAR_MARGIN) / 2);
+            x0 = x - Math.floor((text.length * charWidth + (text.length - 1) * charSpacing) / 2);
         }
 
         if (effect === TextEffect.BACKGROUND) {
             this.ctx.fillStyle = effectColor;
-            this.ctx.fillRect(x0 - 1, y - 1, text.length * (CHAR_WIDTH + CHAR_MARGIN) + 1, CHAR_HEIGHT + 2);
+            this.ctx.fillRect(x0 - 1, y - 1, text.length * (charWidth + charSpacing) + 1, charHeight + 2);
         }
 
         for (let i = 0; i < text.length; i++) {
             const c = text.charCodeAt(i);
-            const { srcX, srcY } = this.codeToCoords(c);
-            const dstX = x0 + i * (CHAR_WIDTH + CHAR_MARGIN);
+            const { srcX, srcY } = this.codeToCoords(c, charWidth, charHeight);
+            const dstX = x0 + i * (charWidth + charSpacing);
 
             if (effect === TextEffect.SHADOW) {
-                const shadowCanvas = this.smallFontColors.get(effectColor) || this.smallFont;
+                const shadowCanvas = h.colors.get(effectColor) || h.source;
                 this.ctx.drawImage(shadowCanvas,
-                    srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
-                    dstX + 1, y + 1, CHAR_WIDTH, CHAR_HEIGHT);
+                    srcX, srcY, charWidth, charHeight,
+                    dstX + 1, y + 1, charWidth, charHeight);
             }
 
             this.ctx.drawImage(srcCanvas,
-                srcX, srcY, CHAR_WIDTH, CHAR_HEIGHT,
-                dstX, y, CHAR_WIDTH, CHAR_HEIGHT);
+                srcX, srcY, charWidth, charHeight,
+                dstX, y, charWidth, charHeight);
         }
     }
 
-    private onImageLoaded(colors: string[]) {
+    private onImageLoaded(handle: FontHandle, colors: string[]) {
         colors.forEach(c => {
-            this.smallFontColors.set(c.toLowerCase(), this.createColor(this.smallFont, c));
+            handle.colors.set(c.toLowerCase(), this.createColor(handle.source, c));
         });
     }
 
@@ -133,7 +192,7 @@ export class TextRenderer {
         return canvas;
     }
 
-    private codeToCoords(code: number): { srcX: number, srcY: number } {
+    private codeToCoords(code: number, charWidth: number, charHeight: number): { srcX: number, srcY: number } {
         let c = code;
         if (c >= ASCII_SMALL_A && c <= ASCII_SMALL_A + ASCII_LETTERS) {
             c -= ASCII_SMALL_A - ASCII_BIG_A; // Convert to upper case
@@ -143,10 +202,10 @@ export class TextRenderer {
 
         if (c >= ASCII_0 && c <= ASCII_0 + ASCII_NUMBERS) {
             c -= ASCII_0;
-            ({ col, row } = NumberMap.get(c) || { col: 7, row: 4 });
+            ({ col, row } = HUDFontNumberMap.get(c) || { col: 7, row: 4 });
         } else if (c >= ASCII_BIG_A && c <= ASCII_BIG_A + ASCII_LETTERS) {
             c -= ASCII_BIG_A;
-            ({ col, row } = LetterMap.get(c) || { col: 7, row: 4 });
+            ({ col, row } = HUDFontLetterMap.get(c) || { col: 7, row: 4 });
         } else if (c === 46) {
             col = 4;
             row = 4;
@@ -158,6 +217,6 @@ export class TextRenderer {
             row = 4;
         }
 
-        return { srcX: col * (CHAR_WIDTH + CHAR_MARGIN), srcY: row * (CHAR_HEIGHT + CHAR_MARGIN) };
+        return { srcX: col * (charWidth + FONT_CHAR_PADDING), srcY: row * (charHeight + FONT_CHAR_PADDING) };
     }
 }

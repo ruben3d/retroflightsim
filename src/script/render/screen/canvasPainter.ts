@@ -1,4 +1,4 @@
-import { TextAlignment, TextEffect, TextRenderer } from "./text";
+import { Font, TextAlignment, TextEffect, TextRenderer } from "./text";
 
 
 function XOR(p: boolean, q: boolean): boolean {
@@ -218,8 +218,8 @@ export class CanvasPainter {
         }
     }
 
-    text(x: number, y: number, text: string, color?: string, alignment: TextAlignment = TextAlignment.LEFT) {
-        this.textRenderer.text(x, y, text, color, alignment, this.textEffect, this.textEffectColor);
+    text(font: Font, x: number, y: number, text: string, color?: string, alignment: TextAlignment = TextAlignment.LEFT) {
+        this.textRenderer.text(font,x, y, text, color, alignment, this.textEffect, this.textEffectColor);
     }
 
     batch(): BatchCanvasPainter {
