@@ -282,8 +282,8 @@ export class HUDEntity implements Entity {
     private renderPitchLadder(scale: number, height: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudSecondaryColor: string, font: Font) {
         const fov = toRadians(COCKPIT_FOV);
         const current = Math.round(toDegrees(-this.pitch) / 10 * scale);
-        const minMarker = current - LADDER_EXTRA_MARKERS * scale;
-        const maxMarker = current + LADDER_EXTRA_MARKERS * scale;
+        const minMarker = Math.max(current - LADDER_EXTRA_MARKERS * scale, -9 * scale);
+        const maxMarker = Math.min(current + LADDER_EXTRA_MARKERS * scale, 9 * scale);
 
         painter.setColor(hudSecondaryColor);
 
