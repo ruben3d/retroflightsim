@@ -1,18 +1,13 @@
 import * as THREE from 'three';
 import { CanvasPainter } from './canvasPainter';
-import { Font, FontDefs, TextAlignment } from './text';
+import { Font, TextAlignment } from './text';
 
 const tmpArray4: number[] = new Array(4);
 
 export function debugDisplayMatrix4(font: Font, painter: CanvasPainter, x: number, y: number, m: THREE.Matrix4, precision: number): void {
-    const fontDef = FontDefs[font];
-    const charWidth = fontDef.charWidth;
-    const charHeight = fontDef.charHeight;
-    const charSpacing = fontDef.charSpacing;
-
     const longest = getLongest(m.elements);
-    const baseX = getBaseX(x, longest, charWidth, charSpacing);
-    const stride = (longest + 1 + precision + 1) * (charWidth + charSpacing);
+    const baseX = getBaseX(x, longest, font.charWidth, font.charSpacing);
+    const stride = (longest + 1 + precision + 1) * (font.charWidth + font.charSpacing);
 
     const ROWS = 4;
     const COLS = 4;
@@ -20,26 +15,21 @@ export function debugDisplayMatrix4(font: Font, painter: CanvasPainter, x: numbe
         for (let col = 0; col < COLS; col++) {
             const n = m.elements[row + col * ROWS];
             const dx = col * stride;
-            const dy = row * (charHeight + charSpacing);
+            const dy = row * (font.charHeight + font.charSpacing);
             debugDisplayFloat(font, painter, baseX + dx, y + dy, n, precision);
         }
     }
 }
 
 export function debugDisplayVectorCol(font: Font, painter: CanvasPainter, x: number, y: number, v: THREE.Vector3 | THREE.Vector4, precision: number): void {
-    const fontDef = FontDefs[font];
-    const charWidth = fontDef.charWidth;
-    const charHeight = fontDef.charHeight;
-    const charSpacing = fontDef.charSpacing;
-
     const elements = v.toArray(tmpArray4);
     const longest = getLongest(elements);
-    const baseX = getBaseX(x, longest, charWidth, charSpacing);
+    const baseX = getBaseX(x, longest, font.charWidth, font.charSpacing);
 
     const size = 'w' in v ? 4 : 3;
     for (let i = 0; i < size; i++) {
         const n = elements[i];
-        const dy = i * (charHeight + charSpacing);
+        const dy = i * (font.charHeight + font.charSpacing);
         debugDisplayFloat(font, painter, baseX, y + dy, n, precision);
     }
 }

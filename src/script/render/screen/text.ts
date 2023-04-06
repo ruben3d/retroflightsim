@@ -12,46 +12,34 @@ export enum TextEffect {
     BACKGROUND
 }
 
-export enum Font {
-    HUD_SMALL = '1',
-    HUD_LARGE = '2'
-}
-
 enum FontCategory {
     HUD
 }
 
-interface FontDefinition {
+export class Font {
+    static readonly HUD_SMALL = new Font('HUD_SMALL', FontCategory.HUD, 'assets/font-hud-small.png', 3, 5, 1);
+    static readonly HUD_MEDIUM = new Font('HUD_MEDIUM', FontCategory.HUD, 'assets/font-hud-medium.png', 5, 8, 1);
+    static readonly HUD_LARGE = new Font('HUD_LARGE', FontCategory.HUD, 'assets/font-hud-large.png', 7, 11, 1);
+
+    readonly id: string;
     readonly category: FontCategory;
     readonly atlas: string;
     readonly charWidth: number;
     readonly charHeight: number;
     readonly charSpacing: number;
+
+    private constructor(id: string, category: FontCategory, atlas: string, charWidth: number, charHeight: number, charSpacing: number) {
+        this.id = id;
+        this.category = category;
+        this.atlas = atlas;
+        this.charWidth = charWidth;
+        this.charHeight = charHeight;
+        this.charSpacing = charSpacing;
+    }
 }
 
-const HUDSmallFont: FontDefinition = {
-    category: FontCategory.HUD,
-    atlas: 'assets/font-hud-small.png',
-    charWidth: 3,
-    charHeight: 5,
-    charSpacing: 1
-};
-
-const HUDLargeFont: FontDefinition = {
-    category: FontCategory.HUD,
-    atlas: 'assets/font-hud-large.png',
-    charWidth: 7,
-    charHeight: 11,
-    charSpacing: 1
-};
-
-export const FontDefs = {
-    [Font.HUD_SMALL]: HUDSmallFont,
-    [Font.HUD_LARGE]: HUDLargeFont,
-};
-
 interface FontHandle {
-    def: FontDefinition;
+    font: Font;
     source: HTMLImageElement;
     colors: Map<string, HTMLCanvasElement>;
 }
@@ -106,38 +94,39 @@ const HUDFontLetterMap = new Map<number, { col: number, row: number }>([
 ]);
 
 export class TextRenderer {
-    private handles: Map<Font, FontHandle>;
+    private handles: Map<string, FontHandle>;
 
     constructor(private ctx: CanvasRenderingContext2D, colors: string[] = []) {
         const allColors = [...colors];
         this.handles = new Map([
-            [Font.HUD_SMALL, this.buildFontHandle(HUDSmallFont, allColors)],
-            [Font.HUD_LARGE, this.buildFontHandle(HUDLargeFont, allColors)]
+            [Font.HUD_SMALL.id, this.buildFontHandle(Font.HUD_SMALL, allColors)],
+            [Font.HUD_MEDIUM.id, this.buildFontHandle(Font.HUD_MEDIUM, allColors)],
+            [Font.HUD_LARGE.id, this.buildFontHandle(Font.HUD_LARGE, allColors)]
         ]);
     }
 
-    private buildFontHandle(def: FontDefinition, colors: string[]): FontHandle {
+    private buildFontHandle(font: Font, colors: string[]): FontHandle {
         const handle: FontHandle = {
-            def: def,
+            font: font,
             source: new Image(),
             colors: new Map()
         };
-        handle.source.src = def.atlas;
+        handle.source.src = font.atlas;
         if (handle.source.complete) {
             this.onImageLoaded(handle, colors);
         } else {
             handle.source.addEventListener('load', this.onImageLoaded.bind(this, handle, colors));
-            handle.source.addEventListener('error', () => { throw Error(`Unable to load "${handle.def.atlas}"`) });
+            handle.source.addEventListener('error', () => { throw Error(`Unable to load "${handle.font.atlas}"`) });
         }
         return handle;
     }
 
     text(font: Font, x: number, y: number, text: string, color: string | undefined, alignment: TextAlignment, effect: TextEffect = TextEffect.NONE, effectColor: string = '') {
-        const h = this.handles.get(font);
+        const h = this.handles.get(font.id);
         assertIsDefined(h);
-        const charWidth = h.def.charWidth;
-        const charHeight = h.def.charHeight;
-        const charSpacing = h.def.charSpacing;
+        const charWidth = h.font.charWidth;
+        const charHeight = h.font.charHeight;
+        const charSpacing = h.font.charSpacing;
         const srcCanvas = h.colors.get(color?.toLowerCase() || '') || h.source;
         let x0 = x;
         if (alignment === TextAlignment.RIGHT) {

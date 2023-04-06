@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { COCKPIT_FOV, H_RES } from '../../../defs';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
-import { Font, FontDefs, TextAlignment } from "../../../render/screen/text";
+import { Font, TextAlignment } from "../../../render/screen/text";
 import { clamp, toDegrees, toRadians, vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
 import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
@@ -112,11 +112,7 @@ export class HUDEntity implements Entity {
         const scale = Math.max(1, Math.round(targetWidth / H_RES));
 
         const font = scale > 1 ? Font.HUD_LARGE : Font.HUD_SMALL;
-        const fontDef = FontDefs[font];
-        const charWidth = fontDef.charWidth;
-        const charHeight = fontDef.charHeight;
-        const charHeightHalf = Math.floor(charHeight / 2);
-        const charSpacing = fontDef.charSpacing;
+        const fontSmall = scale > 1 ? Font.HUD_MEDIUM : Font.HUD_SMALL;
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
         const hudSecondaryColor = PaletteColor(palette, PaletteCategory.HUD_TEXT_SECONDARY);
         const hudWarnColor = PaletteColor(palette, PaletteCategory.HUD_TEXT_WARN);
@@ -125,37 +121,38 @@ export class HUDEntity implements Entity {
         const halfWidth = targetWidth / 2;
         const halfHeight = targetHeight / 2;
 
-        this.renderPitchLadder(scale, targetHeight, halfWidth, halfHeight, painter, hudColor, hudSecondaryColor, font, charWidth, charHeight, charSpacing, charHeightHalf);
+        this.renderPitchLadder(scale, targetHeight, halfWidth, halfHeight, painter, hudColor, hudSecondaryColor, fontSmall);
 
         const altitudeX = halfWidth + Math.floor((LADDER_HALF_WIDTH + 4) * (scale > 1 ? 1.5 : 1));
         const altitudeY = halfHeight;
-        this.renderAltitude(scale, altitudeX, altitudeY, targetWidth, painter, hudColor, font, charWidth, charHeight, charSpacing, charHeightHalf);
+        this.renderAltitude(scale, altitudeX, altitudeY, targetWidth, painter, hudColor, font, fontSmall);
 
         const headingX = halfWidth;
         const headingY = halfHeight - scale * (LADDER_HALF_HEIGHT + 2);
-        this.renderHeading(scale, headingX, headingY, painter, hudColor, font, charWidth, charHeight);
+        this.renderHeading(scale, headingX, headingY, painter, hudColor, font);
 
         const airSpeedX = halfWidth - Math.floor((LADDER_HALF_WIDTH + 6) * (scale > 1 ? 1.5 : 1));
         const airSpeedY = halfHeight;
-        this.renderAirSpeed(scale, airSpeedX, airSpeedY, painter, hudColor, font, charHeight, charHeightHalf);
+        this.renderAirSpeed(scale, airSpeedX, airSpeedY, painter, hudColor, font, fontSmall);
 
-        const throttleX = airSpeedX - (charWidth + charSpacing) * 4 - 1;
-        const throttleY = headingY - charHeight - 3;
+        const throttleX = airSpeedX - (font.charWidth + font.charSpacing) * 4 - 1;
+        const throttleY = headingY - font.charHeight - 3;
         this.renderThrottle(throttleX, throttleY, painter, hudColor, font);
 
         this.renderTarget(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
         this.renderBoresight(halfWidth, halfHeight, painter);
         this.renderFlightPathMarker(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
-        this.renderStallStatus(scale, airSpeedX, airSpeedY, painter, hudColor, hudWarnColor, font, charHeight, charSpacing);
+        this.renderStallStatus(scale, airSpeedX, airSpeedY, painter, hudColor, hudWarnColor, font);
         this.renderVerticalVelocityIndicator(scale, altitudeX, altitudeY, painter, hudColor, hudWarnColor);
     }
 
-    private renderAltitude(scale: number, x: number, y: number, width: number, painter: CanvasPainter, hudColor: string, font: Font, charWidth: number, charHeight: number, charSpacing: number, charHeightHalf: number) {
+    private renderAltitude(scale: number, x: number, y: number, width: number, painter: CanvasPainter, hudColor: string, font: Font, fontSmall: Font) {
         const roundedAltitude = ALTITUDE_STEP * Math.floor(this.altitude / ALTITUDE_STEP);
         const lowp = roundedAltitude >= ALTITUDE_LOWP_THRESHOLD;
         const markerScale = lowp ? 10 : 1;
         const scaledAltitude = Math.floor(roundedAltitude / (ALTITUDE_STEP * markerScale)) * ALTITUDE_STEP * markerScale;
         const offset = scaledAltitude % Math.floor(10 * markerScale) === 0 ? 0 : 1;
+        const charHeightHalf = Math.trunc(font.charHeight / 2);
 
         const batch = painter.batch();
         for (let i = ALTITUDE_HALF_HEIGHT * scale; i >= -ALTITUDE_HALF_HEIGHT * scale; i--) {
@@ -178,15 +175,15 @@ export class HUDEntity implements Entity {
         for (let i = scale * (ALTITUDE_HALF_HEIGHT + 1) + 1; i >= -scale * (ALTITUDE_HALF_HEIGHT + 1) - 1; i--) {
             const current = scaledAltitude + (i * 2 - offset) * ALTITUDE_STEP * markerScale;
             if ((current >= 0 || lowp) && current % (100 * markerScale) === 0) {
-                painter.text(font,
-                    x + 6 + (charWidth + charSpacing) * 3,
+                painter.text(fontSmall,
+                    x + 6 + (fontSmall.charWidth + fontSmall.charSpacing) * 3,
                     y - i * 2 + offset - charHeightHalf,
                     this.getAltitudeDisplay(current, lowp), hudColor, TextAlignment.RIGHT);
             }
         }
         clip.clear();
 
-        painter.text(font, x - 8, y - Math.floor(charHeight / 2), roundedAltitude.toFixed(0), hudColor, TextAlignment.RIGHT);
+        painter.text(font, x - 8, y - Math.floor(font.charHeight / 2), roundedAltitude.toFixed(0), hudColor, TextAlignment.RIGHT);
     }
 
     private getAltitudeDisplay(n: number, lowp: boolean): string {
@@ -206,7 +203,7 @@ export class HUDEntity implements Entity {
         painter.setColor(hudColor);
     }
 
-    private renderHeading(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font, charWidth: number, charHeight: number) {
+    private renderHeading(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
         const offset = this.heading % HEADING_SPACING;
         const batch = painter.batch();
         for (let i = -HEADING_HALF_WIDTH; i <= HEADING_HALF_WIDTH; i++) {
@@ -217,28 +214,30 @@ export class HUDEntity implements Entity {
         batch.commit();
 
         const clip = painter.clip()
-            .rectangle(x - HEADING_HALF_WIDTH * HEADING_SPACING - charWidth - 1,
-                y - charHeight - 4,
-                HEADING_WIDTH * HEADING_SPACING + 2 * charWidth,
-                charHeight + 3)
+            .rectangle(x - HEADING_HALF_WIDTH * HEADING_SPACING - font.charWidth - 1,
+                y - font.charHeight - 4,
+                HEADING_WIDTH * HEADING_SPACING + 2 * font.charWidth,
+                font.charHeight + 3)
             .clip();
         for (let i = -HEADING_HALF_WIDTH - 1 - scale; i <= HEADING_HALF_WIDTH + 1 + scale; i++) {
             const value = this.heading + i * HEADING_STEP - offset;
             if (value % 45 === 0) {
                 painter.text(font,
                     x + i * HEADING_SPACING - offset,
-                    y - charHeight - 3,
+                    y - font.charHeight - 3,
                     formatHeading(value), hudColor, TextAlignment.CENTER);
             }
         }
         clip.clear();
     }
 
-    private renderAirSpeed(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font, charHeight: number, charHeightHalf: number) {
+    private renderAirSpeed(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font, fontSmall: Font) {
         const airspeed = AIRSPEED_SCALE * AIRSPEED_STEP * Math.floor(this.speed / AIRSPEED_STEP);
         const tmp = 25 * Math.floor(this.speed * 10 / 25);
         const offset = tmp % 50 === 0 ? 0 : 1;
         const labelsRes = scale > 1 ? 1000 : 500;
+        const charHeightHalf = Math.trunc(font.charHeight / 2);
+        const smallCharHeightHalf = Math.trunc(fontSmall.charHeight / 2);
 
         const batch = painter.batch();
         for (let i = AIRSPEED_HALF_HEIGHT * scale; i >= -AIRSPEED_HALF_HEIGHT * scale; i--) {
@@ -261,9 +260,9 @@ export class HUDEntity implements Entity {
         for (let i = scale * (AIRSPEED_HALF_HEIGHT + 1) + 1; i >= -scale * (AIRSPEED_HALF_HEIGHT + 1) - 1; i--) {
             const current = airspeed + (i * 2 - offset) * AIRSPEED_STEP * AIRSPEED_SCALE;
             if (current >= 0 && current % labelsRes === 0) {
-                painter.text(font,
+                painter.text(fontSmall,
                     x - 6,
-                    y - i * 2 + offset - charHeightHalf,
+                    y - i * 2 + offset - smallCharHeightHalf,
                     (current / AIRSPEED_SCALE).toFixed(0), hudColor, TextAlignment.RIGHT);
             }
         }
@@ -280,7 +279,7 @@ export class HUDEntity implements Entity {
         painter.text(font, x, y, `THR ${(100 * this.throttle).toFixed(0)}`, hudColor);
     }
 
-    private renderPitchLadder(scale: number, height: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudSecondaryColor: string, font: Font, charWidth: number, charHeight: number, charSpacing: number, charHeightHalf: number) {
+    private renderPitchLadder(scale: number, height: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudSecondaryColor: string, font: Font) {
         const fov = toRadians(COCKPIT_FOV);
         const current = Math.round(toDegrees(-this.pitch) / 10 * scale);
         const minMarker = current - LADDER_EXTRA_MARKERS * scale;
@@ -290,7 +289,10 @@ export class HUDEntity implements Entity {
 
         const adjustedScale = (scale > 1 ? 1.5 : 1);
         const clip = painter.clip()
-            .rectangle(x - Math.floor(LADDER_HALF_WIDTH * adjustedScale), y - LADDER_HALF_HEIGHT * scale, Math.floor(LADDER_WIDTH * adjustedScale), (LADDER_HEIGHT + charHeight) * scale)
+            .rectangle(x - Math.floor(LADDER_HALF_WIDTH * adjustedScale),
+                y - LADDER_HALF_HEIGHT * scale,
+                Math.floor(LADDER_WIDTH * adjustedScale),
+                (LADDER_HEIGHT + font.charHeight) * scale)
             .clip();
 
         for (let i = minMarker; i <= maxMarker; i++) {
@@ -340,12 +342,13 @@ export class HUDEntity implements Entity {
             if (i === 0 && scale > 1) continue;
 
             const str = (i === 0) ? '00' : `${(i * -10 / scale)}`;
+            const charHeightHalf = Math.trunc(font.charHeight / 2);
             const tX = Math.round(normal.x * charHeightHalf);
             const tY = Math.round(normal.z * charHeightHalf);
-            const T0_X = Math.floor(normal.z * 2 * (charWidth + charSpacing));
-            const T0_Y = Math.round(-normal.x * 2 * (charWidth + charSpacing));
-            const T1_X = Math.floor(-normal.z * 2 * (charWidth + charSpacing));
-            const T1_Y = Math.round(normal.x * 2 * (charWidth + charSpacing));
+            const T0_X = Math.floor(normal.z * 2 * (font.charWidth + font.charSpacing));
+            const T0_Y = Math.round(-normal.x * 2 * (font.charWidth + font.charSpacing));
+            const T1_X = Math.floor(-normal.z * 2 * (font.charWidth + font.charSpacing));
+            const T1_Y = Math.round(normal.x * 2 * (font.charWidth + font.charSpacing));
             painter.text(font, C0_X + tX + T0_X, C0_Y + tY + T0_Y, str, hudSecondaryColor, TextAlignment.CENTER);
             painter.text(font, C1_X + tX + T1_X, C1_Y + tY + T1_Y, str, hudSecondaryColor, TextAlignment.CENTER);
         }
@@ -402,7 +405,7 @@ export class HUDEntity implements Entity {
         }
     }
 
-    private renderStallStatus(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string, font: Font, charHeight: number, charSpacing: number) {
+    private renderStallStatus(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string, font: Font) {
         const HALF_HEIGHT_PIXELS = scale * AIRSPEED_HALF_HEIGHT * 2;
         painter.setColor(hudWarnColor);
         painter.vLine(x + 1, y + HALF_HEIGHT_PIXELS + 1, y + HALF_HEIGHT_PIXELS + 1 - Math.floor((this.stallStatus + 1.0) * (HALF_HEIGHT_PIXELS + 1)));
@@ -410,7 +413,7 @@ export class HUDEntity implements Entity {
         const blink = Math.round(this.elapsed * 15) % 2 === 0;
         if (this.stallStatus >= 0 && !this.isLanded && blink) {
             painter.text(font, x + 9,
-                y + HALF_HEIGHT_PIXELS + 1 - charHeight + charSpacing,
+                y + HALF_HEIGHT_PIXELS + 1 - font.charHeight + font.charSpacing,
                 'STALL',
                 hudWarnColor,
                 TextAlignment.LEFT);

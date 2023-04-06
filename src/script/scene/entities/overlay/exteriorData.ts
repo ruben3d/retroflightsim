@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes/palette";
 import { H_RES } from '../../../defs';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
-import { Font, FontDefs, TextAlignment } from "../../../render/screen/text";
+import { Font, TextAlignment } from "../../../render/screen/text";
 import { vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
 import { FORWARD, Scene, SceneLayers } from "../../scene";
@@ -54,23 +54,19 @@ export class ExteriorDataEntity implements Entity {
         const scale = Math.max(1, Math.round(targetWidth / H_RES));
 
         const font = scale > 1 ? Font.HUD_LARGE : Font.HUD_SMALL;
-        const fontDef = FontDefs[font];
-        const charWidth = fontDef.charWidth;
-        const charHeight = fontDef.charHeight;
-        const charSpacing = fontDef.charSpacing;
         const hudColor = PaletteColor(palette, PaletteCategory.HUD_TEXT);
 
         painter.setColor(hudColor);
 
         const halfWidth = targetWidth / 2;
 
-        const headingX = halfWidth - (charWidth + charSpacing) * 19;
-        const airspeedX = halfWidth - (charWidth + charSpacing) * 5;
-        const altitudeX = halfWidth + (charWidth + charSpacing) * 12;
-        const navY = targetHeight - charHeight * 2;
+        const headingX = halfWidth - (font.charWidth + font.charSpacing) * 19;
+        const airspeedX = halfWidth - (font.charWidth + font.charSpacing) * 5;
+        const altitudeX = halfWidth + (font.charWidth + font.charSpacing) * 12;
+        const navY = targetHeight - font.charHeight * 2;
 
         const targetInfoX = halfWidth;
-        const targetInfoY = navY - charHeight * 2;
+        const targetInfoY = navY - font.charHeight * 2;
 
         this.renderAltitude(altitudeX, navY, painter, hudColor, font);
         this.renderHeading(headingX, navY, painter, hudColor, font);
