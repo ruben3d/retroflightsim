@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { modelMatchesPaletteTime, Model, modelHasAnim, ModelAnimation } from '../scene/models/models';
 import { Palette } from '../config/palettes/palette';
+import { Model, ModelAnimation, modelHasAnim, modelMatchesPaletteTime } from '../scene/models/models';
 import { assertIsDefined } from '../utils/asserts';
 
 
@@ -10,9 +10,9 @@ export function visibleWidthAtDistance(camera: THREE.PerspectiveCamera, position
     return camera.aspect * 2 * Math.tan(fov / 2) * d;
 }
 
-export function modelMaxSize(model: Model, scale: THREE.Vector3): number {
+export function modelScaledMaxSize(maxSize: number, scale: THREE.Vector3): number {
     const maxScale = Math.max(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
-    return model.maxSize * maxScale;
+    return maxSize * maxScale;
 }
 
 export const DEFAULT_LOD_BIAS = 3;
@@ -28,7 +28,7 @@ export class LODHelper {
     private objVolumes: THREE.Object3D = new THREE.Object3D();
     private objVolumesAnim: THREE.Object3D = new THREE.Object3D();
 
-    constructor(private model: Model, private bias: number) { }
+    constructor(public model: Model, private bias: number) { }
 
     update(delta: number): void {
         this.elapsed += delta;
@@ -37,13 +37,14 @@ export class LODHelper {
     addToRenderList(
         position: THREE.Vector3, quaternion: THREE.Quaternion, scale: THREE.Vector3,
         targetWidth: number, camera: THREE.Camera, palette: Palette,
-        flatsId: string, volumesId: string, lists: Map<string, THREE.Scene>) {
+        flatsId: string, volumesId: string, lists: Map<string, THREE.Scene>,
+        forceLodLevel?: number) {
 
         const hasFlats = lists.has(flatsId);
         const hasVolumes = lists.has(volumesId);
         if (!hasFlats && !hasVolumes) return;
 
-        const lodLevel = this.getLodLevel(position, scale, targetWidth, camera, this.model);
+        const lodLevel = forceLodLevel !== undefined ? forceLodLevel : this.getLodLevel(position, scale, targetWidth, camera, this.model.maxSize);
         if (lodLevel >= this.model.lod.length) return;
 
         if (hasFlats && this.model.lod[lodLevel].flats.length > 0) {
@@ -54,15 +55,15 @@ export class LODHelper {
         }
     }
 
-    private getLodLevel(position: THREE.Vector3, scale: THREE.Vector3, targetWidth: number, camera: THREE.Camera, model: Model): number {
-        if ('isPerspectiveCamera' in camera === false || model.maxSize === 0) {
+    getLodLevel(position: THREE.Vector3, scale: THREE.Vector3, targetWidth: number, camera: THREE.Camera, modelMaxSize: number): number {
+        if ('isPerspectiveCamera' in camera === false || modelMaxSize === 0) {
             return 0;
         }
         const visibleWidthAtD = visibleWidthAtDistance(camera as THREE.PerspectiveCamera, position);
         if (visibleWidthAtD === 0) {
             return 0; // Camera and model at the same spot, can't get closer than that
         }
-        const relativeSize = modelMaxSize(model, scale) / visibleWidthAtD;
+        const relativeSize = modelScaledMaxSize(modelMaxSize, scale) / visibleWidthAtD;
         const referenceSize = relativeSize * REF_WIDTH;
         const realSize = relativeSize * targetWidth;
         const ratio = realSize / referenceSize;

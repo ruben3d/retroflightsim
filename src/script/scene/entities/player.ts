@@ -1,26 +1,66 @@
 import * as THREE from 'three';
+import { AudioClip } from '../../audio/audioSystem';
+import { Palette } from "../../config/palettes/palette";
+import { FlightModel } from '../../physics/model/flightModel';
 import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
+import { easeOutQuad, easeOutQuint } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
-import { Palette } from "../../config/palettes/palette";
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
-import { AudioClip } from '../../audio/audioSystem';
-import { FlightModel } from '../../physics/model/flightModel';
-import { easeOutQuad, easeOutQuint } from '../../utils/math';
 
+
+export interface PlayerModelParts {
+    body: Model;
+    shadow: Model;
+    flaperonLeft: Model;
+    flaperonRight: Model;
+    elevatorLeft: Model;
+    elevatorRight: Model;
+    rudderLeft: Model;
+    rudderRight: Model;
+}
 
 const ENGINE_LOWEST_VOLUME = 0.05;
+
+const ELEVATOR_LEFT_POSITION = new THREE.Vector3(0, 0, -6);
+const ELEVATOR_LEFT_AXIS = RIGHT;
+const ELEVATOR_RIGHT_POSITION = new THREE.Vector3(0, 0, -6);
+const ELEVATOR_RIGHT_AXIS = RIGHT;
+const FLAPERON_LEFT_POSITION = new THREE.Vector3(4.5, -0.21, -3);
+const FLAPERON_LEFT_AXIS = new THREE.Vector3(1.681781, -0.152682, 0.57654);
+const FLAPERON_RIGHT_POSITION = new THREE.Vector3(-4.5, -0.21, -3);
+const FLAPERON_RIGHT_AXIS = new THREE.Vector3(-1.681781, -0.152682, 0.57654);
+const RUDDER_LEFT_POSITION = new THREE.Vector3(2.34, 1.8, -4.05);
+const RUDDER_LEFT_AXIS = new THREE.Vector3(0.383502, 0.802989, 0.456217);
+const RUDDER_RIGHT_POSITION = new THREE.Vector3(-2.34, 1.8, -4.05);
+const RUDDER_RIGHT_AXIS = new THREE.Vector3(-0.383502, 0.802989, 0.456217);//(0.383502, -0.456217, 0.802989)
+
+interface ControlSurfaceDescriptor {
+    model: LODHelper;
+    positiom: THREE.Vector3;
+    axis: THREE.Vector3;
+    value: () => number;
+    range: number;
+}
 
 export class PlayerEntity implements Entity {
 
     private scene: Scene | undefined;
-    private lodHelper: LODHelper;
-    private lodHelperShadow: LODHelper;
+    private modelBody: LODHelper;
+    private modelShadow: LODHelper;
+    private modelFlaperonLeft: LODHelper;
+    private modelFlaperonRight: LODHelper;
+    private modelElevatorLeft: LODHelper;
+    private modelElevatorRight: LODHelper;
+    private modelRudderLeft: LODHelper;
+    private modelRudderRight: LODHelper;
     private shadowPosition = new THREE.Vector3();
     private shadowQuaternion = new THREE.Quaternion();
     private shadowScale = new THREE.Vector3();
+
+    private controlSurfaceDescriptors: ControlSurfaceDescriptor[];
 
     private flightModel: FlightModel;
 
@@ -44,6 +84,7 @@ export class PlayerEntity implements Entity {
     private _nightVision: boolean = false;
 
     private _v = new THREE.Vector3();
+    private _q = new THREE.Quaternion();
 
     readonly tags: string[] = [];
 
@@ -51,14 +92,65 @@ export class PlayerEntity implements Entity {
     private _exteriorView: boolean = false;
 
     // Heading increases CCW, radians
-    constructor(model: Model, shadow: Model, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, heading: number) {
-        this.lodHelper = new LODHelper(model, DEFAULT_LOD_BIAS);
-        this.lodHelperShadow = new LODHelper(shadow, 5);
+    constructor(modelParts: PlayerModelParts, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, heading: number) {
+        this.modelBody = new LODHelper(modelParts.body, DEFAULT_LOD_BIAS);
+        this.modelShadow = new LODHelper(modelParts.shadow, 5);
+        this.modelFlaperonLeft = new LODHelper(modelParts.flaperonLeft, DEFAULT_LOD_BIAS);
+        this.modelFlaperonRight = new LODHelper(modelParts.flaperonRight, DEFAULT_LOD_BIAS);
+        this.modelElevatorLeft = new LODHelper(modelParts.elevatorLeft, DEFAULT_LOD_BIAS);
+        this.modelElevatorRight = new LODHelper(modelParts.elevatorRight, DEFAULT_LOD_BIAS);
+        this.modelRudderLeft = new LODHelper(modelParts.rudderLeft, DEFAULT_LOD_BIAS);
+        this.modelRudderRight = new LODHelper(modelParts.rudderRight, DEFAULT_LOD_BIAS);
         this.flightModel = flightModel;
         this.flightModel.position.copy(position);
         this.flightModel.quaternion.setFromAxisAngle(UP, heading);
         this.inEngineAudio = inEngineAudio;
         this.outEngineAudio = outEngineAudio;
+
+        this.controlSurfaceDescriptors = [
+            {
+                model: this.modelFlaperonLeft,
+                positiom: FLAPERON_LEFT_POSITION,
+                axis: FLAPERON_LEFT_AXIS,
+                value: () => { return -this.roll },
+                range: Math.PI / 6
+            },
+            {
+                model: this.modelFlaperonRight,
+                positiom: FLAPERON_RIGHT_POSITION,
+                axis: FLAPERON_RIGHT_AXIS,
+                value: () => { return -this.roll },
+                range: Math.PI / 6
+            },
+            {
+                model: this.modelElevatorLeft,
+                positiom: ELEVATOR_LEFT_POSITION,
+                axis: ELEVATOR_LEFT_AXIS,
+                value: () => { return this.pitch },
+                range: Math.PI / 6
+            },
+            {
+                model: this.modelElevatorRight,
+                positiom: ELEVATOR_RIGHT_POSITION,
+                axis: ELEVATOR_RIGHT_AXIS,
+                value: () => { return this.pitch },
+                range: Math.PI / 6
+            },
+            {
+                model: this.modelRudderLeft,
+                positiom: RUDDER_LEFT_POSITION,
+                axis: RUDDER_LEFT_AXIS,
+                value: () => { return this.yaw },
+                range: Math.PI / 6
+            },
+            {
+                model: this.modelRudderRight,
+                positiom: RUDDER_RIGHT_POSITION,
+                axis: RUDDER_RIGHT_AXIS,
+                value: () => { return this.yaw },
+                range: Math.PI / 6
+            }
+        ];
     }
 
     init(scene: Scene): void {
@@ -148,16 +240,31 @@ export class PlayerEntity implements Entity {
         const shadowLength = Math.max(0.2, this._v.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
         const shadowWidth = Math.max(0.2, this._v.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
         this.shadowScale.set(shadowWidth, 1, shadowLength);
-        this.lodHelperShadow.addToRenderList(
+        this.modelShadow.addToRenderList(
             this.shadowPosition, this.shadowQuaternion, this.shadowScale,
             targetWidth, camera, palette,
             SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
 
         if (this._exteriorView) {
-            this.lodHelper.addToRenderList(
+            const lod = this.modelBody.getLodLevel(this.position, this.obj.scale, targetWidth, camera, this.modelBody.model.maxSize);
+
+            this.modelBody.addToRenderList(
                 this.position, this.quaternion, this.obj.scale,
                 targetWidth, camera, palette,
-                SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+                SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists, lod);
+
+            if (lod === 0) {
+                for (let i = 0; i < this.controlSurfaceDescriptors.length; i++) {
+                    const d = this.controlSurfaceDescriptors[i];
+
+                    this._q.setFromAxisAngle(this._v.copy(d.axis).applyQuaternion(this.quaternion), d.value() * d.range).multiply(this.quaternion);
+                    this._v.copy(d.positiom).applyQuaternion(this.quaternion).add(this.position);
+                    d.model.addToRenderList(
+                        this._v, this._q, this.obj.scale,
+                        targetWidth, camera, palette,
+                        SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists, 0);
+                }
+            }
         }
     }
 

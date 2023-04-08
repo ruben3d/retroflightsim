@@ -111,8 +111,16 @@ export class Game {
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
         this.player = new PlayerEntity(
-            this.models.getModel('assets/f22.glb'),
-            this.models.getModel('assets/f22_shadow.glb'),
+            {
+                body: this.models.getModel('assets/f22.glb'),
+                shadow: this.models.getModel('assets/f22_shadow.glb'),
+                flaperonLeft: this.models.getModel('assets/f22_flaperon_left.glb'),
+                flaperonRight: this.models.getModel('assets/f22_flaperon_right.glb'),
+                elevatorLeft: this.models.getModel('assets/f22_elevator_left.glb'),
+                elevatorRight: this.models.getModel('assets/f22_elevator_right.glb'),
+                rudderLeft: this.models.getModel('assets/f22_rudder_left.glb'),
+                rudderRight: this.models.getModel('assets/f22_rudder_right.glb')
+            },
             new ArcadeFlightModel(),
             this.audio.getGlobal('assets/engine-loop-02.ogg', true),
             this.audio.getGlobal('assets/engine-loop-01.ogg', true),
@@ -588,7 +596,7 @@ export class Game {
             { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -930), r: -Math.PI / 2 },
         ];
         planes.forEach(p => {
-            const plane = new StaticSceneryEntity(models.getModel('assets/f22.glb'));
+            const plane = new StaticSceneryEntity(models.getModel('assets/f22_static.glb'));
             plane.position.copy(p.p);
             plane.quaternion.setFromAxisAngle(UP, p.r);
             scene.add(plane);
