@@ -3,6 +3,7 @@ import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes
 import { COCKPIT_FOV, H_RES } from '../../../defs';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { Font, TextAlignment } from "../../../render/screen/text";
+import { HUDFocusMode } from '../../../state/gameDefs';
 import { clamp, toDegrees, toRadians, vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
 import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
@@ -123,17 +124,29 @@ export class HUDEntity implements Entity {
 
         this.renderPitchLadder(scale, targetHeight, halfWidth, halfHeight, painter, hudColor, hudSecondaryColor, fontSmall);
 
-        const altitudeX = halfWidth + Math.floor((LADDER_HALF_WIDTH + 4) * (scale > 1 ? 1.5 : 1));
+        const altitudeX = halfWidth + Math.ceil((LADDER_HALF_WIDTH + 6) * (scale > 1 ? 1.5 : 1));
         const altitudeY = halfHeight;
-        this.renderAltitude(scale, altitudeX, altitudeY, targetWidth, painter, hudColor, font, fontSmall);
+        if (this.actor.hudFocusMode === HUDFocusMode.DISABLED) {
+            this.renderAltitude(scale, altitudeX, altitudeY, targetWidth, painter, hudColor, font, fontSmall);
+        } else {
+            this.renderAltitudeFocusMode(altitudeX, altitudeY, painter, hudColor, font);
+        }
 
         const headingX = halfWidth;
         const headingY = halfHeight - scale * (LADDER_HALF_HEIGHT + 2);
-        this.renderHeading(scale, headingX, headingY, painter, hudColor, font);
+        if (this.actor.hudFocusMode !== HUDFocusMode.FULL) {
+            this.renderHeading(scale, headingX, headingY, painter, hudColor, font);
+        } else {
+            this.renderHeadingFocusMode(headingX, headingY, painter, hudColor, font);
+        }
 
         const airSpeedX = halfWidth - Math.floor((LADDER_HALF_WIDTH + 6) * (scale > 1 ? 1.5 : 1));
         const airSpeedY = halfHeight;
-        this.renderAirSpeed(scale, airSpeedX, airSpeedY, painter, hudColor, font, fontSmall);
+        if (this.actor.hudFocusMode === HUDFocusMode.DISABLED) {
+            this.renderAirSpeed(scale, airSpeedX, airSpeedY, painter, hudColor, font, fontSmall);
+        } else {
+            this.renderAirSpeedFocusMode(airSpeedX, airSpeedY, painter, hudColor, font);
+        }
 
         const throttleX = airSpeedX - (font.charWidth + font.charSpacing) * 4 - 1;
         const throttleY = headingY - font.charHeight - 3;
@@ -142,8 +155,12 @@ export class HUDEntity implements Entity {
         this.renderTarget(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
         this.renderBoresight(halfWidth, halfHeight, painter);
         this.renderFlightPathMarker(targetWidth, targetHeight, halfWidth, halfHeight, painter, camera);
-        this.renderStallStatus(scale, airSpeedX, airSpeedY, painter, hudColor, hudWarnColor, font);
-        this.renderVerticalVelocityIndicator(scale, altitudeX, altitudeY, painter, hudColor, hudWarnColor);
+        this.renderStallWarning(scale, airSpeedX, airSpeedY, painter, hudColor, hudWarnColor, font);
+
+        if (this.actor.hudFocusMode === HUDFocusMode.DISABLED) {
+            this.renderStallStatus(scale, airSpeedX, airSpeedY, painter, hudColor, hudWarnColor);
+            this.renderVerticalVelocityIndicator(scale, altitudeX, altitudeY, painter, hudColor, hudWarnColor);
+        }
     }
 
     private renderAltitude(scale: number, x: number, y: number, width: number, painter: CanvasPainter, hudColor: string, font: Font, fontSmall: Font) {
@@ -196,6 +213,18 @@ export class HUDEntity implements Entity {
         }
     }
 
+    private renderAltitudeFocusMode(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        const roundedAltitude = ALTITUDE_STEP * Math.floor(this.altitude / ALTITUDE_STEP);
+        const textX = x + font.charWidth * 4;
+        const textY = y - Math.floor(font.charHeight / 2);
+        painter.text(font, textX, textY, roundedAltitude.toFixed(0), hudColor, TextAlignment.RIGHT);
+        painter.rectangle(
+            textX - ((font.charWidth + font.charSpacing) * 5 + font.charSpacing + 1),
+            textY - font.charSpacing * 2 - 1,
+            (font.charWidth + font.charSpacing) * 5 + font.charSpacing * 3 + 2,
+            2 + font.charSpacing * 4 + font.charHeight);
+    }
+
     private renderVerticalVelocityIndicator(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string) {
         const pixelLength = clamp(Math.floor(scale * this.verticalSpeed / 500.0), -ALTITUDE_HEIGHT * scale, ALTITUDE_HEIGHT * scale); // Eaxh pixel is 500 feet/min
         painter.setColor(hudWarnColor);
@@ -229,6 +258,19 @@ export class HUDEntity implements Entity {
             }
         }
         clip.clear();
+    }
+
+    private renderHeadingFocusMode(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        const textY = y - font.charHeight;
+        painter.text(font,
+            x,
+            textY,
+            formatHeading(this.heading), hudColor, TextAlignment.CENTER);
+        painter.rectangle(
+            x - (Math.trunc(font.charWidth * 1.5) + 1 + font.charSpacing * 2 + 1),
+            textY - font.charSpacing * 2 - 1,
+            (font.charWidth + font.charSpacing) * 3 + font.charSpacing * 3 + 2,
+            2 + font.charSpacing * 4 + font.charHeight);
     }
 
     private renderAirSpeed(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font, fontSmall: Font) {
@@ -268,11 +310,29 @@ export class HUDEntity implements Entity {
         }
         clip.clear();
 
-        painter.text(font, x + 9,
+        painter.text(font,
+            x + 9,
             y - charHeightHalf,
             Math.floor(this.speed).toString(),
             hudColor,
             TextAlignment.LEFT);
+    }
+
+    private renderAirSpeedFocusMode(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        const textX = x - font.charWidth * 4;
+        const textY = y - Math.trunc(font.charHeight / 2);
+        painter.text(font,
+            textX,
+            y - Math.trunc(font.charHeight / 2),
+            Math.floor(this.speed).toString(),
+            hudColor,
+            TextAlignment.LEFT);
+
+        painter.rectangle(
+            textX - (font.charSpacing * 2 + 1),
+            textY - font.charSpacing * 2 - 1,
+            (font.charWidth + font.charSpacing) * 5 + font.charSpacing * 3 + 2,
+            2 + font.charSpacing * 4 + font.charHeight);
     }
 
     private renderThrottle(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
@@ -405,11 +465,16 @@ export class HUDEntity implements Entity {
         }
     }
 
-    private renderStallStatus(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string, font: Font) {
+    private renderStallStatus(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string) {
         const HALF_HEIGHT_PIXELS = scale * AIRSPEED_HALF_HEIGHT * 2;
         painter.setColor(hudWarnColor);
         painter.vLine(x + 1, y + HALF_HEIGHT_PIXELS + 1, y + HALF_HEIGHT_PIXELS + 1 - Math.floor((this.stallStatus + 1.0) * (HALF_HEIGHT_PIXELS + 1)));
+        painter.setColor(hudColor);
+    }
 
+    private renderStallWarning(scale: number, x: number, y: number, painter: CanvasPainter, hudColor: string, hudWarnColor: string, font: Font) {
+        const HALF_HEIGHT_PIXELS = scale * AIRSPEED_HALF_HEIGHT * 2;
+        painter.setColor(hudWarnColor);
         const blink = Math.round(this.elapsed * 15) % 2 === 0;
         if (this.stallStatus >= 0 && !this.isLanded && blink) {
             painter.text(font, x + 9,

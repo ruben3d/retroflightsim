@@ -97,6 +97,7 @@ The system supports a single device connected only. If the device has less than 
 
 ### Systems
 * `T`: Select target
+* `F`: Cycle through HUD focus modes (disabled, partial, full)
 * `I`: Toggle night (386/VGA) or IR (486/SVGA) view
 
 ### Views

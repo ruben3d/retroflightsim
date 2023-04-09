@@ -4,6 +4,7 @@ import { Palette } from "../../config/palettes/palette";
 import { FlightModel } from '../../physics/model/flightModel';
 import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
+import { HUDFocusMode } from '../../state/gameDefs';
 import { easeOutQuad, easeOutQuint } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { Model } from '../models/models';
@@ -82,6 +83,7 @@ export class PlayerEntity implements Entity {
     private targetIndex: number | undefined
 
     private _nightVision: boolean = false;
+    private hudFocus: HUDFocusMode = HUDFocusMode.DISABLED;
 
     private _v = new THREE.Vector3();
     private _q = new THREE.Quaternion();
@@ -340,6 +342,10 @@ export class PlayerEntity implements Entity {
         return this.flightModel.getStallStatus();
     }
 
+    get hudFocusMode(): HUDFocusMode {
+        return this.hudFocus;
+    }
+
     private setupInput() {
         document.addEventListener('keypress', (event: KeyboardEvent) => {
             switch (event.key) {
@@ -349,6 +355,11 @@ export class PlayerEntity implements Entity {
                 }
                 case 'i': {
                     this._nightVision = !this._nightVision;
+                    break;
+                }
+                case 'f': {
+                    this.hudFocus += 1;
+                    this.hudFocus %= HUDFocusMode._LENGTH;
                     break;
                 }
             }

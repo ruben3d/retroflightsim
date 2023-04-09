@@ -11,3 +11,10 @@ export enum FlightModels {
     ARCADE = 'ARCADE',
     REALISTIC = 'REALISTIC'
 }
+
+export enum HUDFocusMode {
+    DISABLED,
+    PARTIAL,
+    FULL,
+    _LENGTH
+}
