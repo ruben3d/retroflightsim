@@ -20,6 +20,11 @@ export const DEFAULT_LOD_BIAS = 3;
 const ANIM_ROTATE_UP_SPEED = 0.4; // Revolutions per second
 const REF_WIDTH = 320; // Pixels
 
+enum PlaybackStatus {
+    PLAYING,
+    STOPPED
+}
+
 export class LODHelper {
 
     private elapsed: number = 0;
@@ -28,10 +33,86 @@ export class LODHelper {
     private objVolumes: THREE.Object3D = new THREE.Object3D();
     private objVolumesAnim: THREE.Object3D = new THREE.Object3D();
 
-    constructor(public model: Model, private bias: number) { }
+    private animActions: THREE.AnimationAction[] = [];
+    private animMixers: THREE.AnimationMixer[] = [];
+    private playback: PlaybackStatus = PlaybackStatus.STOPPED;
+    private originalPlaybackDuration: number = 0; // seconds
+    private playbackDuration: number = 0; // seconds
+
+    constructor(public model: Model, private bias: number = DEFAULT_LOD_BIAS) {
+        if (model.animations.length !== 0) {
+            this.createActions();
+        }
+    }
+
+    private createActions() {
+        //! Just volumes at LOD 0
+        const map = new Map(this.model.lod[0].volumes.map(model => ([model.name, model])));
+        this.model.animations.forEach(clip => {
+            this.originalPlaybackDuration = Math.max(this.originalPlaybackDuration, clip.duration);
+            const root = map.get(clip.name.replace('Action', ''));
+            assertIsDefined(root, clip.name);
+            const mixer = new THREE.AnimationMixer(root);
+            this.animMixers.push(mixer);
+            const action = mixer.clipAction(clip);
+            action.loop = THREE.LoopOnce;
+            action.clampWhenFinished = true;
+            this.animActions.push(action);
+        });
+    }
 
     update(delta: number): void {
         this.elapsed += delta;
+        if (this.playback === PlaybackStatus.PLAYING) {
+            this.playback = PlaybackStatus.STOPPED;
+            for (let i = 0; i < this.animMixers.length; i++) {
+                this.animMixers[i].update(delta);
+                if (this.animActions[i].isRunning()) {
+                    this.playback = PlaybackStatus.PLAYING;
+                }
+            }
+        }
+    }
+
+    play() {
+        this.playback = PlaybackStatus.PLAYING;
+        const timeScale = this.originalPlaybackDuration / this.playbackDuration
+        for (let i = 0; i < this.animActions.length; i++) {
+            this.animActions[i].timeScale = timeScale;
+            this.animActions[i].play();
+            this.animActions[i].paused = false;
+        }
+    }
+
+    playBackwards() {
+        this.playback = PlaybackStatus.PLAYING;
+        const timeScale = this.originalPlaybackDuration / this.playbackDuration
+        for (let i = 0; i < this.animActions.length; i++) {
+            this.animActions[i].timeScale = -timeScale;
+            this.animActions[i].play();
+            this.animActions[i].paused = false;
+        }
+    }
+
+    // [0,1]
+    setPlaybackPosition(p: number) {
+        this.playback = PlaybackStatus.STOPPED;
+        const timeScale = this.originalPlaybackDuration / this.playbackDuration;
+        for (let i = 0; i < this.animMixers.length; i++) {
+            this.animActions[i].timeScale = timeScale;
+            this.animActions[i].paused = false;
+            this.animActions[i].play();
+            this.animMixers[i].setTime(this.animActions[i].getClip().duration * p / timeScale);
+            this.animActions[i].paused = true;
+        }
+    }
+
+    setPlaybackDuration(seconds: number) {
+        this.playbackDuration = seconds;
+        const timeScale = this.originalPlaybackDuration / this.playbackDuration
+        for (let i = 0; i < this.animMixers.length; i++) {
+            this.animActions[i].timeScale = timeScale;
+        }
     }
 
     addToRenderList(

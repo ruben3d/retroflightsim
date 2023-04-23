@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { PaletteCategory, PaletteTime } from '../../config/palettes/palette';
 import { assertIsDefined } from '../../utils/asserts';
 import { isZero } from '../../utils/math';
 import { SceneMaterialManager } from '../materials/materials';
-import { PaletteCategory, PaletteTime } from '../../config/palettes/palette';
 import { updateUniforms } from '../utils';
+
 
 export interface ModelLodLevel {
     flats: THREE.Object3D[];
@@ -13,6 +14,7 @@ export interface ModelLodLevel {
 
 export interface Model {
     lod: ModelLodLevel[];
+    animations: THREE.AnimationClip[];
     maxSize: number;
     center: THREE.Vector3;
 }
@@ -118,9 +120,9 @@ export class ModelManager {
     }
 
     private processModel(gltf: GLTF, model: Model): Model {
-        const scenes = [...gltf.scenes];
+        const scenes = [...gltf.scenes].sort(this.sortingFn);
         const AABBox = new THREE.Box3();
-        model.lod = scenes.sort(this.sortingFn).map(scene => {
+        model.lod = scenes.map(scene => {
             const level: ModelLodLevel = {
                 flats: [],
                 volumes: []
@@ -136,7 +138,7 @@ export class ModelManager {
                 assertIsDefined(localAABB);
                 AABBox.union(localAABB);
 
-                const isFlat = isZero(localAABB.max.y || 0.0);
+                const isFlat = isZero(localAABB.max.y || 0.0) && isZero(localAABB.min.y || 0.0);
                 if (isFlat) {
                     level.flats.push(obj);
                 } else {
@@ -173,6 +175,7 @@ export class ModelManager {
             level.volumes.sort(this.sortingFn);
             return level;
         });
+        model.animations = gltf.animations;
         model.maxSize = Math.max(...AABBox.getSize(new THREE.Vector3()).toArray());
         AABBox.getCenter(model.center);
         return model;
@@ -183,7 +186,7 @@ export class ModelManager {
     }
 
     private empty(): Model {
-        return { lod: [], maxSize: 0, center: new THREE.Vector3() };
+        return { lod: [], animations: [], maxSize: 0, center: new THREE.Vector3() };
     }
 
     private copyTo(src: Model, dst: Model) {
@@ -191,6 +194,7 @@ export class ModelManager {
             flats: level.flats.map(obj => this.cloneObj(obj)),
             volumes: level.volumes.map(obj => this.cloneObj(obj))
         }));
+        dst.animations = src.animations; // No need to copy the clips
         dst.maxSize = src.maxSize;
         dst.center.copy(src.center);
     }

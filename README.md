@@ -96,9 +96,10 @@ The system supports a single device connected only. If the device has less than 
 * `Axis 2`: Throttle
 
 ### Systems
+* `G`: Landing gear
 * `T`: Select target
+* `I`: Toggle night (386/VGA) or IR (486/SVGA) for the tracking camera
 * `F`: Cycle through HUD focus modes (disabled, partial, full)
-* `I`: Toggle night (386/VGA) or IR (486/SVGA) view
 
 ### Views
 * `N`: Toggle day/night

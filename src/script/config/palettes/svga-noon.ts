@@ -38,6 +38,7 @@ const colors: PaletteColors = {
     [PaletteCategory.VEHICLE_PLANE_NAVY]: '#6f7981',
     [PaletteCategory.VEHICLE_PLANE_INTAKE]: '#58595A',
     [PaletteCategory.VEHICLE_PLANE_ENGINE]: '#4B484E',
+    [PaletteCategory.VEHICLE_PLANE_INTERIOR]: '#202020',
 
     [PaletteCategory.SCENERY_SPECKLE]: '#707070',
 

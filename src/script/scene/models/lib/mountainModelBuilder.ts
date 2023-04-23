@@ -54,6 +54,7 @@ export class MountainModelLibBuilder implements ModelLibBuilder {
                     volumes: [mesh]
                 }
             ],
+            animations: [],
             maxSize: 2 * this.radius,
             center: new THREE.Vector3(0, this.height / 2, 0)
         };

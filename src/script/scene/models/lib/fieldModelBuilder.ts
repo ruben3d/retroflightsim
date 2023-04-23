@@ -36,6 +36,7 @@ export class FieldModelLibBuilder implements ModelLibBuilder {
                     volumes: []
                 }
             ],
+            animations: [],
             maxSize: this.size,
             center: new THREE.Vector3()
         };

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DefaultPalette, Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
+import { Palette, PaletteCategory, PaletteColor } from '../config/palettes/palette';
 import { SceneMaterialManager } from '../scene/materials/materials';
 import { Scene, SceneLayers } from '../scene/scene';
 import { assertExpr, assertIsDefined } from '../utils/asserts';
@@ -50,18 +50,18 @@ export class Renderer {
     private composeScene: THREE.Scene = new THREE.Scene();
     private composeCamera: THREE.OrthographicCamera;
     private renderTargets: Map<string, RenderTarget> = new Map();
-    private palette: Palette = DefaultPalette;
+    private palette: Palette;
     private textEffect: TextEffect = TextEffect.NONE;
     private renderLists: Map<string, THREE.Scene>;
     private current3DRenderLists: Map<string, THREE.Scene> = new Map();
     private current2DRenderLists: Set<string> = new Set();
 
-    constructor(private materials: SceneMaterialManager, private composeWidth: number, private composeHeight: number) {
+    constructor(private materials: SceneMaterialManager, private composeWidth: number, private composeHeight: number, palette: Palette) {
         const container = document.getElementById('container');
         assertIsDefined(container, '<div id="container"> not found');
         this.container = container;
         this.composeCamera = new THREE.OrthographicCamera(-composeWidth / 2, composeWidth / 2, composeHeight / 2, -composeHeight / 2, -10, 10);
-
+        this.palette = palette;
         this.renderer = new THREE.WebGL1Renderer({ antialias: false });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.autoClear = false;

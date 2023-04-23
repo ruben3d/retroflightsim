@@ -26,6 +26,7 @@ export class BackgroundModelLibBuilder implements ModelLibBuilder {
                 flats: [mesh],
                 volumes: []
             }],
+            animations: [],
             maxSize: this.type === BackgroundModelLibBuilder.Type.GROUND ? GROUND_SIZE : SKY_SIZE,
             center: new THREE.Vector3()
         };

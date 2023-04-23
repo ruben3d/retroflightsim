@@ -110,16 +110,17 @@ export class Game {
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
-        this.player = new PlayerEntity(
+        this.player = new PlayerEntity(this.models,
             {
-                body: this.models.getModel('assets/f22.glb'),
-                shadow: this.models.getModel('assets/f22_shadow.glb'),
-                flaperonLeft: this.models.getModel('assets/f22_flaperon_left.glb'),
-                flaperonRight: this.models.getModel('assets/f22_flaperon_right.glb'),
-                elevatorLeft: this.models.getModel('assets/f22_elevator_left.glb'),
-                elevatorRight: this.models.getModel('assets/f22_elevator_right.glb'),
-                rudderLeft: this.models.getModel('assets/f22_rudder_left.glb'),
-                rudderRight: this.models.getModel('assets/f22_rudder_right.glb')
+                body: 'assets/f22.glb',
+                shadow: 'assets/f22_shadow.glb',
+                landingGear: 'assets/f22_landinggear.glb',
+                flaperonLeft: 'assets/f22_flaperon_left.glb',
+                flaperonRight: 'assets/f22_flaperon_right.glb',
+                elevatorLeft: 'assets/f22_elevator_left.glb',
+                elevatorRight: 'assets/f22_elevator_right.glb',
+                rudderLeft: 'assets/f22_rudder_left.glb',
+                rudderRight: 'assets/f22_rudder_right.glb'
             },
             new ArcadeFlightModel(),
             this.audio.getGlobal('assets/engine-loop-02.ogg', true),

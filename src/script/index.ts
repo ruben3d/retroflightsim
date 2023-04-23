@@ -1,6 +1,7 @@
 import { AudioSystem } from './audio/audioSystem';
 import { ConfigService } from './config/configService';
-import { DefaultPalette, PaletteCategory } from './config/palettes/palette';
+import { PaletteCategory } from './config/palettes/palette';
+import { VGANoonPalette } from './config/palettes/vga-noon';
 import { CGAProfile } from './config/profiles/cga';
 import { EGAProfile } from './config/profiles/ega';
 import { DisplayShading, FogQuality } from './config/profiles/profile';
@@ -30,8 +31,8 @@ function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControl
         { [FlightModels.DEBUG]: new DebugFlightModel(), [FlightModels.ARCADE]: new ArcadeFlightModel(), [FlightModels.REALISTIC]: new RealisticFlightModel(), }
     );
     config.techProfiles.setActive(TechProfiles.VGA);
-    const materials = new SceneMaterialManager(DefaultPalette, FogQuality.LOW, DisplayShading.STATIC);
-    const renderer = new Renderer(materials, H_RES, V_RES);
+    const materials = new SceneMaterialManager(VGANoonPalette, FogQuality.LOW, DisplayShading.STATIC);
+    const renderer = new Renderer(materials, H_RES, V_RES, VGANoonPalette);
     const models = new ModelManager(materials, [
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.GROUND),
         new BackgroundModelLibBuilder(BackgroundModelLibBuilder.Type.SKY),

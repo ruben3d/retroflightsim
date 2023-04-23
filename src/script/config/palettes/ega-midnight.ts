@@ -39,6 +39,7 @@ const colors: PaletteColors = {
     [PaletteCategory.VEHICLE_PLANE_NAVY]: [EGA_BLACK, EGA_BLACK_BRIGHT],
     [PaletteCategory.VEHICLE_PLANE_INTAKE]: EGA_BLACK,
     [PaletteCategory.VEHICLE_PLANE_ENGINE]: EGA_BLACK,
+    [PaletteCategory.VEHICLE_PLANE_INTERIOR]: EGA_BLACK,
 
     [PaletteCategory.SCENERY_SPECKLE]: EGA_WHITE,
 

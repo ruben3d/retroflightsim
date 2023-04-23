@@ -8,7 +8,7 @@ import { Entity } from "../../entity";
 import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
 import { updateTargetCamera } from '../../utils';
 import { GroundTargetEntity } from '../groundTarget';
-import { PlayerEntity } from "../player";
+import { LandingGearState, PlayerEntity } from "../player";
 import { calculatePitchRoll, formatHeading } from './overlayUtils';
 
 
@@ -47,6 +47,7 @@ export class CockpitEntity implements Entity {
     private aiPitch: number = 0;
     private aiRoll: number = 0;
 
+    private landingGear: LandingGearState = LandingGearState.EXTENDED;
     private mapPlaneMarkerHeading: number = 0;
     private weaponsTarget: GroundTargetEntity | undefined;
     private weaponsTargetRange: number = 0; // Km
@@ -91,6 +92,8 @@ export class CockpitEntity implements Entity {
 
             this.weaponsTargetZoomFactor = updateTargetCamera(this.actor, this.camera, this.targetCamera);
         }
+
+        this.landingGear = this.actor.landingGear;
     }
 
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
@@ -117,6 +120,10 @@ export class CockpitEntity implements Entity {
             CockpitMFD2X(targetWidth, targetHeight, MFDSize),
             CockpitMFD2Y(targetWidth, targetHeight, MFDSize),
             MFDSize, painter, hudColor, palette, font);
+
+        const gearX = MFDSize + font.charSpacing + 2;
+        const gearY = targetHeight - font.charHeight - font.charSpacing;
+        this.renderLandingGearStatus(gearX, gearY, painter, hudColor, font);
     }
 
     private renderAttitudeIndicator(targetWidth: number, targetHeight: number, painter: CanvasPainter, palette: Palette) {
@@ -311,6 +318,12 @@ export class CockpitEntity implements Entity {
                 `${this.weaponsTargetZoomFactor.toFixed(0)}x`, hudColor, TextAlignment.RIGHT);
             painter.text(font, x + font.charSpacing, y + size - font.charHeight - font.charSpacing,
                 `Range ${this.weaponsTargetRange.toFixed(1)} KM`, hudColor);
+        }
+    }
+
+    private renderLandingGearStatus(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        if (this.landingGear === LandingGearState.EXTENDED || this.landingGear === LandingGearState.EXTENDING) {
+            painter.text(font, x, y, 'GEAR', hudColor);
         }
     }
 }

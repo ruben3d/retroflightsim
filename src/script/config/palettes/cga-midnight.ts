@@ -39,6 +39,7 @@ const colors: PaletteColors = {
     [PaletteCategory.VEHICLE_PLANE_NAVY]: CGA_WHITE,
     [PaletteCategory.VEHICLE_PLANE_INTAKE]: CGA_BLACK,
     [PaletteCategory.VEHICLE_PLANE_ENGINE]: CGA_BLACK,
+    [PaletteCategory.VEHICLE_PLANE_INTERIOR]: CGA_BLACK,
 
     [PaletteCategory.SCENERY_SPECKLE]: CGA_WHITE,
 

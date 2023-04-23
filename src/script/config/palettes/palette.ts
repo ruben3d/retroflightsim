@@ -39,6 +39,7 @@ export enum PaletteCategory {
     VEHICLE_PLANE_NAVY = 'VEHICLE_PLANE_NAVY',
     VEHICLE_PLANE_INTAKE = 'VEHICLE_PLANE_INTAKE',
     VEHICLE_PLANE_ENGINE = 'VEHICLE_PLANE_ENGINE',
+    VEHICLE_PLANE_INTERIOR = 'VEHICLE_PLANE_INTERIOR',
 
     SCENERY_ROAD_MAIN = 'SCENERY_ROAD_MAIN',
     SCENERY_ROAD_SECONDARY = 'SCENERY_ROAD_SECONDARY',
@@ -114,84 +115,6 @@ export function FogColorCategory(cat: PaletteCategory): PaletteFogCategories {
 export function FogValueCategory(cat: PaletteCategory): PaletteFogCategories {
     return FogValueCategoryMap.get(cat) || PaletteCategory.FOG_TERRAIN;
 }
-
-const defaultPaletteColors: PaletteColors = {
-    [PaletteCategory.HUD_TEXT]: '', // Use default
-    [PaletteCategory.HUD_TEXT_EFFECT]: '', // Use default
-    [PaletteCategory.HUD_TEXT_SECONDARY]: '', // Use default
-    [PaletteCategory.HUD_TEXT_WARN]: '#FF0000',
-
-    [PaletteCategory.COCKPIT_AI_SKY]: '#00ffff',
-    [PaletteCategory.COCKPIT_AI_GROUND]: '#ff8800',
-    [PaletteCategory.COCKPIT_MFD_BACKGROUND]: '#000000',
-
-    [PaletteCategory.BACKGROUND]: '#FFFFFF',
-
-    [PaletteCategory.FOG_SKY]: '#FFFFFF',
-    [PaletteCategory.FOG_TERRAIN]: '#FFFFFF',
-    [PaletteCategory.FOG_SPECKLE]: '#FFFFFF',
-    [PaletteCategory.FOG_LIGHT]: '#FFFFFF',
-
-    [PaletteCategory.SKY]: '#00ffff',
-
-    [PaletteCategory.TERRAIN_DEFAULT]: '#ff8800',
-    [PaletteCategory.TERRAIN_SAND]: '#ff8800',
-    [PaletteCategory.TERRAIN_BARE]: '#aa5b00',
-    [PaletteCategory.TERRAIN_GRASS]: '#00ff00',
-    [PaletteCategory.TERRAIN_WATER]: '#0000ff',
-    [PaletteCategory.TERRAIN_SHALLOW_WATER]: '#4040ff',
-    [PaletteCategory.SCENERY_MOUNTAIN_GRASS]: '#00ff00',
-    [PaletteCategory.SCENERY_MOUNTAIN_BARE]: '#aa5b00',
-
-    [PaletteCategory.LIGHT_RED]: '#FF0000',
-    [PaletteCategory.LIGHT_GREEN]: '#00FF00',
-    [PaletteCategory.LIGHT_YELLOW]: '#FFFFBA',
-
-    [PaletteCategory.GLASS]: '#00ffff',
-
-    [PaletteCategory.VEHICLE_PLANE_GREY]: '#828385',
-    [PaletteCategory.VEHICLE_PLANE_NAVY]: '#6f7981',
-    [PaletteCategory.VEHICLE_PLANE_INTAKE]: '#58595A',
-    [PaletteCategory.VEHICLE_PLANE_ENGINE]: '#4B484E',
-
-    [PaletteCategory.SCENERY_SPECKLE]: '#888888',
-
-    [PaletteCategory.SCENERY_ROAD_MAIN]: '#4D4D4D',
-    [PaletteCategory.SCENERY_ROAD_SECONDARY]: '#555555',
-
-    [PaletteCategory.SCENERY_FIELD_GREEN]: '#00FF00',
-    [PaletteCategory.SCENERY_FIELD_GREEN_LIGHT]: '#40FF40',
-    [PaletteCategory.SCENERY_FIELD_YELLOW]: '#ffff00',
-    [PaletteCategory.SCENERY_FIELD_OCHRE]: '#ffa000',
-    [PaletteCategory.SCENERY_FIELD_RED]: '#ff0000',
-
-    [PaletteCategory.SCENERY_BUILDING_PLASTER_WHITE]: '#FFFFFF',
-    [PaletteCategory.SCENERY_BUILDING_PLASTER_RED]: '#e16565',
-    [PaletteCategory.SCENERY_BUILDING_PLASTER_TEAL]: '#37aaaa',
-    [PaletteCategory.SCENERY_BUILDING_CONCRETE]: '#9A9A9A',
-    [PaletteCategory.SCENERY_BUILDING_METAL]: '#C0C0C0',
-    [PaletteCategory.SCENERY_BUILDING_METAL_WHITE]: '#ffffff',
-    [PaletteCategory.SCENERY_BUILDING_METAL_RED]: '#ff0000',
-
-    [PaletteCategory.SCENERY_BASE_RUNWAY_LINES]: '#9A9A9A',
-    [PaletteCategory.SCENERY_BASE_RUNWAY_THRESHOLD]: '#C0C0C0',
-
-    [PaletteCategory.FX_FIRE]: '#ff8800',
-    [PaletteCategory.FX_FIRE__B]: '#ffff00',
-};
-
-const defaultPaletteValues: PaletteValues = {
-    [PaletteCategory.FOG_SKY]: 0.003,
-    [PaletteCategory.FOG_TERRAIN]: 0.00008,
-    [PaletteCategory.FOG_LIGHT]: 0.00008,
-    [PaletteCategory.FOG_SPECKLE]: 0.0005
-};
-
-export const DefaultPalette: Palette = {
-    colors: defaultPaletteColors,
-    values: defaultPaletteValues,
-    time: PaletteTime.DAY
-};
 
 export function PaletteColor(p: Palette, c: PaletteCategory): string {
     const v = p.colors[c];

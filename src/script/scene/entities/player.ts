@@ -2,28 +2,30 @@ import * as THREE from 'three';
 import { AudioClip } from '../../audio/audioSystem';
 import { Palette } from "../../config/palettes/palette";
 import { FlightModel } from '../../physics/model/flightModel';
-import { DEFAULT_LOD_BIAS, LODHelper } from '../../render/helpers';
+import { LODHelper } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { HUDFocusMode } from '../../state/gameDefs';
 import { easeOutQuad, easeOutQuint } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
-import { Model } from '../models/models';
+import { ModelManager } from '../models/models';
 import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 
 
 export interface PlayerModelParts {
-    body: Model;
-    shadow: Model;
-    flaperonLeft: Model;
-    flaperonRight: Model;
-    elevatorLeft: Model;
-    elevatorRight: Model;
-    rudderLeft: Model;
-    rudderRight: Model;
+    body: string;
+    shadow: string;
+    landingGear: string;
+    flaperonLeft: string;
+    flaperonRight: string;
+    elevatorLeft: string;
+    elevatorRight: string;
+    rudderLeft: string;
+    rudderRight: string;
 }
 
-const ENGINE_LOWEST_VOLUME = 0.05;
+const ENGINE_LOWEST_VOLUME = 0.05; // [0,1]
+const LANDING_GEAR_ANIM_DURATION = 3; // Seconds
 
 const ELEVATOR_LEFT_POSITION = new THREE.Vector3(0, 0, -6);
 const ELEVATOR_LEFT_AXIS = RIGHT;
@@ -46,11 +48,19 @@ interface ControlSurfaceDescriptor {
     range: number;
 }
 
+export enum LandingGearState {
+    RETRACTING,
+    RETRACTED,
+    EXTENDING,
+    EXTENDED
+}
+
 export class PlayerEntity implements Entity {
 
     private scene: Scene | undefined;
     private modelBody: LODHelper;
     private modelShadow: LODHelper;
+    private modelLandingGear: LODHelper | undefined;
     private modelFlaperonLeft: LODHelper;
     private modelFlaperonRight: LODHelper;
     private modelElevatorLeft: LODHelper;
@@ -69,6 +79,9 @@ export class PlayerEntity implements Entity {
     private outEngineAudio: AudioClip;
     private enginePlaying: boolean = false;
     private engineStarted: boolean = false;
+
+    private landingGearState: LandingGearState = LandingGearState.EXTENDED;
+    private landingGearProgress = LANDING_GEAR_ANIM_DURATION;
 
     private obj = new THREE.Object3D();
 
@@ -94,15 +107,22 @@ export class PlayerEntity implements Entity {
     private _exteriorView: boolean = false;
 
     // Heading increases CCW, radians
-    constructor(modelParts: PlayerModelParts, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, heading: number) {
-        this.modelBody = new LODHelper(modelParts.body, DEFAULT_LOD_BIAS);
-        this.modelShadow = new LODHelper(modelParts.shadow, 5);
-        this.modelFlaperonLeft = new LODHelper(modelParts.flaperonLeft, DEFAULT_LOD_BIAS);
-        this.modelFlaperonRight = new LODHelper(modelParts.flaperonRight, DEFAULT_LOD_BIAS);
-        this.modelElevatorLeft = new LODHelper(modelParts.elevatorLeft, DEFAULT_LOD_BIAS);
-        this.modelElevatorRight = new LODHelper(modelParts.elevatorRight, DEFAULT_LOD_BIAS);
-        this.modelRudderLeft = new LODHelper(modelParts.rudderLeft, DEFAULT_LOD_BIAS);
-        this.modelRudderRight = new LODHelper(modelParts.rudderRight, DEFAULT_LOD_BIAS);
+    constructor(models: ModelManager, modelParts: PlayerModelParts, flightModel: FlightModel, inEngineAudio: AudioClip, outEngineAudio: AudioClip, position: THREE.Vector3, heading: number) {
+        this.modelBody = new LODHelper(models.getModel(modelParts.body));
+        this.modelShadow = new LODHelper(models.getModel(modelParts.shadow), 5);
+        this.modelFlaperonLeft = new LODHelper(models.getModel(modelParts.flaperonLeft));
+        this.modelFlaperonRight = new LODHelper(models.getModel(modelParts.flaperonRight));
+        this.modelElevatorLeft = new LODHelper(models.getModel(modelParts.elevatorLeft));
+        this.modelElevatorRight = new LODHelper(models.getModel(modelParts.elevatorRight));
+        this.modelRudderLeft = new LODHelper(models.getModel(modelParts.rudderLeft));
+        this.modelRudderRight = new LODHelper(models.getModel(modelParts.rudderRight));
+
+        models.getModel(modelParts.landingGear, (_, model) => {
+            this.modelLandingGear = new LODHelper(model);
+            this.modelLandingGear.setPlaybackDuration(LANDING_GEAR_ANIM_DURATION);
+            this.modelLandingGear.setPlaybackPosition(1);
+        });
+
         this.flightModel = flightModel;
         this.flightModel.position.copy(position);
         this.flightModel.quaternion.setFromAxisAngle(UP, heading);
@@ -171,6 +191,27 @@ export class PlayerEntity implements Entity {
         this.velocity.copy(this.flightModel.velocityVector);
 
         this.updateAudio();
+
+        this.updateLandingGear(delta);
+    }
+
+    private updateLandingGear(delta: number) {
+        if (this.landingGearState === LandingGearState.EXTENDING || this.landingGearState === LandingGearState.RETRACTING) {
+            this.modelLandingGear?.update(delta);
+        }
+        if (this.landingGearState === LandingGearState.EXTENDING) {
+            this.landingGearProgress += delta;
+            if (this.landingGearProgress >= LANDING_GEAR_ANIM_DURATION) {
+                this.landingGearProgress = LANDING_GEAR_ANIM_DURATION;
+                this.landingGearState = LandingGearState.EXTENDED;
+            }
+        } else if (this.landingGearState === LandingGearState.RETRACTING) {
+            this.landingGearProgress -= delta;
+            if (this.landingGearProgress <= 0) {
+                this.landingGearProgress = 0;
+                this.landingGearState = LandingGearState.RETRACTED;
+            }
+        }
     }
 
     private updateAudio() {
@@ -256,6 +297,13 @@ export class PlayerEntity implements Entity {
                 SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists, lod);
 
             if (lod === 0) {
+                if (this.landingGearState !== LandingGearState.RETRACTED) {
+                    this.modelLandingGear?.addToRenderList(
+                        this.position, this.quaternion, this.obj.scale,
+                        targetWidth, camera, palette,
+                        SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists, 0);
+                }
+
                 for (let i = 0; i < this.controlSurfaceDescriptors.length; i++) {
                     const d = this.controlSurfaceDescriptors[i];
 
@@ -346,6 +394,10 @@ export class PlayerEntity implements Entity {
         return this.hudFocus;
     }
 
+    get landingGear(): LandingGearState {
+        return this.landingGearState;
+    }
+
     private setupInput() {
         document.addEventListener('keypress', (event: KeyboardEvent) => {
             switch (event.key) {
@@ -362,6 +414,10 @@ export class PlayerEntity implements Entity {
                     this.hudFocus %= HUDFocusMode._LENGTH;
                     break;
                 }
+                case 'g': {
+                    this.toggleLandingGear();
+                    break;
+                }
             }
         });
     }
@@ -375,6 +431,24 @@ export class PlayerEntity implements Entity {
         } else {
             this.target = this.scene?.entityAtByTag(ENTITY_TAGS.TARGET, index) as GroundTargetEntity | undefined;
             this.targetIndex = this.target !== undefined ? index : undefined;
+        }
+    }
+
+    private toggleLandingGear() {
+        if (this.landingGearState === LandingGearState.EXTENDED || this.landingGearState === LandingGearState.EXTENDING) {
+            if (!this.isLanded) {
+                if (this.landingGearState === LandingGearState.EXTENDED) {
+                    this.modelLandingGear?.setPlaybackPosition(1.0);
+                }
+                this.landingGearState = LandingGearState.RETRACTING;
+                this.modelLandingGear?.playBackwards();
+            }
+        } else {
+            if (this.landingGearState === LandingGearState.RETRACTED) {
+                this.modelLandingGear?.setPlaybackPosition(0.0);
+            }
+            this.landingGearState = LandingGearState.EXTENDING;
+            this.modelLandingGear?.play();
         }
     }
 }
