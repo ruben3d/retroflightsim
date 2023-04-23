@@ -9,6 +9,7 @@ export abstract class FlightModel {
     protected velocity: THREE.Vector3 = new THREE.Vector3(); // m/s
 
     protected landed: boolean = true;
+    protected landingGearDeployed: boolean = true;
 
     protected pitch: number = 0; // [-1, 1]
     protected roll: number = 0; // [-1, 1]
@@ -42,6 +43,10 @@ export abstract class FlightModel {
 
     setThrottle(throttle: number) {
         this.throttle = throttle;
+    }
+
+    setLandingGearDeployed(deployed: boolean) {
+        this.landingGearDeployed = deployed;
     }
 
     setLanded(isLanded: boolean) {

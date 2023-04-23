@@ -185,6 +185,7 @@ export class PlayerEntity implements Entity {
         this.flightModel.setRoll(this.roll);
         this.flightModel.setYaw(this.yaw);
         this.flightModel.setThrottle(this.throttle);
+        this.flightModel.setLandingGearDeployed(this.landingGearState !== LandingGearState.RETRACTED);
         this.flightModel.update(delta);
         this.obj.position.copy(this.flightModel.position);
         this.obj.quaternion.copy(this.flightModel.quaternion);

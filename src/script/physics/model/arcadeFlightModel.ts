@@ -20,6 +20,7 @@ const WING_AREA: number = 78; // m^2
 const GROUND_AIR_DENSITY: number = 1.225; // kg/m^3
 const GRAVITY: number = 9.8; // m/s^2
 const CD: number = 0.15; // Unitless
+const CD_LANDING_GEAR_FACTOR = 1.75; // Unitless
 
 export class ArcadeFlightModel extends FlightModel {
 
@@ -66,7 +67,6 @@ export class ArcadeFlightModel extends FlightModel {
         const aoaSign = rightPrjVelocity.cross(this.forward).dot(this.right) > 0 ? -1 : 1;
         const aoa = aoaSign * aoaAngle;
 
-
         // Roll control
         if (!isZero(this.roll) && !this.landed) {
             this.obj.rotateZ(this.roll * ROLL_RATE * delta);
@@ -112,12 +112,13 @@ export class ArcadeFlightModel extends FlightModel {
         const arcadeInducedDrag = this.forward.dot(this.velocityUnit);
         const liftInducedDrag = 1 - Math.cos(2.0 * aoa);
         const rollDrag = Math.abs(this.right.y);
+        const cdMultiplier = this.landingGearDeployed ? CD_LANDING_GEAR_FACTOR : 1.0;
         roundToZero(this.drag
             .copy(this.velocityUnit)
             .negate()
             .multiplyScalar(
                 Math.pow(
-                    0.5 * (CD + liftInducedDrag) * airDensity * speed * speed * WING_AREA,
+                    0.5 * (CD * cdMultiplier + liftInducedDrag) * airDensity * speed * speed * WING_AREA,
                     1.0 + INDUCED_DRAG_FACTOR * (1.0 - arcadeInducedDrag) + ROLL_DRAG_FACTOR * rollDrag
                 )
             )
