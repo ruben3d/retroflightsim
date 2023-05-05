@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SceneMaterialManager } from "../../materials/materials";
 import { PaletteCategory } from '../../../config/palettes/palette';
+import { SceneMaterialManager, SceneMaterialPrimitiveType } from "../../materials/materials";
 import { updateUniforms } from '../../utils';
 import { Model, ModelLibBuilder } from "../models";
 
@@ -21,6 +21,7 @@ export class MountainModelLibBuilder implements ModelLibBuilder {
         geometry.translate(0, this.height / 2, 0);
         geometry.rotateY(Math.PI / 4);
         const mesh = new THREE.Mesh(geometry, materials.build({
+            type: SceneMaterialPrimitiveType.MESH,
             category: this.color,
             depthWrite: true,
             shaded: true
@@ -37,9 +38,9 @@ export class MountainModelLibBuilder implements ModelLibBuilder {
         // ];
         // const linesGeometry = new THREE.BufferGeometry().setFromPoints(points);
         // const lines = new THREE.Line(linesGeometry, materials.build({
+        //     type: SceneMaterialPrimitiveType.LINE,
         //     category: this.color,
         //     depthWrite: true,
-        //     shaded: false
         // }));
         // lines.onBeforeRender = updateUniforms;
 

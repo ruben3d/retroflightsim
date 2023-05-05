@@ -23,7 +23,7 @@ export const ShadedVertProgram: string = `
 
     vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     pos.x = floor(pos.x / pos.w * halfWidth + 0.5) / halfWidth * pos.w;
-    pos.y = floor(pos.y / pos.w * halfHeight) / halfHeight * pos.w;
+    pos.y = floor(pos.y / pos.w * halfHeight + 0.5) / halfHeight * pos.w;
     gl_Position = pos;
   }
 `;

@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { Palette } from '../../config/palettes/palette';
-import { ModelManager } from "../models/models";
-import { Scene, SceneLayers, UP } from "../scene";
-import { Entity } from "../entity";
 import { CanvasPainter } from '../../render/screen/canvasPainter';
+import { UP } from '../../utils/math';
+import { Entity } from "../entity";
+import { ModelManager } from "../models/models";
+import { Scene, SceneLayers } from "../scene";
 import { SimpleEntity } from './simpleEntity';
 
 

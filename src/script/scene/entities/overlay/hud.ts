@@ -4,12 +4,12 @@ import { COCKPIT_FOV, H_RES } from '../../../defs';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { Font, TextAlignment } from "../../../render/screen/text";
 import { HUDFocusMode } from '../../../state/gameDefs';
-import { clamp, toDegrees, toRadians, vectorHeading } from '../../../utils/math';
+import { calculatePitchRoll, clamp, FORWARD, toDegrees, toRadians, UP, vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
-import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
+import { Scene, SceneLayers } from "../../scene";
 import { GroundTargetEntity } from '../groundTarget';
 import { PlayerEntity } from "../player";
-import { calculatePitchRoll, formatHeading, toFeet, toKnots } from './overlayUtils';
+import { formatHeading, toFeet, toKnots } from './overlayUtils';
 
 
 const ALTITUDE_HEIGHT = 32;

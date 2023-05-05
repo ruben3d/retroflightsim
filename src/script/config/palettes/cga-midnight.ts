@@ -65,6 +65,10 @@ const colors: PaletteColors = {
 
     [PaletteCategory.FX_FIRE]: CGA_MAGENTA,
     [PaletteCategory.FX_FIRE__B]: CGA_WHITE,
+
+    [PaletteCategory.FX_SMOKE]: CGA_WHITE,
+    [PaletteCategory.FX_SMOKE__B]: CGA_WHITE,
+    [PaletteCategory.FX_SMOKE__C]: CGA_WHITE,
 };
 
 const values: PaletteValues = {

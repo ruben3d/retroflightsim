@@ -64,6 +64,10 @@ const colors: PaletteColors = {
 
     [PaletteCategory.FX_FIRE]: '#ff8800',
     [PaletteCategory.FX_FIRE__B]: '#ffff00',
+
+    [PaletteCategory.FX_SMOKE]: '#2c2c2c',
+    [PaletteCategory.FX_SMOKE__B]: '#383838',
+    [PaletteCategory.FX_SMOKE__C]: '#6c6c6c',
 };
 
 const values: PaletteValues = {

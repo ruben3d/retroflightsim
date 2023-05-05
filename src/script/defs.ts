@@ -26,3 +26,5 @@ export const MAX_ALTITUDE = 10000; // World units
 
 export const COCKPIT_FOV = 50;
 export const COCKPIT_FAR = 40000;
+
+export const GROUND_SMOKE_PARTICLE_COUNT = 100;

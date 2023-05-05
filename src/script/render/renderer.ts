@@ -64,6 +64,7 @@ export class Renderer {
         this.palette = palette;
         this.renderer = new THREE.WebGL1Renderer({ antialias: false });
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        assertExpr(this.renderer.extensions.has('ANGLE_instanced_arrays'), 'Renderer: WebGL1 extension "ANGLE_instanced_arrays" is required');
         this.renderer.autoClear = false;
         this.renderer.sortObjects = false;
         this.updateViewportSize();

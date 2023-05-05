@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PLANE_COCKPIT_OFFSET_Y, PLANE_COCKPIT_OFFSET_Z } from "../../defs";
 import { PlayerEntity } from "../../scene/entities/player";
-import { UP } from "../../scene/scene";
+import { UP } from '../../utils/math';
 import { CameraUpdater } from "./cameraUpdater";
 
 export class CockpitFrontCameraUpdater extends CameraUpdater {

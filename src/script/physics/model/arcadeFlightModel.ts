@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, YAW_RATE } from "../../defs";
-import { FORWARD, RIGHT, UP, ZERO } from '../../scene/scene';
-import { clamp, easeOutCirc, isZero, roundToZero } from "../../utils/math";
+import { PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, YAW_RATE } from "../../defs";
+import { calculatePitchRoll, clamp, easeOutCirc, FORWARD, isZero, PI_OVER_180, RIGHT, roundToZero, UP, ZERO } from '../../utils/math';
 import { FlightModel } from './flightModel';
+
 
 const TURNING_RATE = Math.PI * 1.5; // Radians/second
 const STALL_RATE = Math.PI / 6; // Radians/second
@@ -21,6 +21,11 @@ const GROUND_AIR_DENSITY: number = 1.225; // kg/m^3
 const GRAVITY: number = 9.8; // m/s^2
 const CD: number = 0.15; // Unitless
 const CD_LANDING_GEAR_FACTOR = 1.75; // Unitless
+
+const LANDED_MAX_SPEED = 100; // m/s
+const LANDING_MAX_VSPEED = 5; // m/s
+const LANDING_MIN_PITCH = -5 * PI_OVER_180; // Radians
+const LANDING_MAX_ROLL = 5 * PI_OVER_180; // Radians
 
 export class ArcadeFlightModel extends FlightModel {
 
@@ -45,6 +50,8 @@ export class ArcadeFlightModel extends FlightModel {
     private velocityUnit: THREE.Vector3 = new THREE.Vector3();
 
     step(delta: number): void {
+
+        if (this.crashed) return;
 
         if (this.effectiveThrottle > this.throttle) {
             this.effectiveThrottle = Math.max(this.throttle, this.effectiveThrottle - THROTTLE_DOWN_RATE * delta);
@@ -196,26 +203,29 @@ export class ArcadeFlightModel extends FlightModel {
             this.landed = false;
         }
 
-
-        // Avoid ground crashes
+        // Ground interaction
         if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
             this.obj.position.y = PLANE_DISTANCE_TO_GROUND;
-            const d = this.obj.getWorldDirection(this._v);
-            if (d.y < 0.0) {
-                d.setY(0).add(this.obj.position);
-                this.obj.lookAt(d);
-            }
-            this.velocity.setY(0);
-            this.stall = -1;
-            this.landed = true;
-        }
 
-        // Avoid flying out of bounds, wraps around
-        const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
-        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
-        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
-        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
-        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
+            const [pitchAngle, rollAngle] = calculatePitchRoll(this.obj);
+
+            if (this.landingGearDeployed === false ||
+                speed > LANDED_MAX_SPEED ||
+                this.velocity.y > LANDING_MAX_VSPEED ||
+                Math.abs(rollAngle) > LANDING_MAX_ROLL ||
+                LANDING_MIN_PITCH > pitchAngle) {
+                this.crashed = true;
+            } else {
+                const d = this.obj.getWorldDirection(this._v);
+                if (d.y < 0.0) {
+                    d.setY(0).add(this.obj.position);
+                    this.obj.lookAt(d);
+                }
+                this.velocity.setY(0);
+                this.stall = -1;
+                this.landed = true;
+            }
+        }
     }
 
     getStallStatus(): number {

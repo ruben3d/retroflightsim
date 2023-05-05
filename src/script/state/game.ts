@@ -16,6 +16,7 @@ import { COCKPIT_FAR, COCKPIT_FOV, HI_H_RES, HI_V_RES, H_RES, LO_H_RES, LO_V_RES
 import { ArcadeFlightModel } from '../physics/model/arcadeFlightModel';
 import { Renderer, RenderLayer, RenderTargetType } from "../render/renderer";
 import { SceneCamera } from '../scene/cameras/camera';
+import { GroundSmokeEntity } from '../scene/entities/groundSmoke';
 import { GroundTargetEntity } from '../scene/entities/groundTarget';
 import { CockpitEntity, CockpitMFD1X, CockpitMFD1Y, CockpitMFD2X, CockpitMFD2Y, CockpitMFDSize } from '../scene/entities/overlay/cockpit';
 import { ExteriorDataEntity } from '../scene/entities/overlay/exteriorData';
@@ -28,15 +29,18 @@ import { StaticSceneryEntity } from '../scene/entities/staticScenery';
 import { Entity } from '../scene/entity';
 import { SceneMaterialManager } from "../scene/materials/materials";
 import { ModelManager } from "../scene/models/models";
-import { RIGHT, Scene, SceneLayers, UP } from '../scene/scene';
+import { Scene, SceneLayers } from '../scene/scene';
 import { assertIsDefined } from '../utils/asserts';
+import { RIGHT, UP } from '../utils/math';
 import { CameraUpdater } from './cameraUpdaters/cameraUpdater';
 import { CockpitFrontCameraUpdater } from './cameraUpdaters/cockpitFrontCameraUpdater';
+import { CrashedCameraUpdater } from './cameraUpdaters/crashedCameraUpdater';
 import { ExteriorFrontBehindCameraUpdater, ExteriorViewHeading } from './cameraUpdaters/exteriorFrontBehindCameraUpdater';
 import { ExteriorSideCameraUpdater, ExteriorViewSide } from './cameraUpdaters/exteriorSideCameraUpdater';
 import { TargetFromCameraUpdater } from './cameraUpdaters/targetFromCameraUpdater';
 import { TargetToCameraUpdater } from './cameraUpdaters/targetToCameraUpdater';
 import { restoreMainCameraParameters } from './stateUtils';
+import { MessagesEntity } from '../scene/entities/overlay/messages';
 
 
 const MAIN_RENDER_TARGET_LO = 'MAIN_RENDER_TARGET_LO';
@@ -48,7 +52,11 @@ const MAP_RENDER_TARGET_LO = 'MAP_RENDER_TARGET_LO';
 const WEAPONSTARGET_RENDER_TARGET_HI = 'WEAPONSTARGET_RENDER_TARGET_HI';
 const MAP_RENDER_TARGET_HI = 'MAP_RENDER_TARGET_HI';
 
+const PLAYER_STARTING_POSITION = new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160);
+const PLAYER_STARTING_HEADING = 0;
+
 enum PlayerViewState {
+    CRASHED,
     COCKPIT_FRONT,
     EXTERIOR_BEHIND,
     EXTERIOR_FRONT,
@@ -56,6 +64,11 @@ enum PlayerViewState {
     EXTERIOR_RIGHT,
     TARGET_TO,
     TARGET_FROM,
+}
+
+enum GameState {
+    PLAYER,
+    CRASHED
 }
 
 export class GameUpdateTask implements KernelTask {
@@ -77,6 +90,8 @@ export class GameRenderTask implements KernelTask {
 }
 
 export class Game {
+
+    private state: GameState = GameState.PLAYER;
 
     private scene: Scene = new Scene();
 
@@ -102,6 +117,10 @@ export class Game {
     private cockpitEntities: Entity[] = [];
     private exteriorEntities: Entity[] = [];
 
+    private groundSmoke: GroundSmokeEntity;
+    private groundFire: StaticSceneryEntity;
+    private messages: MessagesEntity;
+
     constructor(private configService: ConfigService, private models: ModelManager, private materials: SceneMaterialManager, private renderer: Renderer,
         private audio: AudioSystem) {
 
@@ -110,6 +129,7 @@ export class Game {
         this.mapCamera = new THREE.OrthographicCamera(-10000, 10000, 10000, -10000, 10, 1000);
         this.mapCamera.setRotationFromAxisAngle(RIGHT, -Math.PI / 2);
         this.mapCamera.position.set(0, 500, 0);
+
         this.player = new PlayerEntity(this.models,
             {
                 body: 'assets/f22.glb',
@@ -125,7 +145,16 @@ export class Game {
             new ArcadeFlightModel(),
             this.audio.getGlobal('assets/engine-loop-02.ogg', true),
             this.audio.getGlobal('assets/engine-loop-01.ogg', true),
-            new THREE.Vector3(1500, PLANE_DISTANCE_TO_GROUND, -1160), 0);
+            PLAYER_STARTING_POSITION, PLAYER_STARTING_HEADING);
+
+        this.groundSmoke = new GroundSmokeEntity(models.getModel('lib:groundSmoke'));
+        this.groundSmoke.enabled = false;
+        this.groundFire = new StaticSceneryEntity(models.getModel('lib:smallFire'));
+        this.groundFire.enabled = false;
+        this.messages = new MessagesEntity();
+        this.messages.enabled = false;
+
+        this.cameraUpdaters.set(PlayerViewState.CRASHED, new CrashedCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.COCKPIT_FRONT, new CockpitFrontCameraUpdater(this.player, this.playerCamera.main));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_BEHIND, new ExteriorFrontBehindCameraUpdater(this.player, this.playerCamera.main, ExteriorViewHeading.FRONT));
         this.cameraUpdaters.set(PlayerViewState.EXTERIOR_FRONT, new ExteriorFrontBehindCameraUpdater(this.player, this.playerCamera.main, ExteriorViewHeading.BACK));
@@ -282,14 +311,25 @@ export class Game {
     }
 
     update(delta: number) {
-        if ((this.view === PlayerViewState.TARGET_TO || this.view === PlayerViewState.TARGET_FROM) && !this.player.weaponsTarget) {
-            this.setCockpitFrontView();
-        }
+        if (this.state === GameState.PLAYER) {
+            if ((this.view === PlayerViewState.TARGET_TO || this.view === PlayerViewState.TARGET_FROM) && !this.player.weaponsTarget) {
+                this.setCockpitFrontView();
+            }
+            this.scene.update(delta);
 
-        this.scene.update(delta);
-        this.cameraUpdater.update(delta);
-        this.playerCamera.update();
-        this.targetCamera.update();
+            const switchToCrashed = this.state === GameState.PLAYER && this.player.isCrashed;
+            if (switchToCrashed) {
+                this.transitionFromPlayerToCrashed();
+            }
+
+            this.cameraUpdater.update(delta);
+            this.playerCamera.update();
+            this.targetCamera.update();
+        } else if (this.state === GameState.CRASHED) {
+            this.scene.update(delta);
+            this.cameraUpdater.update(delta);
+            this.playerCamera.update();
+        }
     }
 
     render() {
@@ -317,30 +357,42 @@ export class Game {
 
     private setupControls() {
         document.addEventListener('keypress', (event: KeyboardEvent) => {
+            if (this.state === GameState.PLAYER) {
+                switch (event.key) {
+                    case '1': {
+                        if (this.view !== PlayerViewState.COCKPIT_FRONT) {
+                            this.setCockpitFrontView();
+                        }
+                        break;
+                    }
+                    case '2': {
+                        this.setExteriorBehindFrontView();
+                        break;
+                    }
+                    case '3': {
+                        this.setExteriorSideView();
+                        break;
+                    }
+                    case '4': {
+                        if (this.player.weaponsTarget) {
+                            this.setTargetView();
+                        }
+                        break;
+                    }
+                }
+            } else if (this.state === GameState.CRASHED) {
+                switch (event.key) {
+                    case 'Enter': {
+                        this.transitionFromCrashedToPlayer();
+                        break;
+                    }
+                }
+            }
+
             switch (event.key) {
                 case 'n': {
                     this.currentPalette = (this.currentPalette + 1) % this.palettes.length;
                     this.renderer.setPalette(this.getPalette());
-                    break;
-                }
-                case '1': {
-                    if (this.view !== PlayerViewState.COCKPIT_FRONT) {
-                        this.setCockpitFrontView();
-                    }
-                    break;
-                }
-                case '2': {
-                    this.setExteriorBehindFrontView();
-                    break;
-                }
-                case '3': {
-                    this.setExteriorSideView();
-                    break;
-                }
-                case '4': {
-                    if (this.player.weaponsTarget) {
-                        this.setTargetView();
-                    }
                     break;
                 }
             }
@@ -403,6 +455,43 @@ export class Game {
         const updater = this.cameraUpdaters.get(view);
         assertIsDefined(updater);
         return updater;
+    }
+
+    transitionFromPlayerToCrashed() {
+        this.state = GameState.CRASHED;
+
+        this.groundSmoke.enabled = true;
+        this.groundSmoke.position.copy(this.player.position);
+        this.groundSmoke.reset();
+
+        this.groundFire.enabled = true;
+        this.groundFire.position.copy(this.player.position);
+        this.groundFire.position.setY(0);
+
+        this.messages.enabled = true;
+        this.messages.message = 'The plane crashed. Press ENTER to restart.';
+
+        // View options
+        restoreMainCameraParameters(this.playerCamera.main);
+        this.view = PlayerViewState.CRASHED;
+        this.player.exteriorView = true;
+        this.cameraUpdater = this.getCameraUpdater(this.view);
+        for (let i = 0; i < this.cockpitEntities.length; i++) {
+            this.cockpitEntities[i].enabled = false;
+        }
+        for (let i = 0; i < this.exteriorEntities.length; i++) {
+            this.exteriorEntities[i].enabled = false;
+        }
+    }
+
+    transitionFromCrashedToPlayer() {
+        this.state = GameState.PLAYER;
+
+        this.player.reset(PLAYER_STARTING_POSITION, PLAYER_STARTING_HEADING);
+        this.setCockpitFrontView();
+        this.groundSmoke.enabled = false;
+        this.groundFire.enabled = false;
+        this.messages.enabled = false;
     }
 
     private setupScene() {
@@ -510,6 +599,9 @@ export class Game {
         warehouse.quaternion.setFromAxisAngle(UP, Math.PI / 2);
         this.scene.add(warehouse);
 
+        this.scene.add(this.messages);
+        this.scene.add(this.groundSmoke);
+        this.scene.add(this.groundFire);
         this.scene.add(this.player);
 
         const hud = new HUDEntity(this.player);

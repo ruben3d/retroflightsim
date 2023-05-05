@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SceneMaterialManager } from "../../materials/materials";
+import { SceneMaterialManager, SceneMaterialPrimitiveType } from "../../materials/materials";
 import { PaletteCategory } from '../../../config/palettes/palette';
 import { updateUniforms } from '../../utils';
 import { Model, ModelLibBuilder } from "../models";
@@ -14,6 +14,7 @@ export class BackgroundModelLibBuilder implements ModelLibBuilder {
     build(materials: SceneMaterialManager): Model {
         const geometry = this.buildGeometry();
         const mesh = new THREE.Mesh(geometry, materials.build({
+            type: SceneMaterialPrimitiveType.MESH,
             category: this.type === BackgroundModelLibBuilder.Type.GROUND ? PaletteCategory.TERRAIN_DEFAULT : PaletteCategory.SKY,
             depthWrite: false,
             highp: true,

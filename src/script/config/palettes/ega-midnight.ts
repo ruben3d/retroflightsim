@@ -65,6 +65,10 @@ const colors: PaletteColors = {
 
     [PaletteCategory.FX_FIRE]: EGA_RED_BRIGHT,
     [PaletteCategory.FX_FIRE__B]: EGA_YELLOW_BRIGHT,
+
+    [PaletteCategory.FX_SMOKE]: EGA_BLACK_BRIGHT,
+    [PaletteCategory.FX_SMOKE__B]: EGA_BLACK_BRIGHT,
+    [PaletteCategory.FX_SMOKE__C]: EGA_BLACK_BRIGHT,
 };
 
 const values: PaletteValues = {

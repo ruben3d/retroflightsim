@@ -3,7 +3,7 @@ import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PaletteCategory, PaletteTime } from '../../config/palettes/palette';
 import { assertIsDefined } from '../../utils/asserts';
 import { isZero } from '../../utils/math';
-import { SceneMaterialManager } from '../materials/materials';
+import { SceneMaterialManager, SceneMaterialPrimitiveType } from '../materials/materials';
 import { updateUniforms } from '../utils';
 
 
@@ -148,25 +148,22 @@ export class ModelManager {
 
                 if ('isMesh' in obj) {
                     obj.material = this.materials.build({
+                        type: SceneMaterialPrimitiveType.MESH,
                         category: (obj.material as THREE.MeshStandardMaterial).name as PaletteCategory,
                         shaded: !isFlat,
-                        depthWrite: !isFlat,
-                        point: false
+                        depthWrite: !isFlat
                     });
                 } else if ('isLineSegments' in child) {
                     obj.material = this.materials.build({
+                        type: SceneMaterialPrimitiveType.LINE,
                         category: (obj.material as THREE.LineBasicMaterial).name as PaletteCategory,
-                        shaded: false,
-                        depthWrite: !isFlat,
-                        line: !isFlat,
-                        point: false
+                        depthWrite: !isFlat
                     });
                 } else if ('isPoints' in child) {
                     obj.material = this.materials.build({
+                        type: SceneMaterialPrimitiveType.POINT,
                         category: (obj.material as THREE.PointsMaterial).name as PaletteCategory,
-                        shaded: false,
-                        depthWrite: !isFlat,
-                        point: true
+                        depthWrite: !isFlat
                     });
                 }
             });

@@ -63,6 +63,10 @@ export enum PaletteCategory {
 
     FX_FIRE = 'FX_FIRE',
     FX_FIRE__B = 'FX_FIRE__B',
+
+    FX_SMOKE = 'FX_SMOKE',
+    FX_SMOKE__B = 'FX_SMOKE__B',
+    FX_SMOKE__C = 'FX_SMOKE__C',
 }
 
 export const PALETTE_FX_PREFIX: string = 'FX';

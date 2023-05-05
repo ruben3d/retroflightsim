@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, TERRAIN_MODEL_SIZE, TERRAIN_SCALE, YAW_RATE } from "../../defs";
-import { FORWARD, UP } from '../../scene/scene';
-import { isZero } from "../../utils/math";
+import { MAX_ALTITUDE, MAX_SPEED, PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, YAW_RATE } from "../../defs";
+import { FORWARD, isZero, UP } from '../../utils/math';
 import { FlightModel } from './flightModel';
 
 export class DebugFlightModel extends FlightModel {
@@ -57,13 +56,6 @@ export class DebugFlightModel extends FlightModel {
         if (this.obj.position.y > MAX_ALTITUDE) {
             this.obj.position.y = MAX_ALTITUDE;
         }
-
-        // Avoid flying out of bounds, wraps around
-        const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
-        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
-        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
-        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
-        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
 
         // Velocity
         this.velocity.copy(FORWARD).applyQuaternion(this.obj.quaternion).multiplyScalar(this.speed);

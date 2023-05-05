@@ -1,23 +1,61 @@
 import * as THREE from 'three';
 import { ShaderMaterial } from 'three';
-import { FogColorCategory, FogValueCategory, Palette, PaletteCategory, PaletteColor, PaletteColorShade, PALETTE_FX_PREFIX } from "../../config/palettes/palette";
-import { FlatVertProgram, HighpFlatVertProgram } from './shaders/flatVP';
+import { FogColorCategory, FogValueCategory, PALETTE_FX_PREFIX, Palette, PaletteCategory, PaletteColor, PaletteColorShade } from "../../config/palettes/palette";
+import { DisplayShading, FogQuality } from '../../config/profiles/profile';
+import { KernelTask } from '../../core/kernel';
+import { assertExpr } from '../../utils/asserts';
+import { ConstantFragProgram } from './shaders/constantFP';
 import { DepthFragProgram } from './shaders/depthFP';
+import { FlatVertProgram, HighpFlatVertProgram } from './shaders/flatVP';
+import { LineVertProgram } from './shaders/lineVP';
+import { ParticleMeshFragProgram } from './shaders/particlesMeshFP';
+import { ParticleMeshVertProgram } from './shaders/particlesMeshVP';
 import { PointVertProgram } from './shaders/pointVP';
 import { ShadedVertProgram } from './shaders/shadedVP';
-import { ConstantFragProgram } from './shaders/constantFP';
-import { KernelTask } from '../../core/kernel';
-import { LineVertProgram } from './shaders/lineVP';
-import { DisplayShading, FogQuality } from '../../config/profiles/profile';
 
 
-export interface SceneMaterialProperties {
+export enum SceneMaterialPrimitiveType {
+    MESH,
+    LINE,
+    POINT,
+    PARTICLE_MESH,
+}
+
+export type SceneMaterialProperties = SceneMaterialCommonProperties & (
+    SceneMaterialMeshProperties |
+    SceneMaterialLineProperties |
+    SceneMaterialPointProperties |
+    SceneMaterialParticleMeshProperties
+);
+
+export interface SceneMaterialCommonProperties {
     category: PaletteCategory;
-    shaded: boolean;
     depthWrite: boolean;
-    line?: boolean;
-    point?: boolean;
-    highp?: boolean; // Flat only (not shaded)
+}
+
+export type SceneMaterialMeshProperties = {
+    type: SceneMaterialPrimitiveType.MESH;
+} & (
+        {
+            shaded: true;
+        }
+        |
+        {
+            shaded: false;
+            highp?: boolean;
+        }
+    );
+
+export interface SceneMaterialPointProperties {
+    type: SceneMaterialPrimitiveType.POINT;
+}
+
+export interface SceneMaterialLineProperties {
+    type: SceneMaterialPrimitiveType.LINE;
+}
+
+export interface SceneMaterialParticleMeshProperties {
+    type: SceneMaterialPrimitiveType.PARTICLE_MESH;
 }
 
 export type SceneMaterialUniforms = SceneFlatMaterialUniforms | SceneShadedMaterialUniforms;
@@ -55,10 +93,12 @@ export type SceneMaterialData = SceneCommonMaterialData & (SceneFlatMaterialData
 export interface SceneCommonMaterialData {
     category: PaletteCategory;
     depthWrite: boolean;
+    particles: boolean;
     line: boolean;
     point: boolean;
     fog: FogQuality;
     shading: DisplayShading;
+    ramp?: THREE.Color[]; // Particle materials only
 }
 
 export interface SceneFlatMaterialData {
@@ -77,6 +117,7 @@ export class SceneMaterialManager implements KernelTask {
     private readonly lineProto: THREE.ShaderMaterial;
     private readonly shadedProto: THREE.ShaderMaterial;
     private readonly pointProto: THREE.ShaderMaterial;
+    private readonly particleMeshProto: THREE.ShaderMaterial;
     private readonly colorCache: ColorCache = new ColorCache();
     private palette: Palette;
     private fog: FogQuality;
@@ -129,11 +170,19 @@ export class SceneMaterialManager implements KernelTask {
             userData: {},
             uniforms: {}
         });
+        this.particleMeshProto = new THREE.RawShaderMaterial({
+            vertexShader: ParticleMeshVertProgram,
+            fragmentShader: ParticleMeshFragProgram,
+            side: THREE.FrontSide,
+            depthWrite: true,
+            userData: {},
+            uniforms: {}
+        });
     }
 
     build(properties: SceneMaterialProperties): THREE.Material {
         const p = this.sanitiseProperties(properties);
-        const data = this.buildData(p);
+        const data = this.buildData(p, this.palette);
         const material = this.cloneMaterial(p);
         material.depthWrite = p.depthWrite;
         material.userData = data;
@@ -160,28 +209,32 @@ export class SceneMaterialManager implements KernelTask {
     }
 
     private sanitiseProperties(properties: SceneMaterialProperties): SceneMaterialProperties {
-        const p = { ...properties };
-        if (this.isPoint(p) || this.isFx(p)) {
-            p.shaded = false;
-            p.highp = false;
+        if (this.isFx(properties)) {
+            return {
+                ...properties,
+                shaded: false,
+                highp: undefined
+            }
         }
-        if (p.shaded) {
-            p.line = false;
-            p.highp = false;
-        }
-        return p;
+        return { ...properties };
     }
 
-    private buildData(properties: SceneMaterialProperties): SceneMaterialData {
+    private buildData(properties: SceneMaterialProperties, palette: Palette): SceneMaterialData {
         return {
-            shaded: properties.shaded,
+            shaded: properties.type === SceneMaterialPrimitiveType.MESH && properties.shaded,
             shading: this.shading,
             category: properties.category,
             depthWrite: properties.depthWrite,
-            line: properties.line || false,
+            particles: properties.type === SceneMaterialPrimitiveType.PARTICLE_MESH,
+            line: properties.type === SceneMaterialPrimitiveType.LINE,
             point: this.isPoint(properties),
-            highp: properties.highp || false,
-            fog: this.fog
+            highp: properties.type === SceneMaterialPrimitiveType.MESH && !properties.shaded && properties.highp || false,
+            fog: this.fog,
+            ramp: (properties.type === SceneMaterialPrimitiveType.PARTICLE_MESH && properties.category === PaletteCategory.FX_SMOKE) ? [
+                this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE)).clone(),
+                this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE__B)).clone(),
+                this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE__C)).clone(),
+            ] : undefined,
         };
     }
 
@@ -197,7 +250,7 @@ export class SceneMaterialManager implements KernelTask {
                 fogDensity: { value: this.palette.values[FogValueCategory(properties.category)] },
                 fogColor: { value: new THREE.Color(PaletteColor(this.palette, FogColorCategory(properties.category))) }
             },
-            ...properties.shaded ? {
+            ...(properties.type === SceneMaterialPrimitiveType.MESH && properties.shaded) ? {
                 distance: { value: 0 },
                 normalModelMatrix: { value: new THREE.Matrix3() }
             } : {
@@ -209,12 +262,11 @@ export class SceneMaterialManager implements KernelTask {
     }
 
     private isPoint(properties: SceneMaterialProperties): boolean {
-        return properties.point ||
-            (properties.point === undefined &&
-                (properties.category === PaletteCategory.SCENERY_SPECKLE ||
-                    properties.category === PaletteCategory.LIGHT_RED ||
-                    properties.category === PaletteCategory.LIGHT_GREEN ||
-                    properties.category === PaletteCategory.LIGHT_YELLOW));
+        return properties.type === SceneMaterialPrimitiveType.POINT ||
+            properties.category === PaletteCategory.SCENERY_SPECKLE ||
+            properties.category === PaletteCategory.LIGHT_RED ||
+            properties.category === PaletteCategory.LIGHT_GREEN ||
+            properties.category === PaletteCategory.LIGHT_YELLOW;
     }
 
     private isFx(properties: SceneMaterialProperties): boolean {
@@ -224,15 +276,20 @@ export class SceneMaterialManager implements KernelTask {
     private cloneMaterial(properties: SceneMaterialProperties): ShaderMaterial {
         if (this.isPoint(properties)) {
             return this.pointProto.clone();
-        } else if (properties.shaded) {
-            return this.shadedProto.clone();
-        } else if (properties.line) {
+        } else if (properties.type === SceneMaterialPrimitiveType.LINE) {
             return this.lineProto.clone();
-        } else if (properties.highp) {
-            return this.highpFlatProto.clone();
-        } else {
-            return this.flatProto.clone();
+        } else if (properties.type === SceneMaterialPrimitiveType.MESH) {
+            if (properties.shaded) {
+                return this.shadedProto.clone();
+            } else if (properties.highp) {
+                return this.highpFlatProto.clone();
+            } else {
+                return this.flatProto.clone();
+            }
+        } else if (properties.type === SceneMaterialPrimitiveType.PARTICLE_MESH) {
+            return this.particleMeshProto.clone();
         }
+        assertExpr(false, 'This should never happen');
     }
 
     setPalette(palette: Palette) {
@@ -247,6 +304,11 @@ export class SceneMaterialManager implements KernelTask {
             u.colorSecondary.value.copy(this.colorCache.getColor(PaletteColorShade(palette, c)));
             u.fogDensity.value = palette.values[FogValueCategory(c)];
             u.fogColor.value.copy(this.colorCache.getColor(PaletteColor(palette, FogColorCategory(c))));
+            if (d.particles && d.category === PaletteCategory.FX_SMOKE && d.ramp) {
+                d.ramp[0].copy(this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE)));
+                d.ramp[1].copy(this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE__B)));
+                d.ramp[2].copy(this.colorCache.getColor(PaletteColor(palette, PaletteCategory.FX_SMOKE__C)));
+            }
         }
         this.updateFxFire(this.elapsed);
     }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { SceneMaterialManager } from "../../materials/materials";
 import { PaletteCategory } from '../../../config/palettes/palette';
+import { SceneMaterialManager, SceneMaterialPrimitiveType } from "../../materials/materials";
 import { updateUniforms } from '../../utils';
 import { Model, ModelLibBuilder } from "../models";
 
@@ -46,10 +46,9 @@ export class FieldModelLibBuilder implements ModelLibBuilder {
         const points = [new THREE.Vector3(0, 0, 0)];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const material = materials.build({
+            type: SceneMaterialPrimitiveType.POINT,
             category: color,
             depthWrite: false,
-            shaded: false,
-            point: true
         });
         const mesh = new THREE.Points(geometry, material);
         mesh.onBeforeRender = updateUniforms;
@@ -59,9 +58,9 @@ export class FieldModelLibBuilder implements ModelLibBuilder {
     private buildOutline(materials: SceneMaterialManager, color: PaletteCategory, originalMesh: THREE.Mesh<THREE.BufferGeometry | THREE.CircleGeometry | THREE.PlaneGeometry, THREE.Material>) {
         const geometry = this.extractOutlineFromMesh(originalMesh);
         const material = materials.build({
+            type: SceneMaterialPrimitiveType.LINE,
             category: color,
             depthWrite: false,
-            shaded: false
         });
         const lines = new THREE.Line(geometry, material);
         lines.onBeforeRender = updateUniforms;
@@ -82,6 +81,7 @@ export class FieldModelLibBuilder implements ModelLibBuilder {
     private buildMesh(materials: SceneMaterialManager, modelType: FieldModelType, color: PaletteCategory, size: number) {
         const geometry = this.buildGeometry(modelType, size);
         const material = materials.build({
+            type: SceneMaterialPrimitiveType.MESH,
             category: color,
             depthWrite: false,
             shaded: false

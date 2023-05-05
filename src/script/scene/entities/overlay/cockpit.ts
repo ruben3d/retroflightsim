@@ -3,13 +3,13 @@ import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes
 import { H_RES, LO_H_RES } from "../../../defs";
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { Font, TextAlignment } from "../../../render/screen/text";
-import { vectorHeading } from '../../../utils/math';
+import { calculatePitchRoll, FORWARD, UP, vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
-import { FORWARD, Scene, SceneLayers, UP } from "../../scene";
+import { Scene, SceneLayers } from "../../scene";
 import { updateTargetCamera } from '../../utils';
 import { GroundTargetEntity } from '../groundTarget';
 import { LandingGearState, PlayerEntity } from "../player";
-import { calculatePitchRoll, formatHeading } from './overlayUtils';
+import { formatHeading } from './overlayUtils';
 
 
 // Pixels

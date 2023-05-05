@@ -3,9 +3,9 @@ import { Palette, PaletteCategory, PaletteColor } from "../../../config/palettes
 import { H_RES } from '../../../defs';
 import { CanvasPainter } from "../../../render/screen/canvasPainter";
 import { Font, TextAlignment } from "../../../render/screen/text";
-import { vectorHeading } from '../../../utils/math';
+import { FORWARD, vectorHeading } from '../../../utils/math';
 import { Entity } from "../../entity";
-import { FORWARD, Scene, SceneLayers } from "../../scene";
+import { Scene, SceneLayers } from "../../scene";
 import { GroundTargetEntity } from '../groundTarget';
 import { PlayerEntity } from "../player";
 import { toFeet, toKnots } from './overlayUtils';

@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { AudioClip } from '../../audio/audioSystem';
 import { Palette } from "../../config/palettes/palette";
+import { TERRAIN_MODEL_SIZE, TERRAIN_SCALE } from '../../defs';
 import { FlightModel } from '../../physics/model/flightModel';
-import { LODHelper } from '../../render/helpers';
+import { LODHelper, getLodLevel } from '../../render/helpers';
 import { CanvasPainter } from "../../render/screen/canvasPainter";
 import { HUDFocusMode } from '../../state/gameDefs';
-import { easeOutQuad, easeOutQuint } from '../../utils/math';
+import { easeOutQuad, easeOutQuint, FORWARD, RIGHT, UP } from '../../utils/math';
 import { Entity, ENTITY_TAGS } from "../entity";
 import { ModelManager } from '../models/models';
-import { FORWARD, RIGHT, Scene, SceneLayers, UP } from "../scene";
+import { Scene, SceneLayers } from "../scene";
 import { GroundTargetEntity } from './groundTarget';
 
 
@@ -185,15 +186,44 @@ export class PlayerEntity implements Entity {
         this.flightModel.setRoll(this.roll);
         this.flightModel.setYaw(this.yaw);
         this.flightModel.setThrottle(this.throttle);
-        this.flightModel.setLandingGearDeployed(this.landingGearState !== LandingGearState.RETRACTED);
+        this.flightModel.setLandingGearDeployed(this.landingGearState === LandingGearState.EXTENDED);
         this.flightModel.update(delta);
         this.obj.position.copy(this.flightModel.position);
         this.obj.quaternion.copy(this.flightModel.quaternion);
         this.velocity.copy(this.flightModel.velocityVector);
 
+        // Avoid flying out of bounds, wraps around
+        const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
+        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
+        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
+        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
+        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
+
         this.updateAudio();
 
-        this.updateLandingGear(delta);
+        if (!this.isCrashed) {
+            this.updateLandingGear(delta);
+        }
+    }
+
+    reset(position: THREE.Vector3, heading: number) {
+        this.flightModel.reset();
+        this.flightModel.position.copy(position)
+        this.flightModel.quaternion.setFromAxisAngle(UP, heading);
+
+        this.pitch = 0;
+        this.roll = 0;
+        this.yaw = 0;
+        this.throttle = 0;
+
+        this.landingGearState = LandingGearState.EXTENDED;
+        this.modelLandingGear?.setPlaybackPosition(1);
+        this.landingGearProgress = LANDING_GEAR_ANIM_DURATION;
+
+        this.engineStarted = false;
+
+        this.target = undefined;
+        this.targetIndex = undefined;
     }
 
     private updateLandingGear(delta: number) {
@@ -217,6 +247,15 @@ export class PlayerEntity implements Entity {
 
     private updateAudio() {
         const engineAudio = this._exteriorView ? this.outEngineAudio : this.inEngineAudio;
+
+        if (this.isCrashed) {
+            if (this.enginePlaying === true) {
+                engineAudio.stop();
+                this.enginePlaying = false;
+            }
+            return;
+        }
+
         let throttle = this.flightModel.gerEffectiveThrottle();
 
         if (throttle > 0 && this.enginePlaying === false) {
@@ -237,11 +276,6 @@ export class PlayerEntity implements Entity {
             engineAudio.rate = 0.25 + 1.75 * factorRate;
             engineAudio.gain = 1.0 * factorGain;
         }
-
-        // if (this.enginePlaying === true) {
-        //     engineAudio.stop();
-        //     this.enginePlaying = false;
-        // }
     }
 
     setFlightModel(flightModel: FlightModel) {
@@ -277,20 +311,26 @@ export class PlayerEntity implements Entity {
         return this.flightModel.isLanded();
     }
 
+    get isCrashed(): boolean {
+        return this.flightModel.isCrashed();
+    }
+
     render3D(targetWidth: number, targetHeight: number, camera: THREE.Camera, lists: Map<string, THREE.Scene>, palette: Palette): void {
 
-        this.shadowPosition.copy(this.position).setY(0);
-        this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize());
-        const shadowLength = Math.max(0.2, this._v.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
-        const shadowWidth = Math.max(0.2, this._v.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
-        this.shadowScale.set(shadowWidth, 1, shadowLength);
-        this.modelShadow.addToRenderList(
-            this.shadowPosition, this.shadowQuaternion, this.shadowScale,
-            targetWidth, camera, palette,
-            SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+        if (!this.isCrashed) {
+            this.shadowPosition.copy(this.position).setY(0);
+            this.shadowQuaternion.setFromUnitVectors(FORWARD, this.obj.getWorldDirection(this._v).setY(0).normalize());
+            const shadowLength = Math.max(0.2, this._v.copy(FORWARD).applyQuaternion(this.quaternion).setY(0).length());
+            const shadowWidth = Math.max(0.2, this._v.copy(RIGHT).applyQuaternion(this.quaternion).setY(0).length());
+            this.shadowScale.set(shadowWidth, 1, shadowLength);
+            this.modelShadow.addToRenderList(
+                this.shadowPosition, this.shadowQuaternion, this.shadowScale,
+                targetWidth, camera, palette,
+                SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists);
+        }
 
         if (this._exteriorView) {
-            const lod = this.modelBody.getLodLevel(this.position, this.obj.scale, targetWidth, camera, this.modelBody.model.maxSize);
+            const lod = getLodLevel(this.position, this.obj.scale, targetWidth, camera, this.modelBody.model.maxSize);
 
             this.modelBody.addToRenderList(
                 this.position, this.quaternion, this.obj.scale,
@@ -308,7 +348,7 @@ export class PlayerEntity implements Entity {
                 for (let i = 0; i < this.controlSurfaceDescriptors.length; i++) {
                     const d = this.controlSurfaceDescriptors[i];
 
-                    this._q.setFromAxisAngle(this._v.copy(d.axis).applyQuaternion(this.quaternion), d.value() * d.range).multiply(this.quaternion);
+                    this._q.setFromAxisAngle(this._v.copy(d.axis).applyQuaternion(this.quaternion), this.isCrashed ? 0 : d.value() * d.range).multiply(this.quaternion);
                     this._v.copy(d.positiom).applyQuaternion(this.quaternion).add(this.position);
                     d.model.addToRenderList(
                         this._v, this._q, this.obj.scale,
@@ -401,23 +441,25 @@ export class PlayerEntity implements Entity {
 
     private setupInput() {
         document.addEventListener('keypress', (event: KeyboardEvent) => {
-            switch (event.key) {
-                case 't': {
-                    this.pickTarget();
-                    break;
-                }
-                case 'i': {
-                    this._nightVision = !this._nightVision;
-                    break;
-                }
-                case 'f': {
-                    this.hudFocus += 1;
-                    this.hudFocus %= HUDFocusMode._LENGTH;
-                    break;
-                }
-                case 'g': {
-                    this.toggleLandingGear();
-                    break;
+            if (!this.isCrashed) {
+                switch (event.key) {
+                    case 't': {
+                        this.pickTarget();
+                        break;
+                    }
+                    case 'i': {
+                        this._nightVision = !this._nightVision;
+                        break;
+                    }
+                    case 'f': {
+                        this.hudFocus += 1;
+                        this.hudFocus %= HUDFocusMode._LENGTH;
+                        break;
+                    }
+                    case 'g': {
+                        this.toggleLandingGear();
+                        break;
+                    }
                 }
             }
         });

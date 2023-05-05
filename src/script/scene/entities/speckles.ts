@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { Palette, PaletteCategory } from '../../config/palettes/palette';
-import { Scene, SceneLayers } from "../scene";
-import { Entity } from "../entity";
-import { updateUniforms } from '../utils';
-import { SceneMaterialManager } from '../materials/materials';
 import { CanvasPainter } from '../../render/screen/canvasPainter';
+import { Entity } from "../entity";
+import { SceneMaterialManager, SceneMaterialPrimitiveType } from '../materials/materials';
+import { Scene, SceneLayers } from "../scene";
+import { updateUniforms } from '../utils';
 
 
 const TILE_SUBDIVISIONS = 2; // Number of cells, each cell contains one speck of dust
@@ -79,8 +79,8 @@ export class SpecklesEntity implements Entity {
         pointsBuffer.setAttribute('position', new THREE.BufferAttribute(pointsVertices, 3));
         const points = new THREE.Points(pointsBuffer);
         points.material = materials.build({
+            type: SceneMaterialPrimitiveType.POINT,
             category: PaletteCategory.SCENERY_SPECKLE,
-            shaded: false,
             depthWrite: false
         });
         points.onBeforeRender = updateUniforms;

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { AudioSystem } from './audio/audioSystem';
 import { ConfigService } from './config/configService';
 import { PaletteCategory } from './config/palettes/palette';
@@ -8,7 +9,7 @@ import { DisplayShading, FogQuality } from './config/profiles/profile';
 import { SVGAProfile } from './config/profiles/svga';
 import { VGAProfile } from './config/profiles/vga';
 import { Kernel } from './core/kernel';
-import { FPS_CAP, H_RES, V_RES } from './defs';
+import { FPS_CAP, GROUND_SMOKE_PARTICLE_COUNT, H_RES, V_RES } from './defs';
 import { JoystickControlDevice } from './input/devices/joystickControlDevice';
 import { KeyboardControlDevice } from './input/devices/keyboardControlDevice';
 import { setupOSD } from './osd/osdPanel';
@@ -19,7 +20,9 @@ import { Renderer } from './render/renderer';
 import { SceneMaterialManager } from './scene/materials/materials';
 import { BackgroundModelLibBuilder } from './scene/models/lib/backgroundModelBuilder';
 import { FieldModelLibBuilder, FieldModelType } from './scene/models/lib/fieldModelBuilder';
+import { FireModelLibBuilder } from './scene/models/lib/fireModelBuilder';
 import { MountainModelLibBuilder } from './scene/models/lib/mountainModelBuilder';
+import { ParticleMeshModelLibBuilder } from './scene/models/lib/particleMeshModelBuilder';
 import { ModelManager } from './scene/models/models';
 import { Game, GameRenderTask, GameUpdateTask } from './state/game';
 import { FlightModels, TechProfiles } from './state/gameDefs';
@@ -42,7 +45,9 @@ function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControl
         new FieldModelLibBuilder('cropOchre', FieldModelType.HEXAGON, PaletteCategory.SCENERY_FIELD_OCHRE, 400),
         new FieldModelLibBuilder('cropRed', FieldModelType.TRIANGLE, PaletteCategory.SCENERY_FIELD_RED, 400),
         new MountainModelLibBuilder('hill', 700, 300, PaletteCategory.SCENERY_MOUNTAIN_GRASS),
-        new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE)
+        new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE),
+        new FireModelLibBuilder('smallFire', 10),
+        new ParticleMeshModelLibBuilder('groundSmoke', GROUND_SMOKE_PARTICLE_COUNT, new THREE.CircleGeometry(1, 5), 100),
     ]);
     const audio = new AudioSystem();
     const game = new Game(config, models, materials, renderer, audio);

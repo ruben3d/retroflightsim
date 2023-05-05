@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { UP } from '../../utils/math';
 
 const SIM_FPS = 120;
 const SIM_DELTA = 1.0 / SIM_FPS;
@@ -8,6 +9,7 @@ export abstract class FlightModel {
     protected obj = new THREE.Object3D();
     protected velocity: THREE.Vector3 = new THREE.Vector3(); // m/s
 
+    protected crashed: boolean = false;
     protected landed: boolean = true;
     protected landingGearDeployed: boolean = true;
 
@@ -20,6 +22,20 @@ export abstract class FlightModel {
     private deltaRemainder: number = 0;
 
     abstract step(delta: number): void;
+
+    reset() {
+        this.obj.position.set(0, 0, 0);
+        this.obj.quaternion.setFromAxisAngle(UP, 0);
+        this.velocity.set(0, 0, 0);
+        this.crashed = false;
+        this.landed = true;
+        this.landingGearDeployed = true;
+        this.pitch = 0;
+        this.roll = 0;
+        this.yaw = 0;
+        this.throttle = 0;
+        this.effectiveThrottle = 0;
+    }
 
     update(delta: number): void {
         this.deltaRemainder += delta;
@@ -55,6 +71,10 @@ export abstract class FlightModel {
 
     isLanded(): boolean {
         return this.landed;
+    }
+
+    isCrashed(): boolean {
+        return this.crashed;
     }
 
     set position(p: THREE.Vector3) {
