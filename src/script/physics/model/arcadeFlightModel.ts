@@ -104,7 +104,7 @@ export class ArcadeFlightModel extends FlightModel {
         }
 
         // Point down when stalling
-        if (this.stall >= 0 && !this.landed) {
+        if (this.stall >= 0 && !this.landed && !(this.position.y <= 20 && this.landingGearDeployed)) {
             const y = this.forward.y;
             if (y > -0.8) {
                 const groundRight = this._v.copy(this.forward).cross(this.prjForward).normalize();
@@ -211,7 +211,7 @@ export class ArcadeFlightModel extends FlightModel {
 
             if (this.landingGearDeployed === false ||
                 speed > LANDED_MAX_SPEED ||
-                this.velocity.y > LANDING_MAX_VSPEED ||
+                this.velocity.y < -LANDING_MAX_VSPEED ||
                 Math.abs(rollAngle) > LANDING_MAX_ROLL ||
                 LANDING_MIN_PITCH > pitchAngle) {
                 this.crashed = true;
