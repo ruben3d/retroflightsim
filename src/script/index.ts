@@ -46,7 +46,7 @@ function setup(): [Kernel, ConfigService, KeyboardControlDevice, JoystickControl
         new FieldModelLibBuilder('cropRed', FieldModelType.TRIANGLE, PaletteCategory.SCENERY_FIELD_RED, 400),
         new MountainModelLibBuilder('hill', 700, 300, PaletteCategory.SCENERY_MOUNTAIN_GRASS),
         new MountainModelLibBuilder('mountain', 1400, 600, PaletteCategory.SCENERY_MOUNTAIN_BARE),
-        new FireModelLibBuilder('smallFire', 10),
+        new FireModelLibBuilder('smallFire', 7),
         new ParticleMeshModelLibBuilder('groundSmoke', GROUND_SMOKE_PARTICLE_COUNT, new THREE.CircleGeometry(1, 5), 100),
     ]);
     const audio = new AudioSystem();
