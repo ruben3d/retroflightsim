@@ -203,10 +203,26 @@ export class PlayerEntity implements Entity {
 
         // Avoid flying out of bounds, wraps around
         const terrainHalfSize = 2.5 * TERRAIN_SCALE * TERRAIN_MODEL_SIZE;
-        if (this.obj.position.x > terrainHalfSize) this.obj.position.x = -terrainHalfSize;
-        if (this.obj.position.x < -terrainHalfSize) this.obj.position.x = terrainHalfSize;
-        if (this.obj.position.z > terrainHalfSize) this.obj.position.z = -terrainHalfSize;
-        if (this.obj.position.z < -terrainHalfSize) this.obj.position.z = terrainHalfSize;
+        let isOutBounds = false;
+        if (this.obj.position.x > terrainHalfSize) {
+            this.obj.position.x = -terrainHalfSize;
+            isOutBounds = true;
+        }
+        if (this.obj.position.x < -terrainHalfSize) {
+            this.obj.position.x = terrainHalfSize;
+            isOutBounds = true;
+        }
+        if (this.obj.position.z > terrainHalfSize) {
+            this.obj.position.z = -terrainHalfSize;
+            isOutBounds = true;
+        }
+        if (this.obj.position.z < -terrainHalfSize) {
+            this.obj.position.z = terrainHalfSize;
+            isOutBounds = true;
+        }
+        if (isOutBounds) {
+            this.flightModel.position.copy(this.obj.position);
+        }
 
         this.updateAudio();
 
