@@ -97,9 +97,10 @@ The system supports a single device connected only. If the device has less than 
 
 ### Systems
 * `G`: Landing gear
+* `F`: Flaps
 * `T`: Select target
 * `I`: Toggle night (386/VGA) or IR (486/SVGA) for the tracking camera
-* `F`: Cycle through HUD focus modes (disabled, partial, full)
+* `H`: Cycle through HUD focus modes (disabled, partial, full)
 
 ### Views
 * `N`: Toggle day/night

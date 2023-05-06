@@ -8,7 +8,7 @@ import { Entity } from "../../entity";
 import { Scene, SceneLayers } from "../../scene";
 import { updateTargetCamera } from '../../utils';
 import { GroundTargetEntity } from '../groundTarget';
-import { LandingGearState, PlayerEntity } from "../player";
+import { AircraftDeviceState, PlayerEntity } from "../player";
 import { formatHeading } from './overlayUtils';
 
 
@@ -47,7 +47,8 @@ export class CockpitEntity implements Entity {
     private aiPitch: number = 0;
     private aiRoll: number = 0;
 
-    private landingGear: LandingGearState = LandingGearState.EXTENDED;
+    private landingGear: AircraftDeviceState = AircraftDeviceState.EXTENDED;
+    private flaps: AircraftDeviceState = AircraftDeviceState.EXTENDED;
     private mapPlaneMarkerHeading: number = 0;
     private weaponsTarget: GroundTargetEntity | undefined;
     private weaponsTargetRange: number = 0; // Km
@@ -93,6 +94,7 @@ export class CockpitEntity implements Entity {
             this.weaponsTargetZoomFactor = updateTargetCamera(this.actor, this.camera, this.targetCamera);
         }
 
+        this.flaps = this.actor.flaps;
         this.landingGear = this.actor.landingGear;
     }
 
@@ -123,7 +125,7 @@ export class CockpitEntity implements Entity {
 
         const gearX = MFDSize + font.charSpacing + 2;
         const gearY = targetHeight - font.charHeight - font.charSpacing;
-        this.renderLandingGearStatus(gearX, gearY, painter, hudColor, font);
+        this.renderDeviceStatus(gearX, gearY, painter, hudColor, font);
     }
 
     private renderAttitudeIndicator(targetWidth: number, targetHeight: number, painter: CanvasPainter, palette: Palette) {
@@ -321,9 +323,12 @@ export class CockpitEntity implements Entity {
         }
     }
 
-    private renderLandingGearStatus(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
-        if (this.landingGear === LandingGearState.EXTENDED || this.landingGear === LandingGearState.EXTENDING) {
+    private renderDeviceStatus(x: number, y: number, painter: CanvasPainter, hudColor: string, font: Font) {
+        if (this.landingGear === AircraftDeviceState.EXTENDED || this.landingGear === AircraftDeviceState.EXTENDING) {
             painter.text(font, x, y, 'GEAR', hudColor);
+        }
+        if (this.flaps === AircraftDeviceState.EXTENDED || this.flaps === AircraftDeviceState.EXTENDING) {
+            painter.text(font, x, y - font.charHeight - font.charSpacing, 'FLAPS', hudColor);
         }
     }
 }

@@ -10,8 +10,8 @@ const INDUCED_DRAG_FACTOR = 10.0; // Unitless
 const ROLL_DRAG_FACTOR = 0.05; // Unitless
 const GROUND_FRICTION_KINETIC = 0.15; // Unitless
 const GROUND_FRICTION_STATIC = 0.2; // Unitless
-const THROTTLE_UP_RATE = 0.05; // Units/second
-const THROTTLE_DOWN_RATE = 0.1; // Units/second
+const THROTTLE_UP_RATE = 0.03; // Units/second
+const THROTTLE_DOWN_RATE = 0.08; // Units/second
 const YAW_RATE_LANDED = YAW_RATE * 2.0; // Radians/second
 
 const MAX_THRUST = 20; // m/s^2
@@ -20,7 +20,10 @@ const WING_AREA: number = 78; // m^2
 const GROUND_AIR_DENSITY: number = 1.225; // kg/m^3
 const GRAVITY: number = 9.8; // m/s^2
 const CD: number = 0.15; // Unitless
-const CD_LANDING_GEAR_FACTOR = 1.75; // Unitless
+const CD_LANDING_GEAR_FACTOR = 0.75; // Unitless, additive
+const CD_FLAPS_FACTOR = 0.4; // Unitless, additive
+const LIFT_FLAPS_FACTOR = 1.2; // Unitless
+const ROLL_FLAPS_FACTOR = 0.6; // Unitless
 
 const LANDED_MAX_SPEED = 100; // m/s
 const LANDING_MAX_VSPEED = 5; // m/s
@@ -76,7 +79,8 @@ export class ArcadeFlightModel extends FlightModel {
 
         // Roll control
         if (!isZero(this.roll) && !this.landed) {
-            this.obj.rotateZ(this.roll * ROLL_RATE * delta);
+            const rollFlapFactor = this.flapsExtended ? ROLL_FLAPS_FACTOR : 1.0;
+            this.obj.rotateZ(this.roll * ROLL_RATE * rollFlapFactor * delta);
         }
 
         // Pitch control
@@ -104,7 +108,7 @@ export class ArcadeFlightModel extends FlightModel {
         }
 
         // Point down when stalling
-        if (this.stall >= 0 && !this.landed && !(this.position.y <= 20 && this.landingGearDeployed)) {
+        if (this.stall >= 0 && !this.landed) {
             const y = this.forward.y;
             if (y > -0.8) {
                 const groundRight = this._v.copy(this.forward).cross(this.prjForward).normalize();
@@ -119,7 +123,7 @@ export class ArcadeFlightModel extends FlightModel {
         const arcadeInducedDrag = this.forward.dot(this.velocityUnit);
         const liftInducedDrag = 1 - Math.cos(2.0 * aoa);
         const rollDrag = Math.abs(this.right.y);
-        const cdMultiplier = this.landingGearDeployed ? CD_LANDING_GEAR_FACTOR : 1.0;
+        const cdMultiplier = 1.0 + (this.landingGearDeployed ? CD_LANDING_GEAR_FACTOR : 0.0) + (this.flapsExtended ? CD_FLAPS_FACTOR : 0.0);
         roundToZero(this.drag
             .copy(this.velocityUnit)
             .negate()
@@ -137,7 +141,8 @@ export class ArcadeFlightModel extends FlightModel {
         const fwdY = this.forward.y;
         const rightY = Math.abs(this.right.y);
         const liftFactor = 2 * (speed / 256.0) * ((-0.5 * fwdY + 1.5) * (-0.5 * rightY + 1.5) + (-0.5 * rightY + 1.5)) * airDensity;
-        this.stall = -clamp(liftFactor / minLiftFactor + aoaLift * (1.0 - rightY) - 1.0, -1.0, 1.0);
+        const liftFactorMultiplier = this.flapsExtended ? LIFT_FLAPS_FACTOR : 1.0;
+        this.stall = -clamp(liftFactor * liftFactorMultiplier / minLiftFactor + aoaLift * (1.0 - rightY) - 1.0, -1.0, 1.0);
 
         //! WEIGHT
         const weightFwdFactor = -this.forward.y;

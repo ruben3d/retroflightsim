@@ -26,7 +26,11 @@ export interface PlayerModelParts {
 }
 
 const ENGINE_LOWEST_VOLUME = 0.05; // [0,1]
+
 const LANDING_GEAR_ANIM_DURATION = 3; // Seconds
+
+const FLAPS_ANIM_DURATION = 2; // Seconds
+const FLAPS_EXTENDED_ANGLE = Math.PI / 5; // Radians
 
 const ELEVATOR_LEFT_POSITION = new THREE.Vector3(0, 0, -6);
 const ELEVATOR_LEFT_AXIS = RIGHT;
@@ -39,7 +43,7 @@ const FLAPERON_RIGHT_AXIS = new THREE.Vector3(-1.681781, -0.152682, 0.57654);
 const RUDDER_LEFT_POSITION = new THREE.Vector3(2.34, 1.8, -4.05);
 const RUDDER_LEFT_AXIS = new THREE.Vector3(0.383502, 0.802989, 0.456217);
 const RUDDER_RIGHT_POSITION = new THREE.Vector3(-2.34, 1.8, -4.05);
-const RUDDER_RIGHT_AXIS = new THREE.Vector3(-0.383502, 0.802989, 0.456217);//(0.383502, -0.456217, 0.802989)
+const RUDDER_RIGHT_AXIS = new THREE.Vector3(-0.383502, 0.802989, 0.456217);
 
 interface ControlSurfaceDescriptor {
     model: LODHelper;
@@ -49,7 +53,7 @@ interface ControlSurfaceDescriptor {
     range: number;
 }
 
-export enum LandingGearState {
+export enum AircraftDeviceState {
     RETRACTING,
     RETRACTED,
     EXTENDING,
@@ -81,8 +85,12 @@ export class PlayerEntity implements Entity {
     private enginePlaying: boolean = false;
     private engineStarted: boolean = false;
 
-    private landingGearState: LandingGearState = LandingGearState.EXTENDED;
+    private landingGearState: AircraftDeviceState = AircraftDeviceState.EXTENDED;
     private landingGearProgress = LANDING_GEAR_ANIM_DURATION;
+
+    private flapsState: AircraftDeviceState = AircraftDeviceState.EXTENDED;
+    private flapsProgress = FLAPS_ANIM_DURATION;
+    private flapsProgressUnit = 1.0;
 
     private obj = new THREE.Object3D();
 
@@ -135,14 +143,14 @@ export class PlayerEntity implements Entity {
                 model: this.modelFlaperonLeft,
                 positiom: FLAPERON_LEFT_POSITION,
                 axis: FLAPERON_LEFT_AXIS,
-                value: () => { return -this.roll },
+                value: () => { return this.flapsProgressUnit * -FLAPS_EXTENDED_ANGLE - (1.0 - this.flapsProgressUnit * 0.5) * this.roll },
                 range: Math.PI / 6
             },
             {
                 model: this.modelFlaperonRight,
                 positiom: FLAPERON_RIGHT_POSITION,
                 axis: FLAPERON_RIGHT_AXIS,
-                value: () => { return -this.roll },
+                value: () => { return this.flapsProgressUnit * FLAPS_EXTENDED_ANGLE - (1.0 - this.flapsProgressUnit * 0.5) * this.roll },
                 range: Math.PI / 6
             },
             {
@@ -186,7 +194,8 @@ export class PlayerEntity implements Entity {
         this.flightModel.setRoll(this.roll);
         this.flightModel.setYaw(this.yaw);
         this.flightModel.setThrottle(this.throttle);
-        this.flightModel.setLandingGearDeployed(this.landingGearState === LandingGearState.EXTENDED);
+        this.flightModel.setLandingGearDeployed(this.landingGearState === AircraftDeviceState.EXTENDED);
+        this.flightModel.setFlapsExtended(this.flapsState === AircraftDeviceState.EXTENDED);
         this.flightModel.update(delta);
         this.obj.position.copy(this.flightModel.position);
         this.obj.quaternion.copy(this.flightModel.quaternion);
@@ -203,6 +212,7 @@ export class PlayerEntity implements Entity {
 
         if (!this.isCrashed) {
             this.updateLandingGear(delta);
+            this.updateFlaps(delta);
         }
     }
 
@@ -216,9 +226,13 @@ export class PlayerEntity implements Entity {
         this.yaw = 0;
         this.throttle = 0;
 
-        this.landingGearState = LandingGearState.EXTENDED;
+        this.landingGearState = AircraftDeviceState.EXTENDED;
         this.modelLandingGear?.setPlaybackPosition(1);
         this.landingGearProgress = LANDING_GEAR_ANIM_DURATION;
+
+        this.flapsState = AircraftDeviceState.EXTENDED;
+        this.flapsProgress = FLAPS_ANIM_DURATION;
+        this.flapsProgressUnit = 1.0;
 
         this.engineStarted = false;
 
@@ -226,21 +240,42 @@ export class PlayerEntity implements Entity {
         this.targetIndex = undefined;
     }
 
+    private updateFlaps(delta: number) {
+        if (this.flapsState === AircraftDeviceState.EXTENDING) {
+            this.flapsProgress += delta;
+            if (this.flapsProgress >= FLAPS_ANIM_DURATION) {
+                this.flapsProgress = FLAPS_ANIM_DURATION;
+                this.flapsProgressUnit = 1.0;
+                this.flapsState = AircraftDeviceState.EXTENDED;
+            }
+        } else if (this.flapsState === AircraftDeviceState.RETRACTING) {
+            this.flapsProgress -= delta;
+            if (this.flapsProgress <= 0) {
+                this.flapsProgress = 0;
+                this.flapsProgressUnit = 0;
+                this.flapsState = AircraftDeviceState.RETRACTED;
+            }
+        }
+        if (this.flapsState === AircraftDeviceState.EXTENDING || this.flapsState === AircraftDeviceState.RETRACTING) {
+            this.flapsProgressUnit = this.flapsProgress / FLAPS_ANIM_DURATION;
+        }
+    }
+
     private updateLandingGear(delta: number) {
-        if (this.landingGearState === LandingGearState.EXTENDING || this.landingGearState === LandingGearState.RETRACTING) {
+        if (this.landingGearState === AircraftDeviceState.EXTENDING || this.landingGearState === AircraftDeviceState.RETRACTING) {
             this.modelLandingGear?.update(delta);
         }
-        if (this.landingGearState === LandingGearState.EXTENDING) {
+        if (this.landingGearState === AircraftDeviceState.EXTENDING) {
             this.landingGearProgress += delta;
             if (this.landingGearProgress >= LANDING_GEAR_ANIM_DURATION) {
                 this.landingGearProgress = LANDING_GEAR_ANIM_DURATION;
-                this.landingGearState = LandingGearState.EXTENDED;
+                this.landingGearState = AircraftDeviceState.EXTENDED;
             }
-        } else if (this.landingGearState === LandingGearState.RETRACTING) {
+        } else if (this.landingGearState === AircraftDeviceState.RETRACTING) {
             this.landingGearProgress -= delta;
             if (this.landingGearProgress <= 0) {
                 this.landingGearProgress = 0;
-                this.landingGearState = LandingGearState.RETRACTED;
+                this.landingGearState = AircraftDeviceState.RETRACTED;
             }
         }
     }
@@ -338,7 +373,7 @@ export class PlayerEntity implements Entity {
                 SceneLayers.EntityFlats, SceneLayers.EntityVolumes, lists, lod);
 
             if (lod === 0) {
-                if (this.landingGearState !== LandingGearState.RETRACTED) {
+                if (this.landingGearState !== AircraftDeviceState.RETRACTED) {
                     this.modelLandingGear?.addToRenderList(
                         this.position, this.quaternion, this.obj.scale,
                         targetWidth, camera, palette,
@@ -435,8 +470,12 @@ export class PlayerEntity implements Entity {
         return this.hudFocus;
     }
 
-    get landingGear(): LandingGearState {
+    get landingGear(): AircraftDeviceState {
         return this.landingGearState;
+    }
+
+    get flaps(): AircraftDeviceState {
+        return this.flapsState;
     }
 
     private setupInput() {
@@ -451,9 +490,13 @@ export class PlayerEntity implements Entity {
                         this._nightVision = !this._nightVision;
                         break;
                     }
-                    case 'f': {
+                    case 'h': {
                         this.hudFocus += 1;
                         this.hudFocus %= HUDFocusMode._LENGTH;
+                        break;
+                    }
+                    case 'f': {
+                        this.toggleFlaps();
                         break;
                     }
                     case 'g': {
@@ -477,20 +520,28 @@ export class PlayerEntity implements Entity {
         }
     }
 
+    private toggleFlaps() {
+        if (this.flapsState === AircraftDeviceState.EXTENDED || this.flapsState === AircraftDeviceState.EXTENDING) {
+            this.flapsState = AircraftDeviceState.RETRACTING;
+        } else {
+            this.flapsState = AircraftDeviceState.EXTENDING;
+        }
+    }
+
     private toggleLandingGear() {
-        if (this.landingGearState === LandingGearState.EXTENDED || this.landingGearState === LandingGearState.EXTENDING) {
+        if (this.landingGearState === AircraftDeviceState.EXTENDED || this.landingGearState === AircraftDeviceState.EXTENDING) {
             if (!this.isLanded) {
-                if (this.landingGearState === LandingGearState.EXTENDED) {
+                if (this.landingGearState === AircraftDeviceState.EXTENDED) {
                     this.modelLandingGear?.setPlaybackPosition(1.0);
                 }
-                this.landingGearState = LandingGearState.RETRACTING;
+                this.landingGearState = AircraftDeviceState.RETRACTING;
                 this.modelLandingGear?.playBackwards();
             }
         } else {
-            if (this.landingGearState === LandingGearState.RETRACTED) {
+            if (this.landingGearState === AircraftDeviceState.RETRACTED) {
                 this.modelLandingGear?.setPlaybackPosition(0.0);
             }
-            this.landingGearState = LandingGearState.EXTENDING;
+            this.landingGearState = AircraftDeviceState.EXTENDING;
             this.modelLandingGear?.play();
         }
     }

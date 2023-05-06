@@ -12,6 +12,7 @@ export abstract class FlightModel {
     protected crashed: boolean = false;
     protected landed: boolean = true;
     protected landingGearDeployed: boolean = true;
+    protected flapsExtended: boolean = true;
 
     protected pitch: number = 0; // [-1, 1]
     protected roll: number = 0; // [-1, 1]
@@ -30,6 +31,7 @@ export abstract class FlightModel {
         this.crashed = false;
         this.landed = true;
         this.landingGearDeployed = true;
+        this.flapsExtended = true;
         this.pitch = 0;
         this.roll = 0;
         this.yaw = 0;
@@ -63,6 +65,10 @@ export abstract class FlightModel {
 
     setLandingGearDeployed(deployed: boolean) {
         this.landingGearDeployed = deployed;
+    }
+
+    setFlapsExtended(extended: boolean) {
+        this.flapsExtended = extended;
     }
 
     setLanded(isLanded: boolean) {
