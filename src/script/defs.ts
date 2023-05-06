@@ -22,7 +22,7 @@ export const THROTTLE_RATE = 33; // Percentage of maximum/s [0,100]
 export const PLANE_DISTANCE_TO_GROUND = 2.0; // World units
 export const PLANE_COCKPIT_OFFSET_Y = 1.0; // World units
 export const PLANE_COCKPIT_OFFSET_Z = 8.0; // World units
-export const MAX_ALTITUDE = 10000; // World units
+export const MAX_ALTITUDE = 14000; // World units
 
 export const COCKPIT_FOV = 50;
 export const COCKPIT_FAR = 40000;

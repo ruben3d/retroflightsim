@@ -10,8 +10,8 @@ const INDUCED_DRAG_FACTOR = 10.0; // Unitless
 const ROLL_DRAG_FACTOR = 0.05; // Unitless
 const GROUND_FRICTION_KINETIC = 0.15; // Unitless
 const GROUND_FRICTION_STATIC = 0.2; // Unitless
-const THROTTLE_UP_RATE = 0.03; // Units/second
-const THROTTLE_DOWN_RATE = 0.08; // Units/second
+const THROTTLE_UP_RATE = 0.02; // Units/second
+const THROTTLE_DOWN_RATE = 0.07; // Units/second
 const YAW_RATE_LANDED = YAW_RATE * 2.0; // Radians/second
 
 const MAX_THRUST = 20; // m/s^2
@@ -70,6 +70,8 @@ export class ArcadeFlightModel extends FlightModel {
         this.velocityUnit = this.velocityUnit.copy(this.velocity).normalize();
 
         const airDensity: number = GROUND_AIR_DENSITY * Math.exp(-this.obj.position.y / 8000); // kg/m^3
+        // Take into account lower air temperature at higher altitudes
+        const thrustDensity: number = GROUND_AIR_DENSITY * Math.exp(-this.obj.position.y * 0.25 / 8000); // kg/m^3
         const speed = this.velocity.length(); // m/s
 
         const rightPrjVelocity = this._v.copy(this.velocityUnit).projectOnPlane(this.right);
@@ -117,7 +119,11 @@ export class ArcadeFlightModel extends FlightModel {
         }
 
         //! THRUST
-        roundToZero(this.thrust.copy(this.forward).multiplyScalar(airDensity * MAX_THRUST * this.effectiveThrottle * DRY_MASS));
+        roundToZero(this.thrust.copy(this.forward).multiplyScalar(
+            thrustDensity *
+            MAX_THRUST *
+            this.effectiveThrottle *
+            DRY_MASS));
 
         //! DRAG
         const arcadeInducedDrag = this.forward.dot(this.velocityUnit);
