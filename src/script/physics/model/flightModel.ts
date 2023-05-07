@@ -79,6 +79,10 @@ export abstract class FlightModel {
         return this.landed;
     }
 
+    setCrashed(isCrashed: boolean) {
+        this.crashed = isCrashed;
+    }
+
     isCrashed(): boolean {
         return this.crashed;
     }

@@ -330,6 +330,9 @@ export class PlayerEntity implements Entity {
     }
 
     setFlightModel(flightModel: FlightModel) {
+        flightModel.reset();
+        flightModel.setCrashed(this.flightModel.isCrashed());
+        flightModel.setLanded(this.flightModel.isLanded());
         this.flightModel = flightModel;
         this.flightModel.position.copy(this.obj.position);
         this.flightModel.quaternion.copy(this.obj.quaternion);

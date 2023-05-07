@@ -10,7 +10,14 @@ export class DebugFlightModel extends FlightModel {
     private _v: THREE.Vector3 = new THREE.Vector3();
     private _w: THREE.Vector3 = new THREE.Vector3();
 
+    constructor() {
+        super();
+        this.obj.up.copy(UP);
+    }
+
     step(delta: number): void {
+        if (this.crashed) return;
+
         this.effectiveThrottle = this.throttle;
 
         // Roll control
@@ -46,7 +53,7 @@ export class DebugFlightModel extends FlightModel {
         if (this.obj.position.y < PLANE_DISTANCE_TO_GROUND) {
             this.obj.position.y = PLANE_DISTANCE_TO_GROUND;
             const d = this.obj.getWorldDirection(this._v);
-            if (d.y > 0.0) {
+            if (d.y < 0.0) {
                 d.setY(0).add(this.obj.position);
                 this.obj.lookAt(d);
             }
@@ -60,7 +67,7 @@ export class DebugFlightModel extends FlightModel {
         // Velocity
         this.velocity.copy(FORWARD).applyQuaternion(this.obj.quaternion).multiplyScalar(this.speed);
 
-        this.landed = false;
+        this.landed = this.obj.position.y <= PLANE_DISTANCE_TO_GROUND;
     }
 
     getStallStatus(): number {
