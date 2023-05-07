@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PITCH_RATE, PLANE_DISTANCE_TO_GROUND, ROLL_RATE, YAW_RATE } from "../../defs";
-import { calculatePitchRoll, clamp, easeOutCirc, FORWARD, isZero, PI_OVER_180, RIGHT, roundToZero, UP, ZERO } from '../../utils/math';
+import { FORWARD, PI_OVER_180, RIGHT, UP, ZERO, calculatePitchRoll, clamp, easeOutCirc, isZero, roundToZero } from '../../utils/math';
 import { FlightModel } from './flightModel';
 
 
@@ -51,6 +51,11 @@ export class ArcadeFlightModel extends FlightModel {
 
     private prjForward: THREE.Vector3 = new THREE.Vector3();
     private velocityUnit: THREE.Vector3 = new THREE.Vector3();
+
+    constructor() {
+        super();
+        this.obj.up.copy(UP);
+    }
 
     step(delta: number): void {
 
