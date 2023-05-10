@@ -689,7 +689,7 @@ export class Game {
             { p: new THREE.Vector3(1580, PLANE_DISTANCE_TO_GROUND, -930), r: -Math.PI / 2 },
         ];
         planes.forEach(p => {
-            const plane = new StaticSceneryEntity(models.getModel('assets/f22_static.glb'));
+            const plane = new StaticSceneryEntity(models.getModel('assets/f22_scenery.glb'));
             plane.position.copy(p.p);
             plane.quaternion.setFromAxisAngle(UP, p.r);
             scene.add(plane);
